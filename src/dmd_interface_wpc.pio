@@ -9,13 +9,17 @@
 
 .program dmd_reader_wpc
 
+    set x, 31         ; load 5 bits (max allowed)
+    in x, 2           ; shift in 2 more bits: 31 << 2 = 124
+    set x, 3
+    in x, 1           ; shift in 1 = 124 + 3 = 127
+
 .wrap_target
     set y, 31
 
     wait irq 4
 
 yloop:
-    set isr, 127
     mov x, isr
 
     wait irq 5
@@ -57,11 +61,15 @@ xloop:
 
 .program dmd_dotclockdeadzone_wpc
 
+    set x, 1        ; x = 1
+    in x, 8         ; shift left by 8 -> ISR = 256
+    set x, 213 & 31 ; x = 21 (213 & 31 = 21), will shift in lower 5 bits
+    in x, 5         ; shift in 21 -> ISR = 256 | 21 = 469
+
     wait irq 4
 
 .wrap_target
-    set isr, 469   ; 469 * 32 = 15,008 cycles ≈ 120.06 us
-    mov x, isr
+    mov x, isr      ; 469 * 32 = 15,008 cycles ≈ 120.06 us
 long_delay:
     nop [31]
     jmp x-- long_delay
