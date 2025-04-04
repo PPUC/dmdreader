@@ -9,9 +9,6 @@
 
 .program dmd_reader_wpc
 
-; Send using an external clock on the SPI interface
-; - IN pin 0 is the DATA pin
-
     ; initialize y with 12288 = number of pixels (128x32) * number of planes
     set x, 3
     in x, 2
@@ -23,35 +20,30 @@
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear 4 
     wait irq 4
 
 dotloop:
-    wait 0 gpio 4  ; falling edge
-    in null 1      ; add a 0 to the output as WPC is 2bit/px
-    wait 1 gpio 4  ; raising edge
-    in pins 1      ; read pin data
+    wait 1 gpio dotclk ; raising edge
+    in null 1          ; add a 0 to the output as WPC is 2bit/px
+    wait 0 gpio dotclk ; falling edge
+    nop                ; wait 8ns
+    in pins 1          ; read 1 bit pin data
 
-    jmp x-- dotloop
+    jmp x-- dotloop    ; decrement counter
 
 .wrap
+
 
 .program dmd_framedetect_wpc
 
 .wrap_target
-; synchronize on the first line
-    wait 0 gpio rdata 
+; synchronize on frame finished
     wait 1 gpio rdata
-    set x, 31
-
-lineloop:
-    wait 1 gpio rclk
-    wait 0 gpio rclk
-    jmp x-- lineloop
-
-    ; delay by 1 pixel
-    wait 0 gpio 4
-    wait 1 gpio 4
+    wait 0 gpio rdata
+    wait 1 gpio rdata
+    wait 0 gpio rdata
+    wait 1 gpio rdata
+    wait 0 gpio rdata
 
     irq 4
 
@@ -61,7 +53,7 @@ lineloop:
 % c-sdk {
 static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
 
-    uint8_t datapin = 5;
+    uint8_t datapin = 5; // sdata
     pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
 
     // Set the IN base pin to the provided `pin` parameter. This is the data pin, we don't use any other
@@ -71,12 +63,8 @@ static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0);
-    pio_gpio_init(pio, 1);
-    pio_gpio_init(pio, 2);
-    pio_gpio_init(pio, 3);
-    pio_gpio_init(pio, 4);
-    pio_gpio_init(pio, 5);
+    pio_gpio_init(pio, 4); // dotclk
+    pio_gpio_init(pio, 5); // sdata
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -103,12 +91,7 @@ static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offse
     pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0);
-    pio_gpio_init(pio, 1);
-    pio_gpio_init(pio, 2);
-    pio_gpio_init(pio, 3);
-    pio_gpio_init(pio, 4);
-    pio_gpio_init(pio, 5);
+    pio_gpio_init(pio, 1); // rdata
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
