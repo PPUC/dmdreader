@@ -15,7 +15,8 @@
     wait irq 4
 
 yloop:
-    set x, 127
+    set isr, 127
+    mov x, isr
 
     wait irq 5
 
@@ -59,8 +60,8 @@ xloop:
     wait irq 4
 
 .wrap_target
-    set x, 469   ; 469 * 32 = 15,008 cycles ≈ 120.06 us
-
+    set isr, 469   ; 469 * 32 = 15,008 cycles ≈ 120.06 us
+    mov x, isr
 long_delay:
     nop [31]
     jmp x-- long_delay
