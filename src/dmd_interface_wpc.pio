@@ -63,7 +63,7 @@ xloop:
 
     set x, 1        ; x = 1
     in x, 8         ; shift left by 8 -> ISR = 256
-    set x, 213 & 31 ; x = 21 (213 & 31 = 21), will shift in lower 5 bits
+    set x, 21       ; x = 21, will shift in lower 5 bits
     in x, 5         ; shift in 21 -> ISR = 256 | 21 = 469
 
     wait irq 4
