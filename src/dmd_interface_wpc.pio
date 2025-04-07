@@ -5,6 +5,8 @@
 .define collat 3
 .define dotclk 4
 .define sdata 5
+.define frame_latch 6
+.define deadzone_latch 7
 
 
 .program dmd_reader_wpc
@@ -15,16 +17,19 @@
 
 .wrap_target
     set y, 31
-    wait irq 4
+    wait 1 gpio frame_latch
+    irq 4;
 
 yloop:
     mov x, isr        ; x = 127
-    wait irq 5
+    wait 1 gpio deadzone_latch
+    irq 5
 
 xloop:
     in null 1          ; add a 0 to the output as WPC is 2bit/px
     wait 1 gpio dotclk ; raising edge
     in pins 1          ; read 1 bit pin data
+    wait 0 gpio dotclk ; faling edge
     jmp x-- xloop
 
     jmp y-- yloop
@@ -36,11 +41,14 @@ xloop:
     wait 1 gpio rdata
     wait 0 gpio rdata
 
-    irq 4
+    irq clear 4
+    set pins, 1     ; set frame_latch
+    wait irq 4      ; wait for ack
+    set pins, 0
 .wrap
 
 
-.program dmd_dotclockdeadzone_wpc
+.program dmd_deadzone_wpc
     set x, 1        ; x = 1
     in x, 8         ; shift left by 8 -> ISR = 256
 
@@ -49,28 +57,32 @@ xloop:
     wait 0 gpio de
     wait 1 gpio de
 
-dead_zone_delay:
+deadzone_delay:
     nop [31]
-    jmp x-- dead_zone_delay
+    jmp x-- deadzone_delay
 
-    irq 5
+    irq clear 5
+    set pins, 1      ; set deadzone_latch
+    wait irq 5       ; wait for ack
+    set pins, 0      ; clear latch pins
 .wrap
 
 % c-sdk {
 static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
 
-    uint8_t datapin = 5; // sdata
     pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
 
     // Set the IN base pin to the provided `pin` parameter. This is the data pin, we don't use any other
-    sm_config_set_in_pins(&c, datapin);
+    sm_config_set_in_pins(&c, 5); // sdata
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, 4, 4, false);
 
     // Connect these GPIOs to this PIO block
     pio_gpio_init(pio, 4); // dotclk
     pio_gpio_init(pio, 5); // sdata
+    pio_gpio_init(pio, 6); // frame_latch
+    pio_gpio_init(pio, 7); // deadzone_latch
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -94,10 +106,12 @@ static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offse
     pio_sm_config c = dmd_framedetect_wpc_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, 1, 1, false); // rdata
+    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, true);  // frame_latch
 
     // Connect these GPIOs to this PIO block
     pio_gpio_init(pio, 1); // rdata
+    pio_gpio_init(pio, 6); // frame_latch
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
@@ -105,15 +119,17 @@ static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offse
 %}
 
 % c-sdk {
-static inline void dmd_dotclockdeadzone_wpc_program_init(PIO pio, uint sm, uint offset) {
+static inline void dmd_deadzone_wpc_program_init(PIO pio, uint sm, uint offset) {
 
-    pio_sm_config c = dmd_dotclockdeadzone_wpc_program_get_default_config(offset);
+    pio_sm_config c = dmd_deadzone_wpc_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, 0, 1, false); // de
+    pio_sm_set_consecutive_pindirs(pio, sm, 7, 1, true);  // deadzone_latch
 
     // Connect these GPIOs to this PIO block
     pio_gpio_init(pio, 0); // de
+    pio_gpio_init(pio, 7); // deadzone_latch
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
