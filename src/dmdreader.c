@@ -548,12 +548,12 @@ bool init()
         pio_sm_set_enabled(frame_pio, frame_sm, true);
         printf("WPC frame detection initialized\n");
 
-        // The dotclockdeadzone program just runs and blocks dot reading for a while
+        // The deadzone program just runs and blocks dot reading for a while
         // to avoid false positives
         deadzone_pio = pio0;
         offset = pio_add_program(frame_pio, &dmd_framedetect_wpc_program);
         deadzone_sm = pio_claim_unused_sm(deadzone_pio, true);
-        dmd_dotclockdeadzone_wpc_program_init(deadzone_pio, deadzone_sm, offset);
+        dmd_deadzone_wpc_program_init(deadzone_pio, deadzone_sm, offset);
         pio_sm_set_enabled(deadzone_pio, deadzone_sm, true);
         printf("WPC dot clock dead zone initialized\n");
 
