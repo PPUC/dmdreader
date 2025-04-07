@@ -8,7 +8,6 @@
 
 
 .program dmd_reader_wpc
-
     set x, 31         ; load 5 bits (max allowed)
     in x, 2           ; shift in 2 more bits: 31 << 2 = 124
     set x, 3
@@ -16,19 +15,15 @@
 
 .wrap_target
     set y, 31
-
     wait irq 4
 
 yloop:
-    mov x, isr
-
+    mov x, isr        ; x = 127
     wait irq 5
 
 xloop:
-    wait 1 gpio dotclk ; raising edge
     in null 1          ; add a 0 to the output as WPC is 2bit/px
-    wait 0 gpio dotclk ; falling edge
-    ;nop                ; wait 8ns
+    wait 1 gpio dotclk ; raising edge
     in pins 1          ; read 1 bit pin data
     jmp x-- xloop
 
@@ -37,49 +32,28 @@ xloop:
 
 
 .program dmd_framedetect_wpc
-
 .wrap_target
-    ; synchronize on frame (3 planes) finished
     wait 1 gpio rdata
-    wait 0 gpio de
     wait 0 gpio rdata
-    wait 1 gpio de
-
-    wait 1 gpio rdata
-    wait 0 gpio de
-    wait 0 gpio rdata
-    wait 1 gpio de
-
-    wait 1 gpio rdata
-    wait 0 gpio de
-    wait 0 gpio rdata
-    wait 1 gpio de
 
     irq 4
 .wrap
 
 
 .program dmd_dotclockdeadzone_wpc
-
     set x, 1        ; x = 1
     in x, 8         ; shift left by 8 -> ISR = 256
-    set x, 21       ; x = 21, will shift in lower 5 bits
-    in x, 5         ; shift in 21 -> ISR = 256 | 21 = 469
-
-    wait irq 4
 
 .wrap_target
-    mov x, isr      ; 469 * 32 = 15,008 cycles ≈ 120.06 us
-long_delay:
+    mov x, isr      ; 256 * 32 = 8192 cycles ≈ 66 us
+    wait 0 gpio de
+    wait 1 gpio de
+
+dead_zone_delay:
     nop [31]
-    jmp x-- long_delay
+    jmp x-- dead_zone_delay
 
     irq 5
-
-    ; synchronize on frame (3 planes) finished
-    wait 0 gpio rclk
-    wait 1 gpio collat
-    wait 0 gpio collat
 .wrap
 
 % c-sdk {
@@ -123,7 +97,6 @@ static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offse
     pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0); // de
     pio_gpio_init(pio, 1); // rdata
 
     // Load our configuration, do not yet start the program
@@ -140,8 +113,7 @@ static inline void dmd_dotclockdeadzone_wpc_program_init(PIO pio, uint sm, uint 
     pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 2); // rclk
-    pio_gpio_init(pio, 3); // collat
+    pio_gpio_init(pio, 0); // de
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
