@@ -25,13 +25,13 @@
 
 /**
  * Glossary
- * 
+ *
  * Plane
  *  image with one bit data per pixel. This doesn't NOT mean it is stored with 1bit/pixel
- * 
+ *
  * Frame
- *  image with potentially more than one bit per pixel 
- * 
+ *  image with potentially more than one bit per pixel
+ *
  */
 
 #define SPI_IRQ_PIN 17
@@ -42,7 +42,7 @@
 #define USE_CRC
 #endif
 
-typedef struct buf32_t 
+typedef struct buf32_t
 {
     uint8_t byte0;
     uint8_t byte1;
@@ -195,12 +195,12 @@ void spi_send_blocking(uint32_t *buf, uint16_t len)
     {
         pio_sm_put_blocking(spi_pio, spi_sm, *buf);
         buf++;
-    } 
+    }
 }
 
 /**
  * @brief Check if there is still an active SPI data transfer
- * 
+ *
  * @return true if there is still data in the TX FIFO
  * @return false if there is no data in the TX FIFO
  */
@@ -222,7 +222,7 @@ bool spi_busy() {
 
 /**
  * @brief Abort running SPI transfers. This can be necessary in case the SPI master hangs
- * 
+ *
  */
 void spi_abort() {
     if (dma_channel_is_busy(spi_dma_chan)) {
@@ -238,10 +238,10 @@ void spi_abort() {
 
 /**
  * @brief Notify on pin SPI_IRQ_PIN that data are ready on SPI
- * 
+ *
  * The SPI master (the Pico is slave) should start a data transfer when this signal is received
  * It toggles pin SPI_IRQ_PIN to H
- * 
+ *
  */
 void start_spi()
 {
@@ -250,7 +250,7 @@ void start_spi()
 
 /**
  * @brief Set pin SPI_IRQ_PIN to L to signal that there is no active SPI data transfer
- * 
+ *
  */
 void finish_spi() {
     gpio_put(SPI_IRQ_PIN, 0);
@@ -265,24 +265,24 @@ void spi_notify_onoff(int count) {
         sleep_ms(100);
         gpio_put(SPI_IRQ_PIN, 0);
         sleep_ms(100);
-    } 
-} 
+    }
+}
 
 
 
 /**
  * @brief Send a pix buffer via SPI
- * 
+ *
  * @param pixbuf a frame to send
  */
 bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy)
 {
-    
-#ifdef USE_CRC 
+
+#ifdef USE_CRC
     block_header_t h = {
         .block_type = SPI_BLOCK_PIX_CRC};
     block_pix_crc_header_t ph = {};
-#else 
+#else
     block_header_t h = {
         .block_type = SPI_BLOCK_PIX};
     block_pix_header_t ph = {};
@@ -352,7 +352,7 @@ int detect_dmd()
         return DMD_WPC;
     } else if ((dotclk > 640000) && (dotclk < 700000) &&
         (de > 5000) && (de < 5300) &&
-        (rdata > 70) && (rdata < 85)) 
+        (rdata > 70) && (rdata < 85))
     {
         printf("Stern Whitestar detected\n");
         spi_notify_onoff(DMD_WHITESTAR);
@@ -365,7 +365,7 @@ int detect_dmd()
         return DMD_SPIKE1;
     } else if ((dotclk > 1000000) && (dotclk < 1100000) &&
         (de > 8000) && (de < 8400) &&
-        (rdata > 60) && (rdata < 70)) { 
+        (rdata > 60) && (rdata < 70)) {
         printf("Stern SAM detected\n");
         spi_notify_onoff(DMD_SAM);
         return DMD_SAM;
@@ -377,7 +377,7 @@ int detect_dmd()
 
 /**
  * @brief Is being called when SPI DMA transfer has finished
- * 
+ *
  */
 void spi_dma_handler() {
     // Clear the interrupt request
@@ -389,7 +389,7 @@ void spi_dma_handler() {
 
 /**
  * @brief Handles DMD DMA requests by switching between the buffers
- * 
+ *
  */
 void dmd_dma_handler() {
 
@@ -500,7 +500,7 @@ void dmd_dma_handler() {
     *lastcrc = crc32(0,(const uint8_t*) framebuf, lcd_bytes);
 #endif
 
-    frame_received=true;
+    frame_received = true;
 }
 
 
@@ -521,7 +521,7 @@ bool init()
     // on power-on
     while (dmd_type == DMD_UNKNOWN) {
         dmd_type = detect_dmd();
-    } 
+    }
 
     sleep_ms(1000);
 
@@ -589,7 +589,7 @@ bool init()
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 4;           
+        lcd_bitsperpixel = 4;
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 4;         // in Spike there are 4 planes
         lcd_lineoversampling =LINEOVERSAMPLING_NONE;       // no line oversampling
@@ -612,7 +612,7 @@ bool init()
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 4;           
+        lcd_bitsperpixel = 4;
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 1;                            // in SAM there is one planes
         lcd_lineoversampling = LINEOVERSAMPLING_SAM;       // with 4x line oversampling
@@ -629,8 +629,8 @@ bool init()
     if (lcd_lineoversampling == LINEOVERSAMPLING_WHITESTAR) {
         lcd_wordsperplane *= 2;
     } else if (lcd_lineoversampling == LINEOVERSAMPLING_SAM) {
-        lcd_wordsperplane *= 4;  
-    } 
+        lcd_wordsperplane *= 4;
+    }
     lcd_bytesperplane = lcd_bytes;
     lcd_wordsperframe = lcd_wordsperplane * lcd_planesperframe;
     lcd_bytesperframe = lcd_bytesperplane * lcd_planesperframe;
@@ -697,14 +697,14 @@ int main()
     while (true) {
         // Wait for the next frame
         if (!(frame_received)) sleep_ms(1);
-        frame_received=false; 
+        frame_received = false;
 
         // do something
 #ifdef SUPRESS_DUPLICATES
-        if  (*lastcrc != crc_previous_frame) { 
+        if  (*lastcrc != crc_previous_frame) {
             spi_send_pix(lastframe, *lastcrc, true);
             crc_previous_frame = *lastcrc;
-        } 
+        }
 #else
         spi_send_pix(lastframe, *lastcrc, true);
 #endif

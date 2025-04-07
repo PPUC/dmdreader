@@ -5,7 +5,7 @@
 .define COLLAT 3
 .define DOTCLK 4
 .define SDATA 5
-.define FRAME_START 4
+.define PLANE_START 4
 
 
 .program dmd_reader_wpc
@@ -15,8 +15,8 @@
     in x, 1            ; shift in 1 = 124 + 3 = 127
 
 .wrap_target
-    irq clear FRAME_START
-    wait irq FRAME_START
+    irq clear PLANE_START
+    wait irq PLANE_START
     set y, 31
 
 yloop:
@@ -41,22 +41,22 @@ xloop:
     wait 1 gpio DE
     wait 0 gpio DOTCLK
     nop [31]
-    irq FRAME_START
+    irq PLANE_START
 .wrap
 
 % c-sdk {
 static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
 
-    // Set the IN base pin to the provided `pin` parameter. This is the data pin, we don't use any other
+    // Set the IN pin, we don't use any other
     sm_config_set_in_pins(&c, 5); // SDATA
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 4, 2, false); // DOTCLK, SDATA
 
     // Connect these GPIOs to this PIO block
     pio_gpio_init(pio, 4); // DOTCLK
     pio_gpio_init(pio, 5); // SDATA
+
+    // Set the pin direction at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, 4, 2, false); // DOTCLK, SDATA
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -78,14 +78,14 @@ static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
 static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = dmd_framedetect_wpc_program_get_default_config(offset);
 
+    // Connect these GPIOs to this PIO block
+    pio_gpio_init(pio, 0); // DE
+    pio_gpio_init(pio, 1); // RDATA
+    pio_gpio_init(pio, 4); // DOTCLK
+
     // Set the pin direction at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, 0, 2, false); // DE, RDATA
     pio_sm_set_consecutive_pindirs(pio, sm, 4, 1, false); // DOTCLK
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 1); // DE
-    pio_gpio_init(pio, 1); // RDATA
-    pio_gpio_init(pio, 4); // DOTCLK
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
