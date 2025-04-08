@@ -21,7 +21,6 @@
 
 yloop:
     mov x, isr         ; x = 127
-    nop [31]
 
 xloop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
@@ -36,8 +35,8 @@ xloop:
 
 .program dmd_framedetect_wpc
 .wrap_target
-    wait 1 gpio RDATA
     wait 0 gpio RDATA
+    wait 1 gpio RDATA
     wait 1 gpio DE
     wait 0 gpio DOTCLK
     nop [31]
