@@ -9,10 +9,10 @@
 
 
 .program dmd_reader_wpc
-    set x, 31          ; load 5 bits (max allowed)
-    in x, 2            ; shift in 2 more bits: 31 << 2 = 124
-    set x, 3
-    in x, 1            ; shift in 1 = 124 + 3 = 127
+    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
+    in x, 5            ; shift in 5 bits, isr is 31 now
+    set x, 3           : load 3
+    in x, 2            ; shift in 2 bits 31 << 2 = 124, 124 + 3 = 127, isr is 127 now
 
 .wrap_target
     irq clear PLANE_START
