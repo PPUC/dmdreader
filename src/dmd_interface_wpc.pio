@@ -9,27 +9,26 @@
 
 
 .program dmd_reader_wpc
-    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
-    in x, 5            ; shift in 5 bits, isr is 31 now
-    set x, 3           ; load 3
-    in x, 2            ; shift in 2 bits 31 << 2 = 124, 124 + 3 = 127, isr is 127 now
+    set y, 31          ; load 31, 5 bits is max allowed (0b11111)
+    in y, 5            ; shift in 5 bits, isr is 31 now
+    set y, 31          ; load 31, 5 bits is max allowed (0b11111)
+    in y, 5            ; shift in 5 bits, isr is 1023 now
+    set y, 3           ; load 3
+    in y, 2            ; shift in 2 bits, isr is 4095 now (128x32 - 1)
 
 .wrap_target
+    mov x, y           ; load number of pixels per plane (128x32 - 1)
+    mov isr, null      ; reset shift counter
+
     irq clear PLANE_START
     wait irq PLANE_START
-    set y, 31
 
-yloop:
-    mov x, isr         ; x = 127
-
-xloop:
+plane_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
-    wait 1 gpio DOTCLK ; raising edge
     in null 1          ; add a 0 to the output as WPC is 2bit/px
+    wait 1 gpio DOTCLK ; raising edge
     in pins 1          ; read 1 bit pin data
-    jmp x-- xloop
-
-    jmp y-- yloop
+    jmp x-- plane_loop
 .wrap
 
 
