@@ -5,6 +5,10 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
+file(READ version.txt version)
+string(REGEX MATCH "^[0-9.]+$)" _tmp ${version})
+set(VERSION_STRING "${CMAKE_MATCH_1}")
+
 # Initialise pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 set(PICO_SDK_PATH "/home/$ENV{USER}/pico-sdk")
@@ -25,7 +29,7 @@ add_executable(${PROJECT_NAME}
 )
 
 pico_set_program_name(${PROJECT_NAME} "dmdreader")
-pico_set_program_version(${PROJECT_NAME} "0.2.0")
+pico_set_program_version(${PROJECT_NAME} "${VERSION_STRING}")
 
 pico_generate_pio_header(${PROJECT_NAME} src/spi_slave_sender.pio)
 pico_generate_pio_header(${PROJECT_NAME} src/dmd_counter.pio)
