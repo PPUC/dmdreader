@@ -45,6 +45,15 @@ jobs:
             arch: x64
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Checkout pico-sdk
+        uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          path: /home/runner/pico-sdk
+          ref: 2.1.1
+          fetch-depth: 1
       - if: (matrix.platform == 'linux' && matrix.arch == 'x64')
         run: sudo apt install gdb-multiarch cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib cmake
       - if: (!(matrix.platform == 'linux' && matrix.arch == 'aarch64'))
