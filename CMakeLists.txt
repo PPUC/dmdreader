@@ -27,12 +27,12 @@ add_executable(${PROJECT_NAME}
 pico_set_program_name(${PROJECT_NAME} "dmdreader")
 pico_set_program_version(${PROJECT_NAME} "0.2.0")
 
-pico_generate_pio_header(${PROJECT_NAME} src/spi_slave_sender.pio src/spi_slave_sender.pio.h)
-pico_generate_pio_header(${PROJECT_NAME} src/dmd_counter.pio src/dmd_counter.pio.h)
-pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_wpc.pio src/dmd_interface_wpc.pio.h)
-pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_whitestar.pio src/dmd_interface_whitestar.pio.h)
-pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_spike.pio src/dmd_interface_spike.pio.h)
-pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_sam.pio src/dmd_interface_sam.pio.h)
+pico_generate_pio_header(${PROJECT_NAME} src/spi_slave_sender.pio)
+pico_generate_pio_header(${PROJECT_NAME} src/dmd_counter.pio)
+pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_wpc.pio)
+pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_whitestar.pio)
+pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_spike.pio)
+pico_generate_pio_header(${PROJECT_NAME} src/dmd_interface_sam.pio)
 
 # Add the standard library to the build
 target_link_libraries(${PROJECT_NAME} pico_stdlib)
