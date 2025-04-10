@@ -1,6 +1,11 @@
 build
 CMakeCache.txt
 CopyOfCMakeCache.txt
+CMakeDoxyfile.in
+CMakeDoxygenDefaults.cmake
+_deps/
+picotool/
+pico_flash_region.ld
 Makefile
 cmake_install.cmake
 elf2uf2/
