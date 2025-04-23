@@ -1,9 +1,9 @@
-.define de 0
-.define rdata 1
-.define rclk 2
-.define collat 3
-.define dotclk 4
-.define sdata 5
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
 
 
 .program dmd_reader_sam
@@ -22,16 +22,16 @@
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear 4 
+    irq clear 4
     wait irq 4
 
 dotloop:
-    wait 0 gpio 4  ; falling edge
-    in null, 3     ; pad with 3 zeros
-    wait 1 gpio 4  ; raising edge
-    in pins 1      ; read pin data
-    
-    
+    wait 0 gpio DOTCLK  ; falling edge
+    in null, 3          ; pad with 3 zeros
+    wait 1 gpio DOTCLK  ; raising edge
+    in pins 1           ; read pin data
+
+
     jmp x-- dotloop
 
 .wrap
@@ -41,8 +41,8 @@ dotloop:
 .wrap_target
 
 ; synchronize on the least significant plane
-    wait 0 gpio rdata 
-    wait 1 gpio rdata
+    wait 0 gpio RDATA
+    wait 1 gpio RDATA
     irq 4
 
 .wrap
@@ -50,23 +50,17 @@ dotloop:
 
 % c-sdk {
 static inline void dmd_reader_sam_program_init(PIO pio, uint sm, uint offset) {
-
-    uint8_t datapin = 5;
     pio_sm_config c = dmd_reader_sam_program_get_default_config(offset);
 
-    // Set the IN base pin to the provided `pin` parameter. This is the data pin, we don't use any other
-    sm_config_set_in_pins(&c, datapin);
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
+    // Set the IN pin, we don't use any other
+    sm_config_set_in_pins(&c, 2); // SDATA
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0);
-    pio_gpio_init(pio, 1);
-    pio_gpio_init(pio, 2);
-    pio_gpio_init(pio, 3);
-    pio_gpio_init(pio, 4);
-    pio_gpio_init(pio, 5);
+    pio_gpio_init(pio, 3); // DOTCLK
+    pio_gpio_init(pio, 2); // SDATA
+
+    // Set the pin direction at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -86,19 +80,13 @@ static inline void dmd_reader_sam_program_init(PIO pio, uint sm, uint offset) {
 
 % c-sdk {
 static inline void dmd_framedetect_sam_program_init(PIO pio, uint sm, uint offset) {
-
     pio_sm_config c = dmd_framedetect_sam_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0);
-    pio_gpio_init(pio, 1);
-    pio_gpio_init(pio, 2);
-    pio_gpio_init(pio, 3);
-    pio_gpio_init(pio, 4);
-    pio_gpio_init(pio, 5);
+    pio_gpio_init(pio, 6); // RDATA
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);

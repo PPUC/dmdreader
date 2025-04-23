@@ -1,3 +1,10 @@
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
+
 ; As all programs use the same configuration, the length of these programs need to be identical!
 
 .program dmd_count_dotclk
@@ -5,34 +12,34 @@
 
     mov x, null
 .wrap_target
-    wait 0 gpio 4
+    wait 0 gpio DOTCLK
     jmp x-- clockdecrement
 clockdecrement:
-    wait 1 gpio 4
+    wait 1 gpio DOTCLK
 
 .wrap
 
-.program dmd_count_de 
+.program dmd_count_de
  ; count DMD data enable
 
     mov x, null
 .wrap_target
-    wait 0 gpio 0
+    wait 0 gpio DE
     jmp x-- clockdecrement
 clockdecrement:
-    wait 1 gpio 0
+    wait 1 gpio DE
 
 .wrap
 
-.program dmd_count_rdata 
+.program dmd_count_rdata
  ; count DMD RDATA
 
     mov x, null
 .wrap_target
-    wait 0 gpio 1
+    wait 0 gpio RDATA
     jmp x-- clockdecrement
 clockdecrement:
-    wait 1 gpio 1
+    wait 1 gpio RDATA
 
 .wrap
 
@@ -41,32 +48,30 @@ clockdecrement:
 
     mov x, null
 .wrap_target
-    wait 0 gpio 2
+    wait 0 gpio RCLK
     jmp x-- clockdecrement
 clockdecrement:
-    wait 1 gpio 2
+    wait 1 gpio RCLK
 
 .wrap
-    
+
 
 % c-sdk {
 static inline void dmd_counter_program_init(PIO pio, uint sm, uint offset) {
-
     pio_sm_config c = dmd_count_dotclk_program_get_default_config(offset);
 
-    // Set the IN base pin 
-    sm_config_set_in_pins(&c, 0);
+    // Set the IN base pin
+    sm_config_set_in_pins(&c, 7); // DE
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 6, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, 3, 1, false); // DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, 5, 3, false); // RCLK, RDATA, DE
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0);
-    pio_gpio_init(pio, 1);
-    pio_gpio_init(pio, 2);
-    pio_gpio_init(pio, 3);
-    pio_gpio_init(pio, 4);
-    pio_gpio_init(pio, 5);
+    pio_gpio_init(pio, 3); // DOTCLK
+    pio_gpio_init(pio, 7); // DE
+    pio_gpio_init(pio, 6); // RDATA
+    pio_gpio_init(pio, 5); // RCLK
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(

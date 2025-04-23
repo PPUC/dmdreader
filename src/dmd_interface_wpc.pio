@@ -1,10 +1,10 @@
 .define PUBLIC dmd_reader_interrupt 0
-.define DE 0
-.define RDATA 1
-.define RCLK 2
-.define COLLAT 3
-.define DOTCLK 4
-.define SDATA 5
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
 .define PLANE_START 4
 
 
@@ -48,14 +48,14 @@ static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
 
     // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, 5); // SDATA
+    sm_config_set_in_pins(&c, 2); // SDATA
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 4); // DOTCLK
-    pio_gpio_init(pio, 5); // SDATA
+    pio_gpio_init(pio, 3); // DOTCLK
+    pio_gpio_init(pio, 2); // SDATA
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 4, 2, false); // DOTCLK, SDATA
+    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -78,13 +78,13 @@ static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offse
     pio_sm_config c = dmd_framedetect_wpc_program_get_default_config(offset);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 0); // DE
-    pio_gpio_init(pio, 1); // RDATA
-    pio_gpio_init(pio, 4); // DOTCLK
+    pio_gpio_init(pio, 7); // DE
+    pio_gpio_init(pio, 6); // RDATA
+    pio_gpio_init(pio, 3); // DOTCLK
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 2, false); // DE, RDATA
-    pio_sm_set_consecutive_pindirs(pio, sm, 4, 1, false); // DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, 6, 2, false); // RDATA, DE
+    pio_sm_set_consecutive_pindirs(pio, sm, 3, 1, false); // DOTCLK
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
