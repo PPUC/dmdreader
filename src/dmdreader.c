@@ -691,6 +691,7 @@ bool init()
 
 bool usb_connected()
 {
+    sleep_ms(2000); // wait for USB to be initialized
     return tud_mounted();
 }
 
