@@ -21,9 +21,6 @@ project(dmdreader C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-pico_set_program_name(${PROJECT_NAME} "dmdreader")
-pico_set_program_version(${PROJECT_NAME} "${VERSION_STRING}")
-
 # Add executable. Default name is the project name, version 0.2.0
 add_executable(${PROJECT_NAME}
         src/dmdreader.c
@@ -31,6 +28,9 @@ add_executable(${PROJECT_NAME}
         src/sr_device.c
         src/logic_analyzer.c
 )
+
+pico_set_program_name(${PROJECT_NAME} "dmdreader")
+pico_set_program_version(${PROJECT_NAME} "${VERSION_STRING}")
 
 pico_generate_pio_header(${PROJECT_NAME} src/spi_slave_sender.pio)
 pico_generate_pio_header(${PROJECT_NAME} src/dmd_counter.pio)
