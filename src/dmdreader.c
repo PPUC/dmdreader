@@ -16,6 +16,8 @@
 #include "dmd_interface_spike.pio.h"
 #include "dmd_interface_sam.pio.h"
 
+#include "logic_analyzer.h"
+
 // should CRC32 checksum be caculated and sent with each frame
 #define USE_CRC
 
@@ -686,8 +688,24 @@ bool init()
     return true;
 }
 
+bool usb_connected()
+{
+    // Initialize USB temporarily just for detection
+    stdio_init_all();
+    sleep_ms(100); // Allow time for USB enumeration
+    bool connected = stdio_usb_connected();
+    stdio_deinit(); // Clean up
+    return connected;
+}
+
 int main()
 {
+    if (usb_connected()) {
+        printf("USB connected, starting logic analyzer\n");
+        analyze();
+        return 0;
+    }
+    
     uint32_t crc_previous_frame = 0;
     if (!init()) {
         printf("Error during initialisation, aborting...\n");
