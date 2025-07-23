@@ -88,7 +88,7 @@ int process_char(sr_device_t *d, char charin);
 void reset(sr_device_t *d);
 
 // initial post reset state
-void init(sr_device_t *d);
+void sr_init(sr_device_t *d);
 
 // Initialize the tx buffer
 void tx_init(sr_device_t *d);

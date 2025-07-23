@@ -50,7 +50,7 @@ void reset(sr_device_t *d)
    // d->chgmask=0;
 };
 // initial post reset state
-void init(sr_device_t *d)
+void sr_init(sr_device_t *d)
 {
    reset(d);
    d->a_mask = 0;

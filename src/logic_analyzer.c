@@ -769,7 +769,7 @@ void analyze(){
     //The DMA controller must read across the common bus to read the PIO fifo so enabled both reads and write
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
 
-    init(&dev);
+    sr_init(&dev);
     //Since RP2040 is 32 bit this should always be 4B aligned, and it must be because the PIO
     //does DMA on a per byte basis
     //If either malloc fails the code will just hang
