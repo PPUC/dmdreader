@@ -698,7 +698,6 @@ bool usb_connected()
 int main()
 {
     if (usb_connected()) {
-        printf("USB connected, starting logic analyzer\n");
         analyze();
         return 0;
     }
