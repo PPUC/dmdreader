@@ -21,7 +21,7 @@ project(dmdreader C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.2.0
+# Add executable. Default name is the project name
 add_executable(${PROJECT_NAME}
         src/dmdreader.c
         src/crc32.c

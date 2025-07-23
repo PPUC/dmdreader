@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "pico/stdlib.h"
+#include "tusb.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/dma.h"
@@ -690,12 +691,7 @@ bool init()
 
 bool usb_connected()
 {
-    // Initialize USB temporarily just for detection
-    stdio_init_all();
-    sleep_ms(100); // Allow time for USB enumeration
-    bool connected = stdio_usb_connected();
-    stdio_deinit(); // Clean up
-    return connected;
+    return tud_mounted();
 }
 
 int main()
@@ -705,7 +701,7 @@ int main()
         analyze();
         return 0;
     }
-    
+
     uint32_t crc_previous_frame = 0;
     if (!init()) {
         printf("Error during initialisation, aborting...\n");

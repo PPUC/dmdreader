@@ -660,7 +660,7 @@ void core1_code(){
 
 }
 
-int analyze(){
+void analyze(){
     char cmdstr[20];
     int cmdstrptr=0;
     char charin,tmpchar;
@@ -1165,4 +1165,4 @@ for faster parsing.
    }//while(1)
 
 
-}//main
+}//analyze
