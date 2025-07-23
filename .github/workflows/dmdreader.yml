@@ -57,7 +57,11 @@ jobs:
       - if: (matrix.platform == 'linux' && matrix.arch == 'x64')
         run: sudo apt install gdb-multiarch cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib cmake
       - if: (!(matrix.platform == 'linux' && matrix.arch == 'aarch64'))
-        run: scripts/compile.sh
+        run: |
+          cd pico-sdk
+          git submodule update --init --recursive
+          cd ..
+          scripts/compile.sh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
