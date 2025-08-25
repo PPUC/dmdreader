@@ -374,6 +374,11 @@ int detect_dmd()
         return DMD_SAM;
     }
 
+    // Fallback to SPIKE1
+    spi_notify_onoff(DMD_SPIKE1);
+    return DMD_SPIKE1;
+
+
     spi_notify_onoff(1);
     return DMD_UNKNOWN;
 }
