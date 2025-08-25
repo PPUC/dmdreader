@@ -6,7 +6,7 @@
 .define SDATA 2
 
 
-.define PUBLIC spike_rdata 1
+.define PUBLIC spike_rdata RDATA
 
 
 .program dmd_reader_spike
