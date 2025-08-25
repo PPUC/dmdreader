@@ -346,6 +346,11 @@ int detect_dmd()
 
     printf("", dotclk, de, rdata);
 
+    // Force SPIKE1
+    spi_notify_onoff(DMD_SPIKE1);
+    return DMD_SPIKE1;
+
+
     if ((dotclk > 450000) && (dotclk < 550000) &&
         (de > 3800) && (de < 4000) &&
         (rdata > 115) && (rdata < 130))
@@ -373,11 +378,6 @@ int detect_dmd()
         spi_notify_onoff(DMD_SAM);
         return DMD_SAM;
     }
-
-    // Fallback to SPIKE1
-    spi_notify_onoff(DMD_SPIKE1);
-    return DMD_SPIKE1;
-
 
     spi_notify_onoff(1);
     return DMD_UNKNOWN;
