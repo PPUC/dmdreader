@@ -24,6 +24,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name
 add_executable(${PROJECT_NAME}
         src/dmdreader.c
+        src/dmd_reader.c
         src/crc32.c
         src/sr_device.c
         src/logic_analyzer.c

@@ -1,0 +1,16 @@
+{
+  "name": "dmdreader",
+  "description": "PPUC DMD reader driver for Pico",
+  "version": "0.4.0",
+  "downloadUrl": "https://github.com/PPUC/dmdreader/archive/ppuc.zip",
+  "frameworks": "arduino",
+  "platforms": "raspberrypi",
+  "build": {
+    "srcFilter": "-<dmdreader.c>"
+  },
+  "headers": [
+    "dmd_reader.h",
+    "logic_analyzer.h"
+  ],
+  "license": "GPL-3.0"
+}

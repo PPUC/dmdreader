@@ -705,6 +705,16 @@ bool init()
 
 int read_dmd()
 {
+    stdio_init_all();
+
+    gpio_init(SPI_IRQ_PIN);
+    gpio_set_dir(SPI_IRQ_PIN, GPIO_IN);
+    gpio_disable_pulls(SPI_IRQ_PIN);
+
+    if (pin_is_stably_high(SPI_IRQ_PIN, 100, 5, 1500)) {
+        return -1;
+    }
+
     uint32_t crc_previous_frame = 0;
     if (!init()) {
         printf("Error during initialisation, aborting...\n");
