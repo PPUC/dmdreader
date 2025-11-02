@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "pico/stdlib.h"
-#include "tusb.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/dma.h"
@@ -24,7 +23,6 @@
 
 // supress duplicate frames (implies USE_CRC)
 #define SUPRESS_DUPLICATES
-
 
 /**
  * Glossary
@@ -64,7 +62,6 @@ typedef struct __attribute__((__packed__)) block_header_t
     uint16_t len;        // length of the whole data including header in bytes
 } block_header_t;
 
-
 typedef struct __attribute__((__packed__)) block_pix_header_t
 {
     uint16_t columns;      // number of columns
@@ -81,7 +78,6 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t
     uint16_t padding;
     uint32_t crc32;        // crc32 of the pixel data
 } block_pix_crc_header_t;
-
 
 // SPI Defines
 #define SPI0 spi0
@@ -145,7 +141,6 @@ uint32_t* lastcrc;
 uint32_t stat_frames_received=0;
 uint32_t stat_spi_skipped=0;
 
-
 // SPI PIO
 PIO spi_pio;
 uint spi_sm;
@@ -171,6 +166,30 @@ volatile bool spi_dma_running=false;
 uint dmd_int = 0;
 
 volatile bool frame_received = false;
+
+/* ---------- Stable-High Check on SPI_IRQ_PIN at boot ---------- */
+
+static bool pin_is_stably_high(uint pin, uint32_t stable_ms, uint32_t sample_ms, uint32_t timeout_ms) {
+    if (sample_ms == 0) sample_ms = 5;
+    if (stable_ms == 0) stable_ms = 50;
+    if (timeout_ms == 0) timeout_ms = 1000;
+
+    uint32_t elapsed = 0;
+    while (elapsed < timeout_ms) {
+        if (gpio_get(pin)) {
+            uint32_t kept = 0;
+            while (kept < stable_ms) {
+                if (!gpio_get(pin)) break;
+                sleep_ms(sample_ms);
+                kept += sample_ms;
+            }
+            if (kept >= stable_ms) return true;
+        }
+        sleep_ms(sample_ms);
+        elapsed += sample_ms;
+    }
+    return false;
+}
 
 /**
  * @brief Send data via SPI, transfer data via DMA
@@ -271,8 +290,6 @@ void spi_notify_onoff(int count) {
     }
 }
 
-
-
 /**
  * @brief Send a pix buffer via SPI
  *
@@ -300,7 +317,6 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy)
     ph.crc32 = crc32;
 #endif
 
-
     if (skip_when_busy) {
         if (spi_busy()) return false;
     }
@@ -312,7 +328,6 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy)
 
     return true;
 }
-
 
 /**
  * @brief Count a clock using different PIO programs defined in dmd_counter.pio
@@ -506,7 +521,6 @@ void dmd_dma_handler() {
     frame_received = true;
 }
 
-
 bool init()
 {
     stdio_init_all();
@@ -689,15 +703,15 @@ bool init()
     return true;
 }
 
-bool usb_connected()
-{
-    sleep_ms(2000); // wait for USB to be initialized
-    return tud_mounted();
-}
-
 int main()
 {
-    if (usb_connected()) {
+    stdio_init_all();
+
+    gpio_init(SPI_IRQ_PIN);
+    gpio_set_dir(SPI_IRQ_PIN, GPIO_IN);
+    gpio_disable_pulls(SPI_IRQ_PIN);
+
+    if (pin_is_stably_high(SPI_IRQ_PIN, 100, 5, 1500)) {
         analyze();
         return 0;
     }
