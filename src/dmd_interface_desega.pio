@@ -65,9 +65,10 @@ dotloop2:
 wait_low:
     wait 0 gpio DE      ; Wait for DE to go low
 
-    set osr, 39         ; Use osr as storage for 39 iterations   
+    set osr, 20         ; Use osr as storage for 39 iterations   
 
 delay_loop:
+    nop [31]
     nop [31]
     jmp osre delay_loop ; Decrement osr and repeat until zero
 
