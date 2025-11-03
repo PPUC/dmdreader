@@ -65,13 +65,16 @@ dotloop2:
 wait_low:
     wait 0 gpio DE      ; Wait for DE to go low
 
-.rept 39
-    nop [31]            ; Repeat the no operation
-.endr
+    set osr, 39         ; Use osr as storage for 39 iterations   
 
-; After ~10 µs, check if still low
+delay_loop:
+    nop [31]
+    jmp osre delay_loop ; Decrement osr and repeat until zero
+
+    ; After ~10 µs, check if still low
     jmp pin, wait_low   ; If pin went high early → back to wait_low
     irq 4               ; Pin remained low long enough → trigger IRQ
+
     wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
     jmp wait_low        ; went high, time to go back to wait_low
 
