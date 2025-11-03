@@ -661,7 +661,7 @@ bool init()
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 2;                                    // data east sega is 2bpp
+        lcd_bitsperpixel = 4;                                    // data east sega is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in DE/Sega, there's a MSB and a LSB plane
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in DE/Sega each line is sent twice
