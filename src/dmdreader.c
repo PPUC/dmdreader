@@ -584,7 +584,7 @@ bool init()
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 2;
+        lcd_bitsperpixel = 4;
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel; // 4 pixels per byte
         lcd_planesperframe = 2; // LSB + MSB
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;
