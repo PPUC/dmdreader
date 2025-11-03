@@ -588,7 +588,7 @@ bool init()
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in Whitestar, there's a MSB and a LSB plane
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in Whitestar each line is sent twice
-
+        lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
     } else if (dmd_type == DMD_SPIKE1)  {
         dmd_pio = pio0;
         offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
