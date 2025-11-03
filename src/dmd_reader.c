@@ -584,7 +584,7 @@ bool init()
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 4;                                     // it's only 3, but padding to 4 makes things easier
+        lcd_bitsperpixel = 2;                                    // it's only 3, but padding to 4 makes things easier
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in Whitestar, there's a MSB and a LSB plane
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in Whitestar each line is sent twice
