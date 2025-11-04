@@ -98,8 +98,8 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t
 
 // Line oversampling
 #define LINEOVERSAMPLING_NONE 1
-#define LINEOVERSAMPLING_WHITESTAR 2
-#define LINEOVERSAMPLING_SAM 4
+#define LINEOVERSAMPLING_2X 2
+#define LINEOVERSAMPLING_4X 4
 
 // Merging multiple planes
 #define MERGEPLANES_ADD 0
@@ -125,7 +125,7 @@ uint16_t lcd_wordsperframe;
 uint16_t lcd_bytesperframe;
 uint16_t lcd_lineoversampling;
 uint16_t lcd_wordsperline;
-uint8_t  lcd_mergeplanes=MERGEPLANES_ADD;
+uint8_t  lcd_mergeplanes;
 
 // raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL * MAX_PLANESPERFRAME / 8];
@@ -486,7 +486,7 @@ void dmd_dma_handler() {
     }
 
     // deal with whitestar line oversampling directly within framebuf
-    if (lcd_lineoversampling==LINEOVERSAMPLING_WHITESTAR) {
+    if (lcd_lineoversampling==LINEOVERSAMPLING_2X) {
         uint16_t i=0;
         uint32_t *dst, *src1, *src2;
         dst=src1=framebuf;
@@ -502,7 +502,7 @@ void dmd_dma_handler() {
             src2 += lcd_wordsperline*2;
             dst += lcd_wordsperline;     // destination skips only one line
         }
-    } else if (lcd_lineoversampling==LINEOVERSAMPLING_SAM) {
+    } else if (lcd_lineoversampling==LINEOVERSAMPLING_4X) {
         uint16_t i=0;
         uint32_t *dst, *src1, *src2, *src3, *src4;
         dst=src1=framebuf;
@@ -577,6 +577,7 @@ bool init()
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 3;
         lcd_lineoversampling = LINEOVERSAMPLING_NONE;
+        lcd_mergeplanes = MERGEPLANES_ADD;
     } else if (dmd_type == DMD_WHITESTAR) {
         dmd_pio = pio0;
         offset = pio_add_program(dmd_pio, &dmd_reader_whitestar_program);
@@ -597,7 +598,7 @@ bool init()
         lcd_bitsperpixel = 2;                                    // Whitestar is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in Whitestar, there's a MSB and a LSB plane
-        lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in Whitestar each line is sent twice
+        lcd_lineoversampling = LINEOVERSAMPLING_2X;       // in Whitestar each line is sent twice
         lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
     } else if (dmd_type == DMD_SPIKE1)  {
         dmd_pio = pio0;
@@ -619,7 +620,7 @@ bool init()
         lcd_bitsperpixel = 4;
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 4;         // in Spike there are 4 planes
-        lcd_lineoversampling =LINEOVERSAMPLING_NONE;       // no line oversampling
+        lcd_lineoversampling = LINEOVERSAMPLING_NONE;       // no line oversampling
         lcd_mergeplanes = MERGEPLANES_ADDSHIFT;
 
     } else if (dmd_type == DMD_SAM) {
@@ -642,7 +643,7 @@ bool init()
         lcd_bitsperpixel = 4;
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 1;                            // in SAM there is one planes
-        lcd_lineoversampling = LINEOVERSAMPLING_SAM;       // with 4x line oversampling
+        lcd_lineoversampling = LINEOVERSAMPLING_4X;        // with 4x line oversampling
         lcd_mergeplanes = MERGEPLANES_ADD;
     } else if (dmd_type == DMD_DESEGA) {
         dmd_pio = pio0;
@@ -664,7 +665,7 @@ bool init()
         lcd_bitsperpixel = 2;                                    // Data East/ Sega is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in DE/Sega, there's a MSB and a LSB plane
-        lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in DE/Sega each line is sent twice
+        lcd_lineoversampling = LINEOVERSAMPLING_2X;       // in DE/Sega each line is sent twice
         lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
     } else {
         printf("Unknown DMD type, aborting\n");
@@ -675,9 +676,9 @@ bool init()
     lcd_bytes = lcd_width * lcd_height * lcd_bitsperpixel / 8;
     lcd_pixelsperframe = lcd_width * lcd_height;
     lcd_wordsperplane = lcd_bytes / 4;
-    if (lcd_lineoversampling == LINEOVERSAMPLING_WHITESTAR) {
+    if (lcd_lineoversampling == LINEOVERSAMPLING_2X) {
         lcd_wordsperplane *= 2;
-    } else if (lcd_lineoversampling == LINEOVERSAMPLING_SAM) {
+    } else if (lcd_lineoversampling == LINEOVERSAMPLING_4X) {
         lcd_wordsperplane *= 4;
     }
     lcd_bytesperplane = lcd_bytes;
