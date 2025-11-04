@@ -17,6 +17,7 @@
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_spike.pio.h"
 #include "dmd_interface_sam.pio.h"
+#include "dmd_interface_desega.pio.h"
 
 // should CRC32 checksum be caculated and sent with each frame
 #define USE_CRC
@@ -93,6 +94,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t
 #define DMD_WHITESTAR 2
 #define DMD_SPIKE1 3
 #define DMD_SAM 4
+#define DMD_DESEGA 5
 
 // Line oversampling
 #define LINEOVERSAMPLING_NONE 1
@@ -363,30 +365,38 @@ int detect_dmd()
 
     if ((dotclk > 450000) && (dotclk < 550000) &&
         (de > 3800) && (de < 4000) &&
-        (rdata > 115) && (rdata < 130))
-    {
+        (rdata > 115) && (rdata < 130)) {
         printf("WPC detected\n");
         spi_notify_onoff(DMD_WPC);
         return DMD_WPC;
+
     } else if ((dotclk > 640000) && (dotclk < 700000) &&
         (de > 5000) && (de < 5300) &&
-        (rdata > 70) && (rdata < 85))
-    {
+        (rdata > 70) && (rdata < 85)) {
         printf("Stern Whitestar detected\n");
         spi_notify_onoff(DMD_WHITESTAR);
         return DMD_WHITESTAR;
+
     } else if ((dotclk > 1000000) && (dotclk < 1100000) &&
         (de > 8000) && (de < 8400) &&
         (rdata > 240) && (rdata < 270)) {
         printf("Stern Spike1 detected\n");
         spi_notify_onoff(DMD_SPIKE1);
         return DMD_SPIKE1;
+
     } else if ((dotclk > 1000000) && (dotclk < 1100000) &&
         (de > 8000) && (de < 8400) &&
         (rdata > 60) && (rdata < 70)) {
         printf("Stern SAM detected\n");
         spi_notify_onoff(DMD_SAM);
         return DMD_SAM;
+
+    } else if ((dotclk > 640000) && (dotclk < 700000) &&
+        (de > 5000) && (de < 5300) &&
+        (rdata > 3800) && (rdata < 4000)) {
+        printf("Data East/Sega detected\n");
+        spi_notify_onoff(DMD_DESEGA);
+        return DMD_DESEGA;
     }
 
     spi_notify_onoff(1);
@@ -584,11 +594,11 @@ bool init()
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 2;
+        lcd_bitsperpixel = 2;                                    // Whitestar is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in Whitestar, there's a MSB and a LSB plane
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in Whitestar each line is sent twice
-        lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
+        //lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
     } else if (dmd_type == DMD_SPIKE1)  {
         dmd_pio = pio0;
         offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
@@ -634,6 +644,28 @@ bool init()
         lcd_planesperframe = 1;                            // in SAM there is one planes
         lcd_lineoversampling = LINEOVERSAMPLING_SAM;       // with 4x line oversampling
         lcd_mergeplanes = MERGEPLANES_ADD;
+    } else if (dmd_type == DMD_DESEGA) {
+        dmd_pio = pio0;
+        offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
+        dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+        dmd_reader_desega_program_init(dmd_pio, dmd_sm, offset);
+        printf("Data East/Sega DMD reader initialized\n");
+
+        // The framedetect program just runs and detects the beginning of a new frame
+        frame_pio = pio0;
+        offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
+        frame_sm = pio_claim_unused_sm(frame_pio, true);
+        dmd_framedetect_desega_program_init(frame_pio, frame_sm, offset);
+        pio_sm_set_enabled(frame_pio, frame_sm, true);
+        printf("Data East/Sega frame detection initialized\n");
+
+        lcd_width = 128;
+        lcd_height = 32;
+        lcd_bitsperpixel = 2;                                    // Data East/ Sega is 2bpp
+        lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
+        lcd_planesperframe = 2;                                  // in DE/Sega, there's a MSB and a LSB plane
+        lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in DE/Sega each line is sent twice
+        lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
     } else {
         printf("Unknown DMD type, aborting\n");
         return false;

@@ -6,7 +6,7 @@
 .define SDATA 2
 
 
-.program dmd_reader_whitestar
+.program dmd_reader_desega
 
 ; Send using an external clock on the SPI interface
 
@@ -29,8 +29,9 @@
 dotloop1:
     wait 0 gpio DOTCLK  ; falling edge
     wait 1 gpio DOTCLK  ; raising edge
+    in null 2           ; padding
     in pins 1           ; read pin data
-    in null 1           ; right padding
+    in null 1
     jmp x-- dotloop1
 
     mov x, y            ; load number of pixels
@@ -41,32 +42,49 @@ dotloop1:
     wait 1 gpio RCLK
 
 ; this is the loop for the least significant bit
-; in this loop, the bit value is multipled by 2 by shiting it one bit
+; in this loop, the bit value is multipled by 2 by shifting it one bit
 dotloop2:
     wait 0 gpio DOTCLK  ; falling edge
     wait 1 gpio DOTCLK  ; raising edge
-    in null 1           ; left padding
+    in null 3           ; padding
     in pins 1           ; read pin data
     jmp x-- dotloop2
 
 
 .wrap
 
-.program dmd_framedetect_whitestar
+
+.program dmd_framedetect_desega
 
 .wrap_target
 
-; synchronize on the least significant plane
-    wait 0 gpio RDATA
-    wait 1 gpio RDATA
-    irq 4
+; Data East/Sega frame start detection
+; ~7.86µs is the longest state in which DE can be low without it being a new frame
+; Each nop [31] = 32 cycles = 256 ns @125 MHz
+; We go with 10 µs to be safe and confirm the start of a new frame, which is 256ns * 39 = 9.98 µs
+wait_low:
+    wait 0 gpio DE      ; Wait for DE to go low
+
+    set x, 20           ; Use x as storage for 20 iterations   
+
+delay_loop:
+    nop [31]
+    nop [31]
+    jmp x-- delay_loop  ; Decrement x and repeat until zero
+
+    ; After ~10 µs, check if still low
+    jmp pin, wait_low   ; If pin went high early → back to wait_low
+    irq 4               ; Pin remained low long enough → trigger IRQ
+
+    wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
+    jmp wait_low        ; went high, time to go back to wait_low
 
 .wrap
 
 
 % c-sdk {
-static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_reader_whitestar_program_get_default_config(offset);
+static inline void dmd_reader_desega_program_init(PIO pio, uint sm, uint offset) {
+    pio_sm_config c = dmd_reader_desega_program_get_default_config(offset);
 
     // Set the IN pin, we don't use any other
     sm_config_set_in_pins(&c, 2); // SDATA
@@ -97,14 +115,14 @@ static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offs
 %}
 
 % c-sdk {
-static inline void dmd_framedetect_whitestar_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_framedetect_whitestar_program_get_default_config(offset);
+static inline void dmd_framedetect_desega_program_init(PIO pio, uint sm, uint offset) {
+    pio_sm_config c = dmd_framedetect_desega_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
+    pio_sm_set_consecutive_pindirs(pio, sm, 7, 1, false); // DE
 
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 6); // RDATA
+    // Connect this GPIO to this PIO block
+    pio_gpio_init(pio, 7); // DE
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
