@@ -648,20 +648,20 @@ bool init()
         dmd_pio = pio0;
         offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
         dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-        dmd_reader_whitestar_program_init(dmd_pio, dmd_sm, offset);
+        dmd_reader_desega_program_init(dmd_pio, dmd_sm, offset);
         printf("Data East/Sega DMD reader initialized\n");
 
         // The framedetect program just runs and detects the beginning of a new frame
         frame_pio = pio0;
         offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
         frame_sm = pio_claim_unused_sm(frame_pio, true);
-        dmd_framedetect_whitestar_program_init(frame_pio, frame_sm, offset);
+        dmd_framedetect_desega_program_init(frame_pio, frame_sm, offset);
         pio_sm_set_enabled(frame_pio, frame_sm, true);
         printf("Data East/Sega frame detection initialized\n");
 
         lcd_width = 128;
         lcd_height = 32;
-        lcd_bitsperpixel = 4;                                    // data east sega is 2bpp
+        lcd_bitsperpixel = 2;                                    // Data East/ Sega is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 2;                                  // in DE/Sega, there's a MSB and a LSB plane
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in DE/Sega each line is sent twice
