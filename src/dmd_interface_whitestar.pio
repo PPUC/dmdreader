@@ -44,8 +44,8 @@ dotloop1:
 ; in this loop, the bit value is multipled by 2 by shiting it one bit
 dotloop2:
     wait 0 gpio DOTCLK  ; falling edge
-    wait 1 gpio DOTCLK  ; raising edge
     in null 1           ; left padding
+    wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
     jmp x-- dotloop2
 
