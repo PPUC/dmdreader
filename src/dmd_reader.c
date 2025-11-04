@@ -596,7 +596,7 @@ bool init()
         lcd_height = 32;
         lcd_bitsperpixel = 2;                                    // Whitestar is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-        lcd_planesperframe = 2;                                  // in Whitestar, there's a MSB and a LSB plane
+        lcd_planesperframe = 1;                                  // in Whitestar, there's a MSB and a LSB plane
         lcd_lineoversampling = LINEOVERSAMPLING_WHITESTAR;       // in Whitestar each line is sent twice
         lcd_mergeplanes = MERGEPLANES_ADDSHIFT;                  // required for correct 2bpp merge
     } else if (dmd_type == DMD_SPIKE1)  {
