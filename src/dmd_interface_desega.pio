@@ -33,8 +33,6 @@ dotloop:
     in pins 1           ; read pin data
     jmp x-- dotloop
 
-; There's an empty row with 256 dots at the end of a frame.
-; It is ignored because we already read the specified amount of dots and now wait for a new frame.
 .wrap
 
 
