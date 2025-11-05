@@ -24,8 +24,6 @@
     irq clear 4
     wait irq 4
 
-    ;wait 1 gpio RDATA   ; raising edge indicates a new frame
-
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
     in null 1           ; left padding
@@ -33,8 +31,12 @@ dotloop:
     in pins 1           ; read pin data
     jmp x-- dotloop
 
+    wait 0 gpio RDATA   ; 
+    wait 1 gpio RDATA   ; raising edge indicates a new frame
+
     ;mov x, y            ; load number of pixels
     ;mov isr, null       ; reset shift counter
+
 
 ; There's an empty row with 256 gots at the end of a frame.
 ; it is ignored because we already read the specified amount of dots and now wait for a new frame.
