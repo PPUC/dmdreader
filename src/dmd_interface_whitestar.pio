@@ -9,11 +9,15 @@
 .program dmd_reader_whitestar
 
 
-    ; initialize y with 8192 = number of pixels ((128 x LSB + 128 x MSB) x 32)
-    set x, 1
-    in x, 1
-    in null, 13
-    mov y, isr
+    ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
+    set x, 31          ; x = 31 (max 5-bit value)
+    in x, 5            ; shift in 5 bits, isr = 31
+    set x, 31          ; x = 31
+    in x, 5            ; shift in 5 bits, isr = 1023
+    set x, 15          ; x = 15
+    in x, 3            ; shift in 3 bits, isr = 8191
+    in null, 3         ; pad with 3 zeros
+    mov y, isr         ; y = 8191
 
 .wrap_target
 
