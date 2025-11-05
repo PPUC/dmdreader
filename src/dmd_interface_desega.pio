@@ -5,7 +5,7 @@
 .define DOTCLK 3
 .define SDATA 2
 
-.define FRAME_START 4
+.define FRAME_START_IRQ 4
 
 .define PUBLIC desega_DE DE
 .define PUBLIC desega_RDATA RDATA
@@ -29,8 +29,8 @@
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear FRAME_START
-    wait irq FRAME_START
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
@@ -60,7 +60,7 @@ delay_loop:
 
     ; After ~10 µs, check if still low
     jmp pin, wait_low   ; If pin went high early → back to wait_low
-    irq FRAME_START     ; Pin remained low long enough → frame started
+    irq FRAME_START_IRQ ; Pin remained low long enough → frame started
 
     wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
     jmp wait_low        ; went high, time to go back to wait_low

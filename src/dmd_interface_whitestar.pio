@@ -57,11 +57,9 @@ static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offs
     sm_config_set_in_pins(&c, whitestar_SDATA);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, whitestar_RDATA, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm, whitestar_SDATA, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, whitestar_RDATA);
     pio_gpio_init(pio, whitestar_DOTCLK);
     pio_gpio_init(pio, whitestar_SDATA);
 
