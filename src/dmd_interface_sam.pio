@@ -4,8 +4,13 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
+
 .define FRAME_START_IRQ 4
 
+.define PUBLIC sam_RCLK RCLK
+.define PUBLIC sam_RDATA RDATA
+.define PUBLIC sam_DOTCLK DOTCLK
+.define PUBLIC sam_SDATA SDATA
 
 .program dmd_reader_sam
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
@@ -47,16 +52,14 @@ static inline void dmd_reader_sam_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = dmd_reader_sam_program_get_default_config(offset);
 
     // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, 2); // SDATA
+    sm_config_set_in_pins(&c, sam_SDATA);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
-    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, sam_SDATA, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 6); // RDATA
-    pio_gpio_init(pio, 3); // DOTCLK
-    pio_gpio_init(pio, 2); // SDATA
+    pio_gpio_init(pio, sam_DOTCLK);
+    pio_gpio_init(pio, sam_SDATA);
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -79,10 +82,10 @@ static inline void dmd_framedetect_sam_program_init(PIO pio, uint sm, uint offse
     pio_sm_config c = dmd_framedetect_sam_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
+    pio_sm_set_consecutive_pindirs(pio, sm, sam_RDATA, 1, false);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 6); // RDATA
+    pio_gpio_init(pio, sam_RDATA);
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);

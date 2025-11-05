@@ -5,8 +5,12 @@
 .define DOTCLK 3
 .define SDATA 2
 
+.define PLANE_START_IRQ 4
 
-.define PUBLIC spike_rdata RDATA
+.define PUBLIC spike_RCLK RCLK
+.define PUBLIC spike_RDATA RDATA
+.define PUBLIC spike_DOTCLK DOTCLK
+.define PUBLIC spike_SDATA SDATA
 
 
 .program dmd_reader_spike
@@ -22,8 +26,8 @@
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear 4
-    wait irq 4
+    irq clear PLANE_START_IRQ
+    wait irq PLANE_START_IRQ
 
 ; this is the loop for the most significant bit
 dotloop1:
@@ -77,7 +81,7 @@ lineloop:
     wait 0 gpio RCLK
     jmp x-- lineloop
 
-    irq 4
+    irq PLANE_START_IRQ
 
 .wrap
 
@@ -86,14 +90,13 @@ static inline void dmd_reader_spike_program_init(PIO pio, uint sm, uint offset) 
     pio_sm_config c = dmd_reader_spike_program_get_default_config(offset);
 
     // Set the IN base pin to the provided `pin` parameter. This is the data pin, we don't use any other
-    sm_config_set_in_pins(&c, 2); // SDATA
-
+    sm_config_set_in_pins(&c, spike_SDATA);
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, spike_SDATA, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 3); // DOTCLK
-    pio_gpio_init(pio, 2); // SDATA
+    pio_gpio_init(pio, spike_DOTCLK);
+    pio_gpio_init(pio, spike_SDATA);
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -114,8 +117,8 @@ static inline void dmd_reader_spike_program_init(PIO pio, uint sm, uint offset) 
 % c-sdk {
 static inline void dmd_framedetect_spike_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = dmd_framedetect_spike_program_get_default_config(offset);
-    // rdata is used for jump control
-    sm_config_set_jmp_pin(&c, spike_rdata);
+    // RDATA is used for jump control
+    sm_config_set_jmp_pin(&c, spike_RDATA);
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -126,11 +129,11 @@ static inline void dmd_framedetect_spike_program_init(PIO pio, uint sm, uint off
     );
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 5, 2, false); // RCLK, RDATA
+    pio_sm_set_consecutive_pindirs(pio, sm, spike_RCLK, 2, false); // RCLK, RDATA
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 6); // RDATA
-    pio_gpio_init(pio, 5); // RCLK
+    pio_gpio_init(pio, spike_RDATA);
+    pio_gpio_init(pio, spike_RCLK);
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);

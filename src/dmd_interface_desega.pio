@@ -4,7 +4,13 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
+
 .define FRAME_START 4
+
+.define PUBLIC desega_DE DE
+.define PUBLIC desega_RDATA RDATA
+.define PUBLIC desega_DOTCLK DOTCLK
+.define PUBLIC desega_SDATA SDATA
 
 
 .program dmd_reader_desega
@@ -67,14 +73,14 @@ static inline void dmd_reader_desega_program_init(PIO pio, uint sm, uint offset)
     pio_sm_config c = dmd_reader_desega_program_get_default_config(offset);
 
     // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, 2); // SDATA
+    sm_config_set_in_pins(&c, desega_SDATA);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, desega_SDATA, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 3); // DOTCLK
-    pio_gpio_init(pio, 2); // SDATA
+    pio_gpio_init(pio, desega_DOTCLK);
+    pio_gpio_init(pio, desega_SDATA);
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -97,10 +103,10 @@ static inline void dmd_framedetect_desega_program_init(PIO pio, uint sm, uint of
     pio_sm_config c = dmd_framedetect_desega_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 7, 1, false); // DE
+    pio_sm_set_consecutive_pindirs(pio, sm, desega_DE, 1, false);
 
     // Connect this GPIO to this PIO block
-    pio_gpio_init(pio, 7); // DE
+    pio_gpio_init(pio, desega_DE);
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
