@@ -8,7 +8,6 @@
 
 .program dmd_reader_whitestar
 
-; Send using an external clock on the SPI interface
 
     ; initialize y with 8192 = number of pixels ((128 x LSB + 128 x MSB) x 32)
     set x, 1
@@ -32,9 +31,6 @@ dotloop:
     wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
     jmp x-- dotloop
-
-    ;mov x, y            ; load number of pixels
-    ;mov isr, null       ; reset shift counter
 
 
 ; There's an empty row with 256 gots at the end of a frame.
