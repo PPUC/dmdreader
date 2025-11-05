@@ -495,7 +495,7 @@ void dmd_dma_handler() {
 
         for (int l=0; l<lcd_height; l++) {
             for (int w=0; w<lcd_wordsperline; w++) {
-                v = src1[w]*2+src2[2]*1;
+                v = src1[w]*1+src2[w]*2;
                 dst[w]=v;
             }
             src1 += lcd_wordsperline*2; // source skips 2 lines forward
