@@ -34,7 +34,7 @@ dotloop:
     jmp x-- dotloop
 
     ; There's an empty line between LSB and HSB plane
-    wait 1 gpio rdata
+    wait 1 gpio RDATA
 
 
 .wrap
