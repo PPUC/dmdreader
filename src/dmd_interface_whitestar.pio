@@ -31,7 +31,6 @@ dotloop:
     in pins 1           ; read pin data
     jmp x-- dotloop
 
-    wait 0 gpio RDATA   ; 
     wait 1 gpio RDATA   ; raising edge indicates a new frame
 
     ;mov x, y            ; load number of pixels
@@ -62,11 +61,11 @@ static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offs
     sm_config_set_in_pins(&c, 2); // SDATA
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 5, 1, false); // RCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
     pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 5); // RCLK
+    pio_gpio_init(pio, 6); // RDATA
     pio_gpio_init(pio, 3); // DOTCLK
     pio_gpio_init(pio, 2); // SDATA
 
