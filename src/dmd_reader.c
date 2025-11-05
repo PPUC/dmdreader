@@ -376,8 +376,8 @@ int detect_dmd() {
     spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
 
-  } else if ((dotclk > 640000) && (dotclk < 700000) && (de > 5000) &&
-             (de < 5300) && (rdata > 3800) && (rdata < 4000)) {
+  } else if ((dotclk > 600000) && (dotclk < 680000) && (de > 4800) &&
+             (de < 5200) && (rdata > 2500) && (rdata < 2650)) {
     printf("Data East/Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
