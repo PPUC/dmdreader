@@ -24,14 +24,14 @@
     irq clear 4
     wait irq 4
 
+    wait 1 gpio RDATA   ; raising edge indicates a new frame
+
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
     in null 1           ; left padding
     wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
     jmp x-- dotloop
-
-    wait 1 gpio RDATA   ; raising edge indicates a new frame
 
     ;mov x, y            ; load number of pixels
     ;mov isr, null       ; reset shift counter
