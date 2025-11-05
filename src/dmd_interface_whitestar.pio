@@ -10,7 +10,7 @@
 
 ; Send using an external clock on the SPI interface
 
-    ; initialize y with 8192 = number of pixels (128x32x2)
+    ; initialize y with 8192 = number of pixels ((128 x LSB + 128 x MSB) x 32)
     set x, 1
     in x, 1
     in null, 14
@@ -24,26 +24,28 @@
     irq clear 4
     wait irq 4
 
+    wait 1 gpio RDATA   ; raising edge indicates a new frame
+
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
+    in null 1           ; left padding
     wait 1 gpio DOTCLK  ; raising edge
-    in null 1           ; pad with a zero
-    in pins 1           ; right padding
-
-
+    in pins 1           ; read pin data
     jmp x-- dotloop
 
-    ; There's an empty line between LSB and HSB plane
-    wait 1 gpio RDATA
+    ;mov x, y            ; load number of pixels
+    ;mov isr, null       ; reset shift counter
 
 
+; There's an empty row with 256 gots at the end of a frame.
+; it is ignored because we already read the specified amount of dots and now wait for a new frame.
 .wrap
 
 .program dmd_framedetect_whitestar
 
 .wrap_target
 
-; synchronize on the least significant plane
+; synchronize on a new frame
     wait 0 gpio RDATA
     wait 1 gpio RDATA
     irq 4
@@ -59,11 +61,11 @@ static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offs
     sm_config_set_in_pins(&c, 2); // SDATA
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 5, 1, false); // RCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
     pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 5); // RCLK
+    pio_gpio_init(pio, 6); // RDATA
     pio_gpio_init(pio, 3); // DOTCLK
     pio_gpio_init(pio, 2); // SDATA
 
