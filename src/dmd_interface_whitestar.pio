@@ -12,7 +12,7 @@
     ; initialize y with 8192 = number of pixels ((128 x LSB + 128 x MSB) x 32)
     set x, 1
     in x, 1
-    in null, 14
+    in null, 13
     mov y, isr
 
 .wrap_target
