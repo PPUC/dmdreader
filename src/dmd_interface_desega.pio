@@ -43,7 +43,6 @@ dotloop:
 
 ; Data East/Sega frame start detection
 ; ~7.86µs is the longest state in which DE can be low without it being a new frame
-; Each nop [31] = 32 cycles = 256 ns @125 MHz
 ; We go with 10 µs to be safe and confirm the start of a new frame, which is 256ns * 39 = 9.98 µs
 
 wait_low:
@@ -57,7 +56,7 @@ delay_loop:
 
     ; After ~10 µs, check if still low
     jmp pin, wait_low   ; If pin went high early → back to wait_low
-    irq 4               ; Pin remained low long enough → trigger IRQ
+    irq FRAME_START     ; Pin remained low long enough → frame started
 
     wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
     jmp wait_low        ; went high, time to go back to wait_low
@@ -73,11 +72,9 @@ static inline void dmd_reader_desega_program_init(PIO pio, uint sm, uint offset)
     sm_config_set_in_pins(&c, 2); // SDATA
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 5, 1, false); // RCLK
     pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 5); // RCLK
     pio_gpio_init(pio, 3); // DOTCLK
     pio_gpio_init(pio, 2); // SDATA
 
