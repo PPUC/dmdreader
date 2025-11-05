@@ -13,7 +13,7 @@
     ; initialize y with 8192 = number of pixels (128x32x2)
     set x, 1
     in x, 1
-    in null, 13
+    in null, 14
     mov y, isr
 
 .wrap_target
