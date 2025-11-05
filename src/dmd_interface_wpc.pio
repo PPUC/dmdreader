@@ -5,7 +5,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-.define PLANE_START 4
+.define PLANE_START_IRQ 4
 
 
 .program dmd_reader_wpc
@@ -21,8 +21,8 @@
     mov x, y           ; load number of pixels per plane (128x32 - 1)
     mov isr, null      ; reset shift counter
 
-    irq clear PLANE_START
-    wait irq PLANE_START
+    irq clear PLANE_START_IRQ
+    wait irq PLANE_START_IRQ
 
 plane_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
@@ -40,8 +40,9 @@ plane_loop:
     wait 1 gpio DE
     wait 0 gpio DOTCLK
     nop [31]
-    irq PLANE_START
+    irq PLANE_START_IRQ
 .wrap
+
 
 % c-sdk {
 static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {

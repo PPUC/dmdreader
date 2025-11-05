@@ -4,11 +4,10 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
+.define FRAME_START_IRQ 4
 
 
 .program dmd_reader_sam
-
-
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
     set x, 31          ; x = 31 (max 5-bit value)
     in x, 5            ; shift in 5 bits, isr = 31
@@ -20,14 +19,11 @@
     mov y, isr         ; y = 16383
 
 .wrap_target
-
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear 4
-    wait irq 4
-
-    wait 1 gpio RDATA   ; raising edge indicates a new frame
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
@@ -35,18 +31,14 @@ dotloop:
     wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
     jmp x-- dotloop
-
 .wrap
 
+
 .program dmd_framedetect_sam
-
 .wrap_target
-
-; synchronize on a new frame
     wait 0 gpio RDATA
     wait 1 gpio RDATA
-    irq 4
-
+    irq FRAME_START_IRQ
 .wrap
 
 
