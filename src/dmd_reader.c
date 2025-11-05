@@ -650,12 +650,13 @@ bool init() {
 
     lcd_width = 128;
     lcd_height = 32;
-    lcd_bitsperpixel = 2;  // Data East/ Sega is 2bpp
+    lcd_bitsperpixel = 2;  // DE-Sega is 2bpp
     lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 2;  // in DE/Sega, there's a MSB and a LSB plane
+    lcd_planesperframe = 1;  // in DE-Sega, there's only one plane, containg
+                             // one LSB row followed by one MSB row and so on
     lcd_lineoversampling =
-        LINEOVERSAMPLING_2X;  // in DE/Sega each line is sent twice
-    lcd_mergeplanes = MERGEPLANES_ADDSHIFT;  // required for correct 2bpp merge
+        LINEOVERSAMPLING_2X;  // in DE-Sega each line is sent twice
+    lcd_mergeplanes = MERGEPLANES_NONE;  // required for correct 2bpp merge
   } else {
     printf("Unknown DMD type, aborting\n");
     return false;
