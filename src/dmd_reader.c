@@ -645,7 +645,7 @@ bool init()
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
         lcd_planesperframe = 1;                            // in SAM there is one plane
         lcd_lineoversampling = LINEOVERSAMPLING_4X;        // with 4x line oversampling
-        lcd_mergeplanes = MERGEPLANES_ADD;
+        lcd_mergeplanes = MERGEPLANES_NONE;
     } else if (dmd_type == DMD_DESEGA) {
         dmd_pio = pio0;
         offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
