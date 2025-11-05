@@ -20,7 +20,6 @@
     in x, 5            ; shift in 5 bits, isr = 1023
     set x, 15          ; x = 15
     in x, 4            ; shift in 4 bits, isr = 16383
-    in null, 2         ; pad with 2 zeros
     mov y, isr         ; y = 16383
 
 .wrap_target

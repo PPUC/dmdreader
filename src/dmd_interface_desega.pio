@@ -21,7 +21,6 @@
     in x, 5            ; shift in 5 bits, isr = 1023
     set x, 15          ; x = 15
     in x, 3            ; shift in 3 bits, isr = 8191
-    in null, 3         ; pad with 3 zeros
     mov y, isr         ; y = 8191
 
 .wrap_target
