@@ -102,6 +102,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t
 #define LINEOVERSAMPLING_4X 4
 
 // Merging multiple planes
+#define MERGEPLANES_NONE 0
 #define MERGEPLANES_ADD 0
 #define MERGEPLANES_ADDSHIFT 1
 
@@ -495,7 +496,7 @@ void dmd_dma_handler() {
 
         for (int l=0; l<lcd_height; l++) {
             for (int w=0; w<lcd_wordsperline; w++) {
-                v = (src1[w] + src2[w]) >> 1;
+                v = src1[w] + src2[w]*2;
                 dst[w]=v;
             }
             src1 += lcd_wordsperline*2; // source skips 2 lines forward
@@ -597,9 +598,9 @@ bool init()
         lcd_height = 32;
         lcd_bitsperpixel = 2;                                    // Whitestar is 2bpp
         lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-        lcd_planesperframe = 2;                                  // in Whitestar, there's a MSB and a LSB plane
+        lcd_planesperframe = 1;                                  // in Whitestar, there's only one plane, containg one LSB row followed by one MSB row and so on
         lcd_lineoversampling = LINEOVERSAMPLING_2X;       // in Whitestar each line is sent twice
-        lcd_mergeplanes = MERGEPLANES_ADD;                  // Shifting happen in pio code
+        lcd_mergeplanes = MERGEPLANES_NONE;
     } else if (dmd_type == DMD_SPIKE1)  {
         dmd_pio = pio0;
         offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
