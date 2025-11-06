@@ -685,14 +685,18 @@ bool init() {
   channel_config_set_dreq(&dmd_dma_chan_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
 
+  // Configure the DMA channel. As soon as the PIO pushed a specified number of
+  // words to its RX FIFO, the DMA transfer will be triggered.
+  // The amount of words to transfer is lcd_wordsperframe.
   dma_channel_configure(dmd_dma_chan, &dmd_dma_chan_cfg,
                         NULL,  // Destination pointer, needs to be set later
                         &dmd_pio->rxf[dmd_sm],  // Source pointer
                         lcd_wordsperframe,      // Number of transfers
                         false                   // Do not yet start
   );
-
+  // Enable DMA interrupt 0 to be triggered when the transfer is done.
   dma_channel_set_irq0_enabled(dmd_dma_chan, true);
+  // Set the IRQ handler function.
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
 
