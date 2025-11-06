@@ -377,14 +377,14 @@ int detect_dmd() {
     return DMD_SAM;
 
   } else if ((dotclk > 600000) && (dotclk < 680000) && (de > 4800) &&
-             (de < 5200) && (rdata > 2500) && (rdata < 2650)) {
+             (de < 5200) && (rdata > 2450) && (rdata < 2650)) {
     printf("Data East/Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
   }
 
-  spi_notify_onoff(DMD_DESEGA);
-  return DMD_DESEGA;
+  spi_notify_onoff(1);
+  return DMD_UNKNOWN;
 }
 
 /**
