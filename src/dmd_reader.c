@@ -384,7 +384,7 @@ int detect_dmd() {
   }
 
   spi_notify_onoff(1);
-  return DMD_UNKNOWN;
+  return DMD_DESEGA;
 }
 
 /**
