@@ -383,7 +383,7 @@ int detect_dmd() {
     return DMD_DESEGA;
   }
 
-  spi_notify_onoff(1);
+  spi_notify_onoff(DMD_DESEGA);
   return DMD_DESEGA;
 }
 
