@@ -14,14 +14,14 @@
 
 
 .program dmd_reader_spike
-    ; initialize y with 4095, number of pixels (128x32) - 1 because counting starts at 0.
-    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
-    in x, 5            ; shift in 5 bits, isr is 31 now
-    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
-    in x, 5            ; shift in 5 bits, isr is 1023 now
-    set x, 3           ; load 3
-    in x, 2            ; shift in 2 bits, isr is 4095 now (128x32 - 1)
-    mov y, isr         ; copy 4095 to y
+    ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
+    set x, 31          ; x = 31 (max 5-bit value)
+    in x, 5            ; shift in 5 bits, isr = 31
+    set x, 31          ; x = 31
+    in x, 5            ; shift in 5 bits, isr = 1023
+    set x, 31          ; x = 31
+    in x, 4            ; shift in 4 bits, isr = 16383
+    mov y, isr         ; y = 16383
 
 .wrap_target
     mov x, y       ; load number of pixels
