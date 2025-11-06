@@ -110,20 +110,20 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define MAX_MEMORY_OVERHEAD \
   4  // reserve additional memory in framebuf for line oversampling
 
-uint16_t lcd_width;
-uint16_t lcd_height;
-uint16_t lcd_bitsperpixel;
-uint16_t lcd_pixelsperbyte;
-uint16_t lcd_bytes;
-uint16_t lcd_pixelsperframe;
-uint16_t lcd_wordsperplane;
-uint16_t lcd_bytesperplane;
-uint16_t lcd_planesperframe;
-uint16_t lcd_wordsperframe;
-uint16_t lcd_bytesperframe;
-uint16_t lcd_lineoversampling;
-uint16_t lcd_wordsperline;
-uint8_t lcd_mergeplanes;
+uint16_t source_width;
+uint16_t source_height;
+uint16_t source_bitsperpixel;
+uint16_t source_pixelsperbyte;
+uint16_t source_bytes;
+uint16_t source_pixelsperframe;
+uint16_t source_wordsperplane;
+uint16_t source_bytesperplane;
+uint16_t source_planesperframe;
+uint16_t source_wordsperframe;
+uint16_t source_bytesperframe;
+uint16_t source_lineoversampling;
+uint16_t source_wordsperline;
+uint8_t source_mergeplanes;
 
 // raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
@@ -304,10 +304,10 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
 #endif
 
   // round length to 4-byte blocks
-  h.len = (((lcd_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
-  ph.columns = lcd_width;
-  ph.rows = lcd_height;
-  ph.bitsperpixel = lcd_bitsperpixel;
+  h.len = (((source_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
+  ph.columns = source_width;
+  ph.rows = source_height;
+  ph.bitsperpixel = source_bitsperpixel;
 #ifdef USE_CRC
   ph.crc32 = crc32;
 #endif
@@ -318,7 +318,7 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
 
   spi_send_blocking((uint32_t *)&h, sizeof(h));
   spi_send_blocking((uint32_t *)&ph, sizeof(ph));
-  spi_send_dma((uint32_t *)pixbuf, lcd_bytes);
+  spi_send_dma((uint32_t *)pixbuf, source_bytes);
   start_spi();
 
   return true;
@@ -436,7 +436,7 @@ void dmd_dma_handler() {
   planebuf = (uint32_t *)lastplane;
   buf32_t *v;
   uint32_t res;
-  for (int i = 0; i < lcd_wordsperframe; i++) {
+  for (int i = 0; i < source_wordsperframe; i++) {
     v = (buf32_t *)planebuf;
     res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
     *planebuf = res;
@@ -450,17 +450,17 @@ void dmd_dma_handler() {
   // calculate offsets for each plane and cache these
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
-    offset[i] = i * lcd_wordsperplane;
+    offset[i] = i * source_wordsperplane;
   }
 
-  bool lcd_shiftplanesatmerge = (lcd_mergeplanes == MERGEPLANES_ADDSHIFT);
+  bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
   planebuf = (uint32_t *)lastplane;
-  for (int px = 0; px < lcd_wordsperplane; px++) {
+  for (int px = 0; px < source_wordsperplane; px++) {
     uint32_t pixval = 0;
-    for (int plane = 0; plane < lcd_planesperframe; plane++) {
+    for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
-      if (lcd_shiftplanesatmerge) {
+      if (source_shiftplanesatmerge) {
         v <<= plane;
       }
       pixval += v;
@@ -469,46 +469,46 @@ void dmd_dma_handler() {
   }
 
   // deal with whitestar line oversampling directly within framebuf
-  if (lcd_lineoversampling == LINEOVERSAMPLING_2X) {
+  if (source_lineoversampling == LINEOVERSAMPLING_2X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2;
     dst = src1 = framebuf;
-    src2 = framebuf + lcd_wordsperline;
+    src2 = framebuf + source_wordsperline;
     uint32_t v;
 
-    for (int l = 0; l < lcd_height; l++) {
-      for (int w = 0; w < lcd_wordsperline; w++) {
+    for (int l = 0; l < source_height; l++) {
+      for (int w = 0; w < source_wordsperline; w++) {
         v = src1[w] * 2 + src2[w];
         dst[w] = v;
       }
-      src1 += lcd_wordsperline * 2;  // source skips 2 lines forward
-      src2 += lcd_wordsperline * 2;
-      dst += lcd_wordsperline;  // destination skips only one line
+      src1 += source_wordsperline * 2;  // source skips 2 lines forward
+      src2 += source_wordsperline * 2;
+      dst += source_wordsperline;  // destination skips only one line
     }
-  } else if (lcd_lineoversampling == LINEOVERSAMPLING_4X) {
+  } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2, *src3, *src4;
     dst = src1 = framebuf;
-    src2 = src1 + lcd_wordsperline;
-    src3 = src2 + lcd_wordsperline;
-    src4 = src3 + lcd_wordsperline;
+    src2 = src1 + source_wordsperline;
+    src3 = src2 + source_wordsperline;
+    src4 = src3 + source_wordsperline;
     uint32_t v;
 
-    for (int l = 0; l < lcd_height; l++) {
-      for (int w = 0; w < lcd_wordsperline; w++) {
+    for (int l = 0; l < source_height; l++) {
+      for (int w = 0; w < source_wordsperline; w++) {
         // On SAM line order is really messed up :-(
         v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
         dst[w] = v;
       }
-      src1 += lcd_wordsperline * 4;  // source skips 4 lines forward
-      src2 += lcd_wordsperline * 4;
-      src3 += lcd_wordsperline * 4;
-      src4 += lcd_wordsperline * 4;
-      dst += lcd_wordsperline;  // destination skips only one line
+      src1 += source_wordsperline * 4;  // source skips 4 lines forward
+      src2 += source_wordsperline * 4;
+      src3 += source_wordsperline * 4;
+      src4 += source_wordsperline * 4;
+      dst += source_wordsperline;  // destination skips only one line
     }
   }
 #ifdef USE_CRC
-  *lastcrc = crc32(0, (const uint8_t *)framebuf, lcd_bytes);
+  *lastcrc = crc32(0, (const uint8_t *)framebuf, source_bytes);
 #endif
 
   frame_received = true;
@@ -553,13 +553,13 @@ bool init() {
     pio_sm_set_enabled(frame_pio, frame_sm, true);
     printf("WPC frame detection initialized\n");
 
-    lcd_width = 128;
-    lcd_height = 32;
-    lcd_bitsperpixel = 2;
-    lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 3;
-    lcd_lineoversampling = LINEOVERSAMPLING_NONE;
-    lcd_mergeplanes = MERGEPLANES_ADD;
+    source_width = 128;
+    source_height = 32;
+    source_bitsperpixel = 2;
+    source_pixelsperbyte = 8 / source_bitsperpixel;
+    source_planesperframe = 3;
+    source_lineoversampling = LINEOVERSAMPLING_NONE;
+    source_mergeplanes = MERGEPLANES_ADD;
   } else if (dmd_type == DMD_WHITESTAR) {
     dmd_pio = pio0;
     offset = pio_add_program(dmd_pio, &dmd_reader_whitestar_program);
@@ -576,15 +576,16 @@ bool init() {
     pio_sm_set_enabled(frame_pio, frame_sm, true);
     printf("Whitestar frame detection initialized\n");
 
-    lcd_width = 128;
-    lcd_height = 32;
-    lcd_bitsperpixel = 2;  // Whitestar is 2bpp
-    lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 1;  // in Whitestar, there's only one plane, containg
-                             // one LSB row followed by one MSB row and so on
-    lcd_lineoversampling =
+    source_width = 128;
+    source_height = 32;
+    source_bitsperpixel = 2;  // Whitestar is 2bpp
+    source_pixelsperbyte = 8 / source_bitsperpixel;
+    source_planesperframe =
+        1;  // in Whitestar, there's only one plane, containg
+            // one LSB row followed by one MSB row and so on
+    source_lineoversampling =
         LINEOVERSAMPLING_2X;  // in Whitestar each line is sent twice
-    lcd_mergeplanes = MERGEPLANES_NONE;
+    source_mergeplanes = MERGEPLANES_NONE;
   } else if (dmd_type == DMD_SPIKE1) {
     dmd_pio = pio0;
     offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
@@ -601,13 +602,13 @@ bool init() {
     pio_sm_set_enabled(frame_pio, frame_sm, true);
     printf("Spike frame detection initialized\n");
 
-    lcd_width = 128;
-    lcd_height = 32;
-    lcd_bitsperpixel = 4;
-    lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 4;  // in Spike there are 4 planes
-    lcd_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
-    lcd_mergeplanes = MERGEPLANES_ADDSHIFT;
+    source_width = 128;
+    source_height = 32;
+    source_bitsperpixel = 4;
+    source_pixelsperbyte = 8 / source_bitsperpixel;
+    source_planesperframe = 4;  // in Spike there are 4 planes
+    source_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
+    source_mergeplanes = MERGEPLANES_ADDSHIFT;
 
   } else if (dmd_type == DMD_SAM) {
     dmd_pio = pio0;
@@ -625,13 +626,13 @@ bool init() {
     pio_sm_set_enabled(frame_pio, frame_sm, true);
     printf("SAM frame detection initialized\n");
 
-    lcd_width = 128;
-    lcd_height = 32;
-    lcd_bitsperpixel = 4;
-    lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 1;                      // in SAM there is one plane
-    lcd_lineoversampling = LINEOVERSAMPLING_4X;  // with 4x line oversampling
-    lcd_mergeplanes = MERGEPLANES_NONE;
+    source_width = 128;
+    source_height = 32;
+    source_bitsperpixel = 4;
+    source_pixelsperbyte = 8 / source_bitsperpixel;
+    source_planesperframe = 1;                      // in SAM there is one plane
+    source_lineoversampling = LINEOVERSAMPLING_4X;  // with 4x line oversampling
+    source_mergeplanes = MERGEPLANES_NONE;
   } else if (dmd_type == DMD_DESEGA) {
     dmd_pio = pio0;
     offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
@@ -648,35 +649,35 @@ bool init() {
     pio_sm_set_enabled(frame_pio, frame_sm, true);
     printf("Data East/Sega frame detection initialized\n");
 
-    lcd_width = 128;
-    lcd_height = 32;
-    lcd_bitsperpixel = 2;  // Data East and Sega are 2bpp
-    lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 1;  // in DE-Sega, there's only one plane, containg
-                             // one LSB row followed by one MSB row and so on
-    lcd_lineoversampling =
+    source_width = 128;
+    source_height = 32;
+    source_bitsperpixel = 2;  // Data East and Sega are 2bpp
+    source_pixelsperbyte = 8 / source_bitsperpixel;
+    source_planesperframe = 1;  // in DE-Sega, there's only one plane, containg
+                                // one LSB row followed by one MSB row and so on
+    source_lineoversampling =
         LINEOVERSAMPLING_2X;  // in DE-Sega each line is sent twice
-    lcd_mergeplanes = MERGEPLANES_NONE;  // required for correct 2bpp merge
+    source_mergeplanes = MERGEPLANES_NONE;  // required for correct 2bpp merge
   } else {
     printf("Unknown DMD type, aborting\n");
     return false;
   }
 
   // Calculate display parameters
-  lcd_bytes = lcd_width * lcd_height * lcd_bitsperpixel / 8;
-  lcd_pixelsperframe = lcd_width * lcd_height;
-  lcd_wordsperplane = lcd_bytes / 4;
-  if (lcd_lineoversampling == LINEOVERSAMPLING_2X) {
-    lcd_wordsperplane *= 2;
-  } else if (lcd_lineoversampling == LINEOVERSAMPLING_4X) {
-    lcd_wordsperplane *= 4;
+  source_bytes = source_width * source_height * source_bitsperpixel / 8;
+  source_pixelsperframe = source_width * source_height;
+  source_wordsperplane = source_bytes / 4;
+  if (source_lineoversampling == LINEOVERSAMPLING_2X) {
+    source_wordsperplane *= 2;
+  } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
+    source_wordsperplane *= 4;
   }
-  lcd_bytesperplane = lcd_bytes;
-  lcd_wordsperframe = lcd_wordsperplane * lcd_planesperframe;
-  lcd_bytesperframe = lcd_bytesperplane * lcd_planesperframe;
-  lcd_wordsperline = lcd_width * lcd_bitsperpixel / 32;
+  source_bytesperplane = source_bytes;
+  source_wordsperframe = source_wordsperplane * source_planesperframe;
+  source_bytesperframe = source_bytesperplane * source_planesperframe;
+  source_wordsperline = source_width * source_bitsperpixel / 32;
 
-  printf("LCD buffer initialized");
+  printf("Source buffer initialized");
 
   // DMA for DMD reader
   dmd_dma_chan_cfg = dma_channel_get_default_config(dmd_dma_chan);
@@ -687,11 +688,11 @@ bool init() {
 
   // Configure the DMA channel. As soon as the PIO pushed a specified number of
   // words to its RX FIFO, the DMA transfer will be triggered.
-  // The amount of words to transfer is lcd_wordsperframe.
+  // The amount of words to transfer is source_wordsperframe.
   dma_channel_configure(dmd_dma_chan, &dmd_dma_chan_cfg,
                         NULL,  // Destination pointer, needs to be set later
                         &dmd_pio->rxf[dmd_sm],  // Source pointer
-                        lcd_wordsperframe,      // Number of transfers
+                        source_wordsperframe,   // Number of transfers
                         false                   // Do not yet start
   );
   // Enable DMA interrupt 0 to be triggered when the transfer is done.
