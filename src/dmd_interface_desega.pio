@@ -5,65 +5,51 @@
 .define DOTCLK 3
 .define SDATA 2
 
+.define FRAME_START_IRQ 4
+
+.define PUBLIC desega_DE DE
+.define PUBLIC desega_RDATA RDATA
+.define PUBLIC desega_DOTCLK DOTCLK
+.define PUBLIC desega_SDATA SDATA
+
 
 .program dmd_reader_desega
-
-; Send using an external clock on the SPI interface
-
-    ; initialize y with 4096 = number of pixels (128x32)
-    set x, 1
-    in x, 1
-    in null, 13
-    mov y, isr
+    ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
+    set x, 31          ; x = 31 (max 5-bit value)
+    in x, 5            ; shift in 5 bits, isr = 31
+    set x, 31          ; x = 31
+    in x, 5            ; shift in 5 bits, isr = 1023
+    set x, 15          ; x = 15
+    in x, 3            ; shift in 3 bits, isr = 8191
+    mov y, isr         ; y = 8191
 
 .wrap_target
 
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear 4
-    wait irq 4
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ
 
-
-; this is the loop for the most significant bit
-dotloop1:
+dotloop:
     wait 0 gpio DOTCLK  ; falling edge
-    wait 1 gpio DOTCLK  ; raising edge
-    in pins 1           ; read pin data
-    in null 1           ; right padding
-    jmp x-- dotloop1
-
-    mov x, y            ; load number of pixels
-    mov isr, null       ; reset shift counter
-
-; There's an empty line between LSB and HSB plane
-    wait 0 gpio RCLK
-    wait 1 gpio RCLK
-
-; this is the loop for the least significant bit
-; in this loop, the bit value is multipled by 2 by shifting it one bit
-dotloop2:
-    wait 0 gpio DOTCLK  ; falling edge
-    wait 1 gpio DOTCLK  ; raising edge
     in null 1           ; left padding
+    wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
-    jmp x-- dotloop2
-
+    jmp x-- dotloop
 
 .wrap
 
 
 .program dmd_framedetect_desega
-
 .wrap_target
 
 ; Data East/Sega frame start detection
 ; ~7.86µs is the longest state in which DE can be low without it being a new frame
-; Each nop [31] = 32 cycles = 256 ns @125 MHz
 ; We go with 10 µs to be safe and confirm the start of a new frame, which is 256ns * 39 = 9.98 µs
+
 wait_low:
     wait 0 gpio DE      ; Wait for DE to go low
-
     set x, 20           ; Use x as storage for 20 iterations
 
 delay_loop:
@@ -73,7 +59,7 @@ delay_loop:
 
     ; After ~10 µs, check if still low
     jmp pin, wait_low   ; If pin went high early → back to wait_low
-    irq 4               ; Pin remained low long enough → trigger IRQ
+    irq FRAME_START_IRQ ; Pin remained low long enough → frame started
 
     wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
     jmp wait_low        ; went high, time to go back to wait_low
@@ -86,16 +72,14 @@ static inline void dmd_reader_desega_program_init(PIO pio, uint sm, uint offset)
     pio_sm_config c = dmd_reader_desega_program_get_default_config(offset);
 
     // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, 2); // SDATA
+    sm_config_set_in_pins(&c, desega_SDATA);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 5, 1, false); // RCLK
-    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, desega_SDATA, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 5); // RCLK
-    pio_gpio_init(pio, 3); // DOTCLK
-    pio_gpio_init(pio, 2); // SDATA
+    pio_gpio_init(pio, desega_DOTCLK);
+    pio_gpio_init(pio, desega_SDATA);
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -118,10 +102,10 @@ static inline void dmd_framedetect_desega_program_init(PIO pio, uint sm, uint of
     pio_sm_config c = dmd_framedetect_desega_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 7, 1, false); // DE
+    pio_sm_set_consecutive_pindirs(pio, sm, desega_DE, 1, false);
 
     // Connect this GPIO to this PIO block
-    pio_gpio_init(pio, 7); // DE
+    pio_gpio_init(pio, desega_DE);
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);

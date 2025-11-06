@@ -376,8 +376,8 @@ int detect_dmd() {
     spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
 
-  } else if ((dotclk > 640000) && (dotclk < 700000) && (de > 5000) &&
-             (de < 5300) && (rdata > 3800) && (rdata < 4000)) {
+  } else if ((dotclk > 600000) && (dotclk < 680000) && (de > 4800) &&
+             (de < 5200) && (rdata > 2500) && (rdata < 2650)) {
     printf("Data East/Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
@@ -650,12 +650,13 @@ bool init() {
 
     lcd_width = 128;
     lcd_height = 32;
-    lcd_bitsperpixel = 2;  // Data East/ Sega is 2bpp
+    lcd_bitsperpixel = 2;  // Data East and Sega are 2bpp
     lcd_pixelsperbyte = 8 / lcd_bitsperpixel;
-    lcd_planesperframe = 2;  // in DE/Sega, there's a MSB and a LSB plane
+    lcd_planesperframe = 1;  // in DE-Sega, there's only one plane, containg
+                             // one LSB row followed by one MSB row and so on
     lcd_lineoversampling =
-        LINEOVERSAMPLING_2X;  // in DE/Sega each line is sent twice
-    lcd_mergeplanes = MERGEPLANES_ADDSHIFT;  // required for correct 2bpp merge
+        LINEOVERSAMPLING_2X;  // in DE-Sega each line is sent twice
+    lcd_mergeplanes = MERGEPLANES_NONE;  // required for correct 2bpp merge
   } else {
     printf("Unknown DMD type, aborting\n");
     return false;

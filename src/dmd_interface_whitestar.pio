@@ -5,25 +5,28 @@
 .define DOTCLK 3
 .define SDATA 2
 
+.define FRAME_START_IRQ 4
+
+.define PUBLIC whitestar_RDATA RDATA
+.define PUBLIC whitestar_DOTCLK DOTCLK
+.define PUBLIC whitestar_SDATA SDATA
 
 .program dmd_reader_whitestar
-
-
-    ; initialize y with 8192 = number of pixels ((128 x LSB + 128 x MSB) x 32)
-    set x, 1
-    in x, 1
-    in null, 13
-    mov y, isr
+    ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
+    set x, 31          ; x = 31 (max 5-bit value)
+    in x, 5            ; shift in 5 bits, isr = 31
+    set x, 31          ; x = 31
+    in x, 5            ; shift in 5 bits, isr = 1023
+    set x, 15          ; x = 15
+    in x, 3            ; shift in 3 bits, isr = 8191
+    mov y, isr         ; y = 8191
 
 .wrap_target
-
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear 4
-    wait irq 4
-
-    wait 1 gpio RDATA   ; raising edge indicates a new frame
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
@@ -36,15 +39,12 @@ dotloop:
 ; It is ignored because we already read the specified amount of dots and now wait for a new frame.
 .wrap
 
+
 .program dmd_framedetect_whitestar
-
 .wrap_target
-
-; synchronize on a new frame
     wait 0 gpio RDATA
     wait 1 gpio RDATA
-    irq 4
-
+    irq FRAME_START_IRQ
 .wrap
 
 
@@ -53,16 +53,14 @@ static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offs
     pio_sm_config c = dmd_reader_whitestar_program_get_default_config(offset);
 
     // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, 2); // SDATA
+    sm_config_set_in_pins(&c, whitestar_SDATA);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
-    pio_sm_set_consecutive_pindirs(pio, sm, 2, 2, false); // SDATA, DOTCLK
+    pio_sm_set_consecutive_pindirs(pio, sm, whitestar_SDATA, 2, false); // SDATA, DOTCLK
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 6); // RDATA
-    pio_gpio_init(pio, 3); // DOTCLK
-    pio_gpio_init(pio, 2); // SDATA
+    pio_gpio_init(pio, whitestar_DOTCLK);
+    pio_gpio_init(pio, whitestar_SDATA);
 
     // Shifting to left matches the customary MSB-first ordering of SPI.
     sm_config_set_in_shift(
@@ -85,10 +83,10 @@ static inline void dmd_framedetect_whitestar_program_init(PIO pio, uint sm, uint
     pio_sm_config c = dmd_framedetect_whitestar_program_get_default_config(offset);
 
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false); // RDATA
+    pio_sm_set_consecutive_pindirs(pio, sm, whitestar_RDATA, 1, false);
 
     // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 6); // RDATA
+    pio_gpio_init(pio, whitestar_RDATA);
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
