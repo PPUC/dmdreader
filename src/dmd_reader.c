@@ -1,12 +1,13 @@
 #include "dmd_reader.h"
+#include "dmd_reader_pins.h"
 
 #include <stdbool.h>
 #include <stdio.h>
 
 #include "crc32.h"
 #include "dmd_counter.pio.h"
-#include "dmd_interface_desega.pio.h"
-#include "dmd_interface_sam.pio.h"
+#include "dmd_interface_desega.h"
+#include "dmd_interface_sam.h"
 #include "dmd_interface_spike.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
@@ -35,10 +36,6 @@
  *  image with potentially more than one bit per pixel
  *
  */
-
-#define SPI_IRQ_PIN 17
-#define LED1_PIN 27
-#define LED2_PIN 28
 
 #ifdef SUPRESS_DUPLICATES
 #define USE_CRC
@@ -75,14 +72,6 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t padding;
   uint32_t crc32;  // crc32 of the pixel data
 } block_pix_crc_header_t;
-
-// SPI Defines
-#define SPI0 spi0
-#define SPI_BASE 16
-#define SPI0_MISO SPI_BASE
-#define SPI0_CS (SPI_BASE + 1)
-#define SPI0_SCK (SPI_BASE + 2)
-#define SPI0_MOSI (SPI_BASE + 3)
 
 // DMD types
 #define DMD_UNKNOWN 0
@@ -363,7 +352,7 @@ int detect_dmd() {
     printf("Data East/Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
-  
+
   } else if ((dotclk > 645000) && (dotclk < 665000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     printf("Stern Whitestar detected\n");
