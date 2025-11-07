@@ -8,7 +8,6 @@
 .define FRAME_START_IRQ 4
 
 .define PUBLIC desega_DE DE
-.define PUBLIC desega_RDATA RDATA
 .define PUBLIC desega_DOTCLK DOTCLK
 .define PUBLIC desega_SDATA SDATA
 
