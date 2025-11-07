@@ -1,4 +1,4 @@
-.include "dmd_interface_pins.inc"
+#include "dmd_reader_pins.inc"
 
 ; As all programs use the same configuration, the length of these programs need to be identical!
 
