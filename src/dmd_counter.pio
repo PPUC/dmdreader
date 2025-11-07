@@ -1,9 +1,4 @@
-.define DE 7
-.define RDATA 6
-.define RCLK 5
-.define COLLAT 4
-.define DOTCLK 3
-.define SDATA 2
+.include "dmd_interface_pins.inc"
 
 ; As all programs use the same configuration, the length of these programs need to be identical!
 

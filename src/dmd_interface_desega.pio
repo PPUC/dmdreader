@@ -1,10 +1,4 @@
-.define DE 7
-.define RDATA 6
-.define RCLK 5
-.define COLLAT 4
-.define DOTCLK 3
-.define SDATA 2
-.define FRAME_START_IRQ 4
+.include "dmd_interface_pins.inc"
 
 .program dmd_reader_desega
     ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
