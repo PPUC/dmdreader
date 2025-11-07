@@ -4,7 +4,7 @@
 #include "dmd_interface_wpc.pio.h"
 #include "dmd_reader_pins.h"
 #include "hardware/gpio.h"
-#include "hardware/pio.h
+#include "hardware/pio.h"
 
 void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);

@@ -4,7 +4,7 @@
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_reader_pins.h"
 #include "hardware/gpio.h"
-#include "hardware/pio.h
+#include "hardware/pio.h"
 
 void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_config c = dmd_reader_whitestar_program_get_default_config(offset);
