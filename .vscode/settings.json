@@ -19,5 +19,11 @@
     "cmake.buildBeforeRun": true,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "pio.h": "c",
+        "irq.h": "c",
+        "dmd_interface_sam.pio.h": "c",
+        "dmd_interface_wpc.pio.h": "c"
+    },
 }
 
