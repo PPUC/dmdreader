@@ -99,6 +99,8 @@ static inline void dmd_reader_desega_program_init(PIO pio, uint sm, uint offset)
 % c-sdk {
 static inline void dmd_framedetect_desega_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = dmd_framedetect_desega_program_get_default_config(offset);
+    // DE is used for jump control
+    sm_config_set_jmp_pin(&c, desega_DE);
 
     // Set the pin direction at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, desega_DE, 1, false);
