@@ -41,13 +41,13 @@ dotloop:
 
 
 .program dmd_framedetect_spike
-; Frame detection in Spike:
-; white for RDATA to go H
-; check if it is still H 150-250ms later - in this case, this is the most significant bit
-; which is the last plane
-; now wait for RDATA to go L and H again, this is the beginning of a new frame
-; based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
-; we use 24576 here, because it0s 0b11 << 13
+    ; Frame detection in Spike:
+    ; white for RDATA to go H
+    ; check if it is still H 150-250ms later - in this case, this is the most significant bit
+    ; which is the last plane
+    ; now wait for RDATA to go L and H again, this is the beginning of a new frame
+    ; based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
+    ; we use 24576 here, because it0s 0b11 << 13
 
     ; initialize isr with 24576
     set x, 3
