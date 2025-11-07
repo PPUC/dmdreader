@@ -1,4 +1,4 @@
-#include "dmd_reader_pins.h"
+#import "dmd_reader_pins.h"
 
 ; As all programs use the same configuration, the length of these programs need to be identical!
 

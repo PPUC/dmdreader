@@ -1,4 +1,4 @@
-#include "dmd_reader_pins.h"
+#import "dmd_reader_pins.h"
 
 .define FRAME_START_IRQ 4
 
