@@ -6,7 +6,7 @@
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 
-static inline void dmd_reader_desega_program_init(PIO pio, uint sm,
+void dmd_reader_desega_program_init(PIO pio, uint sm,
                                                   uint offset) {
   pio_sm_config c = dmd_reader_desega_program_get_default_config(offset);
 
@@ -35,7 +35,7 @@ static inline void dmd_reader_desega_program_init(PIO pio, uint sm,
   pio_sm_init(pio, sm, offset, &c);
 }
 
-static inline void dmd_framedetect_desega_program_init(PIO pio, uint sm,
+void dmd_framedetect_desega_program_init(PIO pio, uint sm,
                                                        uint offset) {
   pio_sm_config c = dmd_framedetect_desega_program_get_default_config(offset);
   // DE is used for jump control

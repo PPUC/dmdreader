@@ -16,7 +16,6 @@
     jmp x-- clockdecrement
 clockdecrement:
     wait 1 gpio DOTCLK
-
 .wrap
 
 .program dmd_count_de
@@ -28,7 +27,6 @@ clockdecrement:
     jmp x-- clockdecrement
 clockdecrement:
     wait 1 gpio DE
-
 .wrap
 
 .program dmd_count_rdata
@@ -40,7 +38,6 @@ clockdecrement:
     jmp x-- clockdecrement
 clockdecrement:
     wait 1 gpio RDATA
-
 .wrap
 
 .program dmd_count_rclk
@@ -52,39 +49,4 @@ clockdecrement:
     jmp x-- clockdecrement
 clockdecrement:
     wait 1 gpio RCLK
-
 .wrap
-
-
-% c-sdk {
-static inline void dmd_counter_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_count_dotclk_program_get_default_config(offset);
-
-    // Set the IN base pin
-    sm_config_set_in_pins(&c, 7); // DE
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 3, 1, false); // DOTCLK
-    pio_sm_set_consecutive_pindirs(pio, sm, 5, 3, false); // RCLK, RDATA, DE
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, 3); // DOTCLK
-    pio_gpio_init(pio, 7); // DE
-    pio_gpio_init(pio, 6); // RDATA
-    pio_gpio_init(pio, 5); // RCLK
-
-    // Shifting to left matches the customary MSB-first ordering of SPI.
-    sm_config_set_in_shift(
-        &c,
-        false,  // Shift-to-right = false
-        true,  // Autopull enabled
-        32     // Autopull threshold = 32
-    );
-
-    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}

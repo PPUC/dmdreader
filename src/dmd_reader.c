@@ -5,12 +5,12 @@
 #include <stdio.h>
 
 #include "crc32.h"
-#include "dmd_counter.pio.h"
+#include "dmd_counter.h"
 #include "dmd_interface_desega.h"
 #include "dmd_interface_sam.h"
-#include "dmd_interface_spike.pio.h"
-#include "dmd_interface_whitestar.pio.h"
-#include "dmd_interface_wpc.pio.h"
+#include "dmd_interface_spike.h"
+#include "dmd_interface_whitestar.h"
+#include "dmd_interface_wpc.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"

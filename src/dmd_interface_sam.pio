@@ -4,13 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-
 .define FRAME_START_IRQ 4
-
-.define PUBLIC sam_RCLK RCLK
-.define PUBLIC sam_RDATA RDATA
-.define PUBLIC sam_DOTCLK DOTCLK
-.define PUBLIC sam_SDATA SDATA
 
 .program dmd_reader_sam
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
@@ -37,7 +31,7 @@ dotloop:
     jmp x-- dotloop
 .wrap
 
-
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_sam
 .wrap_target
     wait 0 gpio RDATA

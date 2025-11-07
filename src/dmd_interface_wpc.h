@@ -1,23 +1,23 @@
-#ifndef DMD_INTERFACE_SAM_H
-#define DMD_INTERFACE_SAM_H
+#ifndef DMD_INTERFACE_WPC_H
+#define DMD_INTERFACE_WPC_H
 
-#include "dmd_interface_sam.pio.h"
+#include "dmd_interface_wpc.pio.h"
 #include "dmd_reader_pins.h"
 #include "hardware/gpio.h"
-#include "hardware/pio.h"
+#include "hardware/pio.h
 
-void dmd_reader_sam_program_init(PIO pio, uint sm, uint offset) {
-  pio_sm_config c = dmd_reader_sam_program_get_default_config(offset);
+void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
+  pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
 
   // Set the IN pin, we don't use any other
   sm_config_set_in_pins(&c, SDATA);
 
-  // Set the pin direction at the PIO
-  pio_sm_set_consecutive_pindirs(pio, sm, SDATA, 2, false);  // SDATA, DOTCLK
-
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, DOTCLK);
   pio_gpio_init(pio, SDATA);
+
+  // Set the pin direction at the PIO
+  pio_sm_set_consecutive_pindirs(pio, sm, SDATA, 2, false);  // SDATA, DOTCLK
 
   // Shifting to left matches the customary MSB-first ordering of SPI.
   sm_config_set_in_shift(&c,
@@ -33,18 +33,20 @@ void dmd_reader_sam_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_init(pio, sm, offset, &c);
 }
 
-void dmd_framedetect_sam_program_init(PIO pio, uint sm,
-                                                    uint offset) {
-  pio_sm_config c = dmd_framedetect_sam_program_get_default_config(offset);
-
-  // Set the pin direction at the PIO
-  pio_sm_set_consecutive_pindirs(pio, sm, RDATA, 1, false);
+void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offset) {
+  pio_sm_config c = dmd_framedetect_wpc_program_get_default_config(offset);
 
   // Connect these GPIOs to this PIO block
+  pio_gpio_init(pio, DE);
   pio_gpio_init(pio, RDATA);
+  pio_gpio_init(pio, DOTCLK);
+
+  // Set the pin direction at the PIO
+  pio_sm_set_consecutive_pindirs(pio, sm, RDATA, 2, false);  // RDATA, DE
+  pio_sm_set_consecutive_pindirs(pio, sm, DOTCLK, 1, false);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
 }
 
-#endif  // DMD_INTERFACE_SAM_H
+#endif  // DMD_INTERFACE_WPC_H

@@ -4,13 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-
 .define FRAME_START_IRQ 4
-
-.define PUBLIC desega_DE DE
-.define PUBLIC desega_DOTCLK DOTCLK
-.define PUBLIC desega_SDATA SDATA
-
 
 .program dmd_reader_desega
     ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
@@ -36,10 +30,9 @@ dotloop:
     wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
     jmp x-- dotloop
-
 .wrap
 
-
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_desega
 .wrap_target
 
@@ -62,5 +55,4 @@ delay_loop:
 
     wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
     jmp wait_low        ; went high, time to go back to wait_low
-
 .wrap
