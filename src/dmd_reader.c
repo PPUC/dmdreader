@@ -160,7 +160,7 @@ uint dmd_int = 0;
 
 volatile bool frame_received = false;
 
-/* ---------- Stable-High Check on SPI_IRQ_PIN at boot ---------- */
+/* ---------- Stable-High Check on SPI0_CS at boot ---------- */
 
 static bool pin_is_stably_high(uint pin, uint32_t stable_ms, uint32_t sample_ms,
                                uint32_t timeout_ms) {
@@ -251,29 +251,29 @@ void spi_abort() {
 }
 
 /**
- * @brief Notify on pin SPI_IRQ_PIN that data are ready on SPI
+ * @brief Notify on pin SPI0_CS that data are ready on SPI
  *
  * The SPI master (the Pico is slave) should start a data transfer when this
- * signal is received It toggles pin SPI_IRQ_PIN to H
+ * signal is received It toggles pin SPI0_CS to H
  *
  */
-void start_spi() { gpio_put(SPI_IRQ_PIN, 1); }
+void start_spi() { gpio_put(SPI0_CS, 1); }
 
 /**
- * @brief Set pin SPI_IRQ_PIN to L to signal that there is no active SPI data
+ * @brief Set pin SPI0_CS to L to signal that there is no active SPI data
  * transfer
  *
  */
-void finish_spi() { gpio_put(SPI_IRQ_PIN, 0); }
+void finish_spi() { gpio_put(SPI0_CS, 0); }
 
 /**
- * @brief A simple debug procedure that toggles the IRQ pin multiple times
+ * @brief A simple debug procedure that toggles the SPI0_CS pin multiple times
  */
 void spi_notify_onoff(int count) {
   for (int i = 0; i < count; i++) {
-    gpio_put(SPI_IRQ_PIN, 1);
+    gpio_put(SPI0_CS, 1);
     sleep_ms(100);
-    gpio_put(SPI_IRQ_PIN, 0);
+    gpio_put(SPI0_CS, 0);
     sleep_ms(100);
   }
 }
@@ -508,10 +508,10 @@ bool init() {
 
   printf("DMD reader starting\n");
 
-  // this is uses to notify the Pi that data is available
-  gpio_init(SPI_IRQ_PIN);
-  gpio_set_dir(SPI_IRQ_PIN, GPIO_OUT);
-  gpio_put(SPI_IRQ_PIN, 0);
+  // this is used to notify the Pi that data is available
+  gpio_init(SPI0_CS);
+  gpio_set_dir(SPI0_CS, GPIO_OUT);
+  gpio_put(SPI0_CS, 0);
   printf("IRQ pin initialized\n");
 
   int dmd_type = DMD_UNKNOWN;
@@ -737,11 +737,11 @@ bool init() {
 int read_dmd() {
   stdio_init_all();
 
-  gpio_init(SPI_IRQ_PIN);
-  gpio_set_dir(SPI_IRQ_PIN, GPIO_IN);
-  gpio_disable_pulls(SPI_IRQ_PIN);
+  gpio_init(SPI0_CS);
+  gpio_set_dir(SPI0_CS, GPIO_IN);
+  gpio_disable_pulls(SPI0_CS);
 
-  if (pin_is_stably_high(SPI_IRQ_PIN, 100, 5, 1500)) {
+  if (pin_is_stably_high(SPI0_CS, 100, 5, 1500)) {
     return -1;
   }
 
