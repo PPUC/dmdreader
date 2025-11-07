@@ -358,8 +358,14 @@ int detect_dmd() {
     spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
 
-  } else if ((dotclk > 640000) && (dotclk < 700000) && (de > 5000) &&
-             (de < 5300) && (rdata > 70) && (rdata < 85)) {
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4900) &&
+             (de < 5100) && (rdata > 75) && (rdata < 2600)) {
+    printf("Data East/Sega detected\n");
+    spi_notify_onoff(DMD_DESEGA);
+    return DMD_DESEGA;
+  
+  } else if ((dotclk > 645000) && (dotclk < 665000) && (de > 5075) &&
+             (de < 5200) && (rdata > 75) && (rdata < 85)) {
     printf("Stern Whitestar detected\n");
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
@@ -375,12 +381,6 @@ int detect_dmd() {
     printf("Stern SAM detected\n");
     spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
-
-  } else if ((dotclk > 600000) && (dotclk < 680000) && (de > 4800) &&
-             (de < 5200) && (rdata > 2500) && (rdata < 2650)) {
-    printf("Data East/Sega detected\n");
-    spi_notify_onoff(DMD_DESEGA);
-    return DMD_DESEGA;
   }
 
   spi_notify_onoff(1);
