@@ -1,4 +1,10 @@
-.include "dmd_interface_pins.inc"
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
+.define PLANE_START_IRQ 4
 
 .program dmd_reader_wpc
     set x, 31          ; load 31, 5 bits is max allowed (0b11111)
