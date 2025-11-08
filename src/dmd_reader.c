@@ -10,6 +10,7 @@
 #include "dmd_interface_spike.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
+#include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
@@ -23,6 +24,9 @@
 
 // supress duplicate frames (implies USE_CRC)
 #define SUPRESS_DUPLICATES
+
+// set to officially supported 200MHz clock
+#define SYS_CLK_MHZ 200
 
 /**
  * Glossary
@@ -518,6 +522,9 @@ bool init() {
   stdio_init_all();
 
   printf("DMD reader starting\n");
+
+  uint32_t freq = clock_get_hz(clk_sys);
+  printf("System clock: %.2f MHz\n", freq / 1e6);
 
   // this is uses to notify the Pi that data is available
   gpio_init(SPI_IRQ_PIN);
