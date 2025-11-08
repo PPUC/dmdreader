@@ -4,14 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-
-.define PLANE_START_IRQ 4
-
-.define PUBLIC spike_RCLK RCLK
-.define PUBLIC spike_RDATA RDATA
-.define PUBLIC spike_DOTCLK DOTCLK
-.define PUBLIC spike_SDATA SDATA
-
+.define FRAME_START_IRQ 4
 
 .program dmd_reader_spike
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
@@ -27,8 +20,8 @@
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear PLANE_START_IRQ
-    wait irq PLANE_START_IRQ
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
@@ -36,18 +29,17 @@ dotloop:
     in null 3           ; left padding 3x zero
     in pins 1           ; read pin data
     jmp x-- dotloop
-
 .wrap
 
-
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_spike
-; Frame detection in Spike:
-; white for RDATA to go H
-; check if it is still H 150-250ms later - in this case, this is the most significant bit
-; which is the last plane
-; now wait for RDATA to go L and H again, this is the beginning of a new frame
-; based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
-; we use 24576 here, because it0s 0b11 << 13
+    ; Frame detection in Spike:
+    ; white for RDATA to go H
+    ; check if it is still H 150-250ms later - in this case, this is the most significant bit
+    ; which is the last plane
+    ; now wait for RDATA to go L and H again, this is the beginning of a new frame
+    ; based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
+    ; we use 24576 here, because it0s 0b11 << 13
 
     ; initialize isr with 24576
     set x, 3
@@ -81,61 +73,5 @@ lineloop:
     wait 0 gpio RCLK
     jmp x-- lineloop
 
-    irq PLANE_START_IRQ
-
+    irq FRAME_START_IRQ
 .wrap
-
-% c-sdk {
-static inline void dmd_reader_spike_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_reader_spike_program_get_default_config(offset);
-
-    // Set the IN base pin to the provided `pin` parameter. This is the data pin, we don't use any other
-    sm_config_set_in_pins(&c, spike_SDATA);
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, spike_SDATA, 2, false); // SDATA, DOTCLK
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, spike_DOTCLK);
-    pio_gpio_init(pio, spike_SDATA);
-
-    // Shifting to left matches the customary MSB-first ordering of SPI.
-    sm_config_set_in_shift(
-        &c,
-        false, // Shift-to-right = false
-        true,  // Autopull enabled
-        32     // Autopull threshold
-    );
-
-    // We only receive, so disable the TX FIFO to make the RX FIFO deeper.
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}
-
-% c-sdk {
-static inline void dmd_framedetect_spike_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_framedetect_spike_program_get_default_config(offset);
-    // RDATA is used for jump control
-    sm_config_set_jmp_pin(&c, spike_RDATA);
-
-    // Shifting to left matches the customary MSB-first ordering of SPI.
-    sm_config_set_in_shift(
-        &c,
-        false, // Shift-to-right = false
-        false, // No autopull, we don't read data from this SM
-        32     // Autopull threshold
-    );
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, spike_RCLK, 2, false); // RCLK, RDATA
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, spike_RDATA);
-    pio_gpio_init(pio, spike_RCLK);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}
