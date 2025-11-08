@@ -73,6 +73,9 @@ static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offs
     // We only send, so disable the TX FIFO to make the RX FIFO deeper.
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
+    // For the 200MHz clock
+    sm_config_set_clkdiv(&c,1.6f);
+
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
 }
@@ -87,6 +90,9 @@ static inline void dmd_framedetect_whitestar_program_init(PIO pio, uint sm, uint
 
     // Connect these GPIOs to this PIO block
     pio_gpio_init(pio, whitestar_RDATA);
+
+    // For the 200MHz clock
+    sm_config_set_clkdiv(&c,1.6f);
 
     // Load our configuration, do not yet start the program
     pio_sm_init(pio, sm, offset, &c);
