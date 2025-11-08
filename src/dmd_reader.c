@@ -1,16 +1,12 @@
 #include "dmd_reader.h"
-#include "dmd_reader_pins.h"
 
 #include <stdbool.h>
 #include <stdio.h>
 
 #include "crc32.h"
 #include "dmd_counter.h"
-#include "dmd_interface_desega.h"
-#include "dmd_interface_sam.h"
-#include "dmd_interface_spike.h"
-#include "dmd_interface_whitestar.h"
-#include "dmd_interface_wpc.h"
+#include "dmd_interface.h"
+#include "dmd_reader_pins.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
@@ -531,7 +527,8 @@ bool init() {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_wpc_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_wpc_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, c);
       printf("WPC DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
@@ -556,7 +553,8 @@ bool init() {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_whitestar_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_whitestar_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config c = dmd_reader_whitestar_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, c);
       printf("Whitestar DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
@@ -564,7 +562,7 @@ bool init() {
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_whitestar_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_whitestar_program_init(frame_pio, frame_sm, offset);
+      dmd_framedetect_whitestar_sam_program_init(frame_pio, frame_sm, offset);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Whitestar frame detection initialized\n");
 
@@ -584,7 +582,8 @@ bool init() {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_spike_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config c = dmd_reader_spike_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, c);
       printf("Spike DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
@@ -609,7 +608,8 @@ bool init() {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_sam_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_sam_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config c = dmd_reader_sam_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, c);
       printf("SAM DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
@@ -617,7 +617,7 @@ bool init() {
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_sam_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_sam_program_init(frame_pio, frame_sm, offset);
+      dmd_framedetect_whitestar_sam_program_init(frame_pio, frame_sm, offset);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("SAM frame detection initialized\n");
 
@@ -635,7 +635,8 @@ bool init() {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_desega_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config c = dmd_reader_desega_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, c);
       printf("Data East/Sega DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
