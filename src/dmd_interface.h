@@ -10,7 +10,8 @@
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 
-void dmd_reader_program_init(PIO pio, uint sm, pio_sm_config c) {
+// Init the DMD reader (dots) PIO program, common for all DMD types.
+void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
   // Set the IN pin, we don't use any other
   sm_config_set_in_pins(&c, SDATA);
 
@@ -35,6 +36,7 @@ void dmd_reader_program_init(PIO pio, uint sm, pio_sm_config c) {
   pio_sm_init(pio, sm, offset, &c);
 }
 
+// Init the framedetect PIO program for Data East and Sega DMDs.
 void dmd_framedetect_desega_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_config c = dmd_framedetect_desega_program_get_default_config(offset);
   // DE is used for jump control
@@ -50,6 +52,7 @@ void dmd_framedetect_desega_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_init(pio, sm, offset, &c);
 }
 
+// Init the framedetect PIO program for Whitestar and SAM DMDs.
 void dmd_framedetect_whitestar_sam_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_config c =
       dmd_framedetect_whitestar_program_get_default_config(offset);
@@ -64,6 +67,7 @@ void dmd_framedetect_whitestar_sam_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_init(pio, sm, offset, &c);
 }
 
+// Init the framedetect PIO program for Spike DMDs.
 void dmd_framedetect_spike_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_config c = dmd_framedetect_spike_program_get_default_config(offset);
   // RDATA is used for jump control
@@ -87,6 +91,7 @@ void dmd_framedetect_spike_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_init(pio, sm, offset, &c);
 }
 
+// Init the framedetect PIO program for WPC DMDs.
 void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offset) {
   pio_sm_config c = dmd_framedetect_wpc_program_get_default_config(offset);
 
