@@ -671,7 +671,7 @@ bool init() {
       offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
       pio_sm_config frame_config =
-          dmd_framedetect_sam_program_get_default_config(offset);
+          dmd_framedetect_desega_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, DE);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
