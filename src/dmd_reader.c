@@ -534,7 +534,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint8_t input_pins[] = {RDATA, DE, DOTCLK};
+      uint input_pins[] = {RDATA, DE, DOTCLK};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_wpc_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
@@ -566,7 +566,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint8_t input_pins[] = {RDATA};
+      uint input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_whitestar_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
@@ -601,7 +601,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint8_t input_pins[] = {RCLK, RDATA};
+      uint input_pins[] = {RCLK, RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
@@ -633,7 +633,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint8_t input_pins[] = {RDATA};
+      uint input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_sam_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
@@ -666,7 +666,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint8_t input_pins[] = {DE};
+      uint input_pins[] = {DE};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
