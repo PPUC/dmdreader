@@ -137,7 +137,6 @@ uint spi_sm;
 // DMD reader PIO
 PIO dmd_pio;
 uint dmd_sm;
-pio_sm_config sm_config;
 
 // Frame detection PIO
 PIO frame_pio;
@@ -524,20 +523,25 @@ bool init() {
 
   // Initialize DMD reader
   switch (dmd_type) {
-    case DMD_WPC:
+    case DMD_WPC: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_wpc_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      sm_config = dmd_reader_wpc_program_get_default_config(offset);
-      dmd_reader_program_init(dmd_pio, dmd_sm, offset, sm_config);
+      pio_sm_config dmd_config =
+          dmd_reader_wpc_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("WPC DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint8_t input_pins[] = {RDATA, DE, DOTCLK};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_wpc_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_wpc_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_wpc_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 3);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("WPC frame detection initialized\n");
 
@@ -549,21 +553,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
+    }
 
-    case DMD_WHITESTAR:
+    case DMD_WHITESTAR: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_whitestar_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      sm_config = dmd_reader_whitestar_program_get_default_config(offset);
-      dmd_reader_program_init(dmd_pio, dmd_sm, offset, sm_config);
+      pio_sm_config dmd_config =
+          dmd_reader_whitestar_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("Whitestar DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint8_t input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_whitestar_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_whitestar_sam_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_whitestar_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Whitestar frame detection initialized\n");
 
@@ -578,21 +588,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
       break;
+    }
 
-    case DMD_SPIKE1:
+    case DMD_SPIKE1: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      sm_config = dmd_reader_spike_program_get_default_config(offset);
-      dmd_reader_program_init(dmd_pio, dmd_sm, offset, sm_config);
+      pio_sm_config dmd_config =
+          dmd_reader_spike_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("Spike DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint8_t input_pins[] = {RCLK, RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_spike_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_spike_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 2);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Spike frame detection initialized\n");
 
@@ -604,21 +620,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
       source_mergeplanes = MERGEPLANES_ADDSHIFT;
       break;
+    }
 
-    case DMD_SAM:
+    case DMD_SAM: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_sam_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      sm_config = dmd_reader_sam_program_get_default_config(offset);
-      dmd_reader_program_init(dmd_pio, dmd_sm, offset, sm_config);
+      pio_sm_config dmd_config =
+          dmd_reader_sam_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("SAM DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint8_t input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_sam_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_whitestar_sam_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_sam_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("SAM frame detection initialized\n");
 
@@ -631,21 +653,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
       break;
+    }
 
-    case DMD_DESEGA:
+    case DMD_DESEGA: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      sm_config = dmd_reader_desega_program_get_default_config(offset);
-      dmd_reader_program_init(dmd_pio, dmd_sm, offset, sm_config);
+      pio_sm_config dmd_config =
+          dmd_reader_desega_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("Data East/Sega DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint8_t input_pins[] = {DE};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_desega_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_sam_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1, DE);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Data East/Sega frame detection initialized\n");
 
@@ -658,8 +686,9 @@ bool init() {
       source_planesperframe = 1;
       // in DE-Sega each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
-      source_mergeplanes = MERGEPLANES_NONE;  // required for correct 2bpp merge
+      source_mergeplanes = MERGEPLANES_NONE;
       break;
+    }
 
     default:
       printf("Unknown DMD type, aborting\n");
