@@ -7,6 +7,7 @@
 #include "dmd_counter.h"
 #include "dmd_interface.h"
 #include "dmd_reader_pins.h"
+#include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
@@ -20,6 +21,9 @@
 
 // supress duplicate frames (implies USE_CRC)
 #define SUPRESS_DUPLICATES
+
+// set to officially supported 200MHz clock
+#define SYS_CLK_MHZ 200
 
 /**
  * Glossary
@@ -503,6 +507,11 @@ bool init() {
   stdio_init_all();
 
   printf("DMD reader starting\n");
+
+  // overclock to achieve higher SPI transfer speed 
+  set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
+  uint32_t freq = clock_get_hz(clk_sys);
+  printf("System clock: %.2f MHz\n", freq / 1e6);
 
   // this is used to notify the Pi that data is available
   gpio_init(SPI0_CS);
