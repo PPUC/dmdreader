@@ -4,13 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-
 .define PLANE_START_IRQ 4
-
-.define PUBLIC wpc_DE DE
-.define PUBLIC wpc_RDATA RDATA
-.define PUBLIC wpc_DOTCLK DOTCLK
-.define PUBLIC wpc_SDATA SDATA
 
 .program dmd_reader_wpc
     set x, 31          ; load 31, 5 bits is max allowed (0b11111)
@@ -36,7 +30,7 @@ plane_loop:
     jmp x-- plane_loop
 .wrap
 
-
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_wpc
 .wrap_target
     wait 0 gpio RDATA
@@ -46,58 +40,3 @@ plane_loop:
     nop [31]
     irq PLANE_START_IRQ
 .wrap
-
-
-% c-sdk {
-static inline void dmd_reader_wpc_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_reader_wpc_program_get_default_config(offset);
-
-    // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, wpc_SDATA);
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, wpc_DOTCLK);
-    pio_gpio_init(pio, wpc_SDATA);
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, wpc_SDATA, 2, false); // SDATA, DOTCLK
-
-    // Shifting to left matches the customary MSB-first ordering of SPI.
-    sm_config_set_in_shift(
-        &c,
-        false, // Shift-to-right = false
-        true,  // Autopull enabled
-        32     // Autopull threshold
-    );
-
-    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // For the 200MHz clock
-    sm_config_set_clkdiv(&c,1.6f);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}
-
-% c-sdk {
-static inline void dmd_framedetect_wpc_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_framedetect_wpc_program_get_default_config(offset);
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, wpc_DE);
-    pio_gpio_init(pio, wpc_RDATA);
-    pio_gpio_init(pio, wpc_DOTCLK);
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, wpc_RDATA, 2, false); // RDATA, DE
-    pio_sm_set_consecutive_pindirs(pio, sm, wpc_DOTCLK, 1, false);
-
-    // For the 200MHz clock
-    sm_config_set_clkdiv(&c,1.6f);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}

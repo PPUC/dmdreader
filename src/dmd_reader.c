@@ -4,12 +4,9 @@
 #include <stdio.h>
 
 #include "crc32.h"
-#include "dmd_counter.pio.h"
-#include "dmd_interface_desega.pio.h"
-#include "dmd_interface_sam.pio.h"
-#include "dmd_interface_spike.pio.h"
-#include "dmd_interface_whitestar.pio.h"
-#include "dmd_interface_wpc.pio.h"
+#include "dmd_counter.h"
+#include "dmd_interface.h"
+#include "dmd_reader_pins.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
@@ -39,10 +36,6 @@
  *  image with potentially more than one bit per pixel
  *
  */
-
-#define SPI_IRQ_PIN 17
-#define LED1_PIN 27
-#define LED2_PIN 28
 
 #ifdef SUPRESS_DUPLICATES
 #define USE_CRC
@@ -79,14 +72,6 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t padding;
   uint32_t crc32;  // crc32 of the pixel data
 } block_pix_crc_header_t;
-
-// SPI Defines
-#define SPI0 spi0
-#define SPI_BASE 16
-#define SPI0_MISO SPI_BASE
-#define SPI0_CS (SPI_BASE + 1)
-#define SPI0_SCK (SPI_BASE + 2)
-#define SPI0_MOSI (SPI_BASE + 3)
 
 // DMD types
 #define DMD_UNKNOWN 0
@@ -175,7 +160,7 @@ uint dmd_int = 0;
 
 volatile bool frame_received = false;
 
-/* ---------- Stable-High Check on SPI_IRQ_PIN at boot ---------- */
+/* ---------- Stable-High Check on SPI0_CS at boot ---------- */
 
 static bool pin_is_stably_high(uint pin, uint32_t stable_ms, uint32_t sample_ms,
                                uint32_t timeout_ms) {
@@ -266,29 +251,29 @@ void spi_abort() {
 }
 
 /**
- * @brief Notify on pin SPI_IRQ_PIN that data are ready on SPI
+ * @brief Notify on pin SPI0_CS that data are ready on SPI
  *
  * The SPI master (the Pico is slave) should start a data transfer when this
- * signal is received It toggles pin SPI_IRQ_PIN to H
+ * signal is received It toggles pin SPI0_CS to H
  *
  */
-void start_spi() { gpio_put(SPI_IRQ_PIN, 1); }
+void start_spi() { gpio_put(SPI0_CS, 1); }
 
 /**
- * @brief Set pin SPI_IRQ_PIN to L to signal that there is no active SPI data
+ * @brief Set pin SPI0_CS to L to signal that there is no active SPI data
  * transfer
  *
  */
-void finish_spi() { gpio_put(SPI_IRQ_PIN, 0); }
+void finish_spi() { gpio_put(SPI0_CS, 0); }
 
 /**
- * @brief A simple debug procedure that toggles the IRQ pin multiple times
+ * @brief A simple debug procedure that toggles the SPI0_CS pin multiple times
  */
 void spi_notify_onoff(int count) {
   for (int i = 0; i < count; i++) {
-    gpio_put(SPI_IRQ_PIN, 1);
+    gpio_put(SPI0_CS, 1);
     sleep_ms(100);
-    gpio_put(SPI_IRQ_PIN, 0);
+    gpio_put(SPI0_CS, 0);
     sleep_ms(100);
   }
 }
@@ -367,7 +352,7 @@ int detect_dmd() {
     printf("Data East/Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
-  
+
   } else if ((dotclk > 645000) && (dotclk < 665000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     printf("Stern Whitestar detected\n");
@@ -523,14 +508,15 @@ bool init() {
 
   printf("DMD reader starting\n");
 
+  // overclock to achieve higher SPI transfer speed 
   set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
   uint32_t freq = clock_get_hz(clk_sys);
   printf("System clock: %.2f MHz\n", freq / 1e6);
 
-  // this is uses to notify the Pi that data is available
-  gpio_init(SPI_IRQ_PIN);
-  gpio_set_dir(SPI_IRQ_PIN, GPIO_OUT);
-  gpio_put(SPI_IRQ_PIN, 0);
+  // this is used to notify the Pi that data is available
+  gpio_init(SPI0_CS);
+  gpio_set_dir(SPI0_CS, GPIO_OUT);
+  gpio_put(SPI0_CS, 0);
   printf("IRQ pin initialized\n");
 
   int dmd_type = DMD_UNKNOWN;
@@ -546,19 +532,25 @@ bool init() {
 
   // Initialize DMD reader
   switch (dmd_type) {
-    case DMD_WPC:
+    case DMD_WPC: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_wpc_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_wpc_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config dmd_config =
+          dmd_reader_wpc_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("WPC DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint input_pins[] = {RDATA, DE, DOTCLK};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_wpc_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_wpc_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_wpc_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 3, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("WPC frame detection initialized\n");
 
@@ -570,20 +562,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
+    }
 
-    case DMD_WHITESTAR:
+    case DMD_WHITESTAR: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_whitestar_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_whitestar_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config dmd_config =
+          dmd_reader_whitestar_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("Whitestar DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_whitestar_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_whitestar_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_whitestar_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Whitestar frame detection initialized\n");
 
@@ -598,20 +597,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
       break;
+    }
 
-    case DMD_SPIKE1:
+    case DMD_SPIKE1: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_spike_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config dmd_config =
+          dmd_reader_spike_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("Spike DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint input_pins[] = {RCLK, RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_spike_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_spike_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 2, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Spike frame detection initialized\n");
 
@@ -623,20 +629,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
       source_mergeplanes = MERGEPLANES_ADDSHIFT;
       break;
+    }
 
-    case DMD_SAM:
+    case DMD_SAM: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_sam_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_sam_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config dmd_config =
+          dmd_reader_sam_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("SAM DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_sam_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_sam_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_sam_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("SAM frame detection initialized\n");
 
@@ -649,20 +662,27 @@ bool init() {
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
       break;
+    }
 
-    case DMD_DESEGA:
+    case DMD_DESEGA: {
       dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      dmd_reader_desega_program_init(dmd_pio, dmd_sm, offset);
+      pio_sm_config dmd_config =
+          dmd_reader_desega_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
       printf("Data East/Sega DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
+      uint input_pins[] = {DE};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
-      dmd_framedetect_desega_program_init(frame_pio, frame_sm, offset);
+      pio_sm_config frame_config =
+          dmd_framedetect_desega_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1, DE);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Data East/Sega frame detection initialized\n");
 
@@ -675,8 +695,9 @@ bool init() {
       source_planesperframe = 1;
       // in DE-Sega each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
-      source_mergeplanes = MERGEPLANES_NONE;  // required for correct 2bpp merge
+      source_mergeplanes = MERGEPLANES_NONE;
       break;
+    }
 
     default:
       printf("Unknown DMD type, aborting\n");
@@ -756,11 +777,11 @@ bool init() {
 int read_dmd() {
   stdio_init_all();
 
-  gpio_init(SPI_IRQ_PIN);
-  gpio_set_dir(SPI_IRQ_PIN, GPIO_IN);
-  gpio_disable_pulls(SPI_IRQ_PIN);
+  gpio_init(SPI0_CS);
+  gpio_set_dir(SPI0_CS, GPIO_IN);
+  gpio_disable_pulls(SPI0_CS);
 
-  if (pin_is_stably_high(SPI_IRQ_PIN, 100, 5, 1500)) {
+  if (pin_is_stably_high(SPI0_CS, 100, 5, 1500)) {
     return -1;
   }
 

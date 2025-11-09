@@ -4,12 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-
 .define FRAME_START_IRQ 4
-
-.define PUBLIC whitestar_RDATA RDATA
-.define PUBLIC whitestar_DOTCLK DOTCLK
-.define PUBLIC whitestar_SDATA SDATA
 
 .program dmd_reader_whitestar
     ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
@@ -39,62 +34,10 @@ dotloop:
 ; It is ignored because we already read the specified amount of dots and now wait for a new frame.
 .wrap
 
-
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_whitestar
 .wrap_target
     wait 0 gpio RDATA
     wait 1 gpio RDATA
     irq FRAME_START_IRQ
 .wrap
-
-
-% c-sdk {
-static inline void dmd_reader_whitestar_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_reader_whitestar_program_get_default_config(offset);
-
-    // Set the IN pin, we don't use any other
-    sm_config_set_in_pins(&c, whitestar_SDATA);
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, whitestar_SDATA, 2, false); // SDATA, DOTCLK
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, whitestar_DOTCLK);
-    pio_gpio_init(pio, whitestar_SDATA);
-
-    // Shifting to left matches the customary MSB-first ordering of SPI.
-    sm_config_set_in_shift(
-        &c,
-        false, // Shift-to-right = false
-        true,  // Autopull enabled
-        32     // Autopull threshold
-    );
-
-    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // For the 200MHz clock
-    sm_config_set_clkdiv(&c,1.6f);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}
-
-% c-sdk {
-static inline void dmd_framedetect_whitestar_program_init(PIO pio, uint sm, uint offset) {
-    pio_sm_config c = dmd_framedetect_whitestar_program_get_default_config(offset);
-
-    // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, whitestar_RDATA, 1, false);
-
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, whitestar_RDATA);
-
-    // For the 200MHz clock
-    sm_config_set_clkdiv(&c,1.6f);
-
-    // Load our configuration, do not yet start the program
-    pio_sm_init(pio, sm, offset, &c);
-}
-%}
