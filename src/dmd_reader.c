@@ -541,7 +541,7 @@ bool init() {
       pio_sm_config frame_config =
           dmd_framedetect_wpc_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 3);
+                                   input_pins, 3, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("WPC frame detection initialized\n");
 
@@ -573,7 +573,7 @@ bool init() {
       pio_sm_config frame_config =
           dmd_framedetect_whitestar_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 1);
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Whitestar frame detection initialized\n");
 
@@ -608,7 +608,7 @@ bool init() {
       pio_sm_config frame_config =
           dmd_framedetect_spike_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 2);
+                                   input_pins, 2, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Spike frame detection initialized\n");
 
@@ -640,7 +640,7 @@ bool init() {
       pio_sm_config frame_config =
           dmd_framedetect_sam_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 1);
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("SAM frame detection initialized\n");
 
