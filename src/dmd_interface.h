@@ -32,6 +32,9 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
   // We only send, so disable the TX FIFO to make the RX FIFO deeper.
   sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
+  // For the 200MHz clock
+  sm_config_set_clkdiv(&c, 1.6f);
+
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
 }
@@ -51,6 +54,9 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
     // Set the pin direction at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, input_pins[i], 1, false);
   }
+
+  // For the 200MHz clock
+  sm_config_set_clkdiv(&c, 1.6f);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
