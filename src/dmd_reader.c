@@ -22,10 +22,6 @@
 // supress duplicate frames (implies USE_CRC)
 #define SUPRESS_DUPLICATES
 
-// set to officially supported 200MHz clock
-// @see SYS_CLK_MHZ https://github.com/raspberrypi/pico-sdk/releases/tag/2.1.1
-#define SYS_CLK_MHZ 200
-
 /**
  * Glossary
  *
