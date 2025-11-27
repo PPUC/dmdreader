@@ -336,34 +336,43 @@ int detect_dmd() {
   uint32_t de = count_clock(&dmd_count_de_program);
   uint32_t rdata = count_clock(&dmd_count_rdata_program);
 
+  // By checking DOTCLK, DE and RDATA we can identify system types
+  // All values are based on a 500ms sample of data, multiplied by 2
+
   printf("", dotclk, de, rdata);
 
+  // WPC: DOTCLK: 50000 | DE: 3900 | RDATA: 120 
   if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
       (rdata > 115) && (rdata < 130)) {
     printf("WPC detected\n");
     spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
-
+  
+  // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
+  //   DE: DOTCLK: 640000 | DE: 5000 | RDATA: 80    
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4900) &&
              (de < 5100) && (rdata > 75) && (rdata < 2600)) {
     printf("Data East/Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
-  } else if ((dotclk > 645000) && (dotclk < 665000) && (de > 5075) &&
+  // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80 
+  } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     printf("Stern Whitestar detected\n");
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
+  // SPIKE1 -> unknown for now
   } else if ((dotclk > 1000000) && (dotclk < 1100000) && (de > 8000) &&
              (de < 8400) && (rdata > 240) && (rdata < 270)) {
     printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
 
-  } else if ((dotclk > 1000000) && (dotclk < 1100000) && (de > 8000) &&
-             (de < 8400) && (rdata > 60) && (rdata < 70)) {
+  // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
+  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
+             (de < 8100) && (rdata > 55) && (rdata < 65)) {
     printf("Stern SAM detected\n");
     spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
