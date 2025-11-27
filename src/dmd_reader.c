@@ -348,11 +348,17 @@ int detect_dmd() {
     spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
   
-  // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
-  //   DE: DOTCLK: 640000 | DE: 5000 | RDATA: 80    
+  // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580 
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4900) &&
-             (de < 5100) && (rdata > 75) && (rdata < 2600)) {
-    printf("Data East/Sega detected\n");
+             (de < 5100) && (rdata > 2530) && (rdata < 2630)) {
+    printf("Sega detected\n");
+    spi_notify_onoff(DMD_DESEGA);
+    return DMD_DESEGA;
+
+  // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80    
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4900) &&
+             (de < 5100) && (rdata > 75) && (rdata < 85)) {
+    printf("Data East detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
