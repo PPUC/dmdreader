@@ -341,7 +341,7 @@ int detect_dmd() {
 
   printf("", dotclk, de, rdata);
 
-  // WPC: DOTCLK: 50000 | DE: 3900 | RDATA: 120 
+  // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120 
   if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
       (rdata > 115) && (rdata < 130)) {
     printf("WPC detected\n");
