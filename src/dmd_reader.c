@@ -349,8 +349,8 @@ int detect_dmd() {
     return DMD_WPC;
 
   // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80    
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4900) &&
-             (de < 5100) && (rdata > 75) && (rdata < 85)) {
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
+             (de < 5070) && (rdata > 75) && (rdata < 85)) {
     printf("Data East detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
