@@ -65,11 +65,3 @@ using different timing:
 
 A full screen consist of these 4 planes and therefore is displayed for 15.75ms
 
-# Reading data
-
-When reading data, we assume the data is sent correctly. 
-This means we can read a full 128x32 bit frame 
-as follows:
- - Wait for frame start - this is different on different platforms
- - Read 32x128 bit
-
