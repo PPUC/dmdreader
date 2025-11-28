@@ -1,7 +1,7 @@
 {
   "name": "dmdreader",
   "description": "PPUC DMD reader driver for Pico",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "downloadUrl": "https://github.com/PPUC/dmdreader/archive/ppuc.zip",
   "frameworks": "arduino",
   "platforms": "raspberrypi",
