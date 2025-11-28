@@ -356,8 +356,8 @@ int detect_dmd() {
     return DMD_DESEGA;
   
   // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580 
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4900) &&
-             (de < 5100) && (rdata > 2530) && (rdata < 2630)) {
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
+             (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
     printf("Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
