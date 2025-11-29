@@ -44,11 +44,16 @@ dotloop:
 ; A new frame is assumed when RDATA stays HIGH for more than 132 µs.
 ; Using 300 iterations (about 512 ns each) gives roughly 153.6 µs
 
+    ; initialize isr with ~300 (304)
+    set x, 19        ; load 19 into X
+    in  x, 5         ; shift in 5 bits of X  → ISR = 19
+    in  null, 4      ; shift in 4 zero bits → ISR = 19 << 4 = 304
+
 .wrap_target
 
 wait_high:
     wait 1 gpio RDATA   ; Wait for RDATA HIGH
-    set x, 300          ; ~153.6 µs threshold
+    mov x, isr          ; refill x
 
 loop:
     nop [31]            ; ~256 ns
