@@ -369,9 +369,9 @@ int detect_dmd() {
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
-  // SPIKE1 -> unknown for now
-  } else if ((dotclk > 1000000) && (dotclk < 1100000) && (de > 8000) &&
-             (de < 8400) && (rdata > 240) && (rdata < 270)) {
+  // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255 
+  } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
+             (de < 8300) && (rdata > 245) && (rdata < 265)) {
     printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
