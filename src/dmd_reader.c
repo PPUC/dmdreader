@@ -344,9 +344,13 @@ int detect_dmd() {
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
-    // SPIKE1 -> unknown for now
-  } else if ((dotclk > 1000000) && (dotclk < 1100000) && (de > 8000) &&
-             (de < 8400) && (rdata > 240) && (rdata < 270)) {
+    // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
+  } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
+             (de < 8300) && (rdata > 245) && (rdata < 265)) {
+    gpio_init(25);
+    gpio_set_dir(25, GPIO_OUT);
+    gpio_put(25, 1);
+
     printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
@@ -491,14 +495,9 @@ void dmd_dma_handler() {
 }
 
 bool init() {
-  //stdio_init_all();
+  // stdio_init_all();
 
   printf("DMD reader starting\n");
-
-  // overclock to achieve higher SPI transfer speed
-  set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
-  uint32_t freq = clock_get_hz(clk_sys);
-  printf("System clock: %.2f MHz\n", freq / 1e6);
 
   // this is used to notify the Pi that data is available
   gpio_init(SPI0_CS);
@@ -597,14 +596,14 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint input_pins[] = {RCLK, RDATA};
+      uint input_pins[] = {RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_spike_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 2, RDATA);
+                                   input_pins, 1, RDATA);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Spike frame detection initialized\n");
 
@@ -774,7 +773,7 @@ int read_dmd() {
 
   while (true) {
     // Wait for the next frame
-    if (!(frame_received)) sleep_ms(1);
+    if (!(frame_received)) sleep_us(100);
     frame_received = false;
 
     // do something
