@@ -426,9 +426,6 @@ void dmd_dma_handler() {
   planebuf = (uint32_t *)lastplane;
   for (int px = 0; px < source_wordsperplane; px++) {
     uint32_t pixval = 0;
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1);
     for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
@@ -577,7 +574,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint input_pins[] = {RDATA, RCLK};
+      uint input_pins[] = {RCLK, RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
