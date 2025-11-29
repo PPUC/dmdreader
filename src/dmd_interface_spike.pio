@@ -8,13 +8,19 @@
 
 .program dmd_reader_spike
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
-    set x, 31          ; x = 31 (max 5-bit value)
-    in x, 5            ; shift in 5 bits, isr = 31
-    set x, 31          ; x = 31
-    in x, 5            ; shift in 5 bits, isr = 1023
-    set x, 31          ; x = 31
-    in x, 4            ; shift in 4 bits, isr = 16383
-    mov y, isr         ; y = 16383
+    ; set x, 31          ; x = 31 (max 5-bit value)
+    ; in x, 5            ; shift in 5 bits, isr = 31
+    ; set x, 31          ; x = 31
+    ; in x, 5            ; shift in 5 bits, isr = 1023
+    ; set x, 31          ; x = 31
+    ; in x, 4            ; shift in 4 bits, isr = 16383
+    ; mov y, isr         ; y = 16383
+    
+    ; initialize y with 4096 = number of pixels (128x32)
+    set x, 1
+    in x, 1
+    in null, 15
+    mov y, isr
 
 .wrap_target
     mov x, y       ; load number of pixels

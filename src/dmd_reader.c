@@ -354,7 +354,7 @@ int detect_dmd() {
     printf("Data East detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
-  
+
   // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580 
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
@@ -629,7 +629,7 @@ bool init() {
       pio_sm_config frame_config =
           dmd_framedetect_spike_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 2, 0);
+                                   input_pins, 2, RDATA);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Spike frame detection initialized\n");
 
