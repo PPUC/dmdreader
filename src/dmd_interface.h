@@ -48,6 +48,13 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
   sm_config_set_jmp_pin(&c, 6);
   //}
 
+    // Shifting to left matches the customary MSB-first ordering of SPI.
+  sm_config_set_in_shift(
+      &c,
+      false, // Shift-to-right = false
+      false, // No autopull, we don't read data from this SM
+      32     // Autopull threshold
+  );
   //for (uint i = 0; i < num_input_pins; i++) {
     // Set the pin direction at the PIO
   pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false);

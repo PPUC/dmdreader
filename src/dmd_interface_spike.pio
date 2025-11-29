@@ -4,7 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-.define FRAME_START_IRQ 4
+.define PLANE_START_IRQ 4
 
 .program dmd_reader_spike
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
@@ -26,8 +26,8 @@
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
-    irq clear FRAME_START_IRQ
-    wait irq FRAME_START_IRQ
+    irq clear PLANE_START_IRQ
+    wait irq PLANE_START_IRQ
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
@@ -64,7 +64,7 @@ loop:
     ; Reading was high long enough, beginning of new frame found
     wait 0 gpio RDATA   ; Let it fast forward to the dotloop
     wait 1 gpio RDATA   ; We have arrived at the start of the dotloop
-    irq FRAME_START_IRQ
+    irq PLANE_START_IRQ
 
     wait 0 gpio RDATA   ; Wait for RDATA LOW before restarting
     jmp wait_high           
