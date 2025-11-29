@@ -34,6 +34,7 @@ dotloop:
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_spike
+<<<<<<< HEAD
 ; Frame detection in Spike:
 ; white for RDATA to go H
 ; check if it is still H 150-250ms later - in this case, this is the most significant bit
@@ -41,6 +42,14 @@ dotloop:
 ; now wait for RDATA to go L and H again, this is the beginning of a new frame
 ; based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
 ; we use 24576 here, because it0s 0b11 << 13
+=======
+    ; Frame detection in Spike:
+    ; Wait for RDATA to go HIGH
+    ; Check if it is still HIGH 150-250ms later - in this case, this is the most significant bit which is the last plane
+    ; Then wait for RDATA to go LOW and HIGH again, this is the beginning of a new frame
+    ; Based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
+    ; We use 24576 here, because it0s 0b11 << 13
+>>>>>>> 23f11c701eb6b2b7afcc3cca0bf42c10b79b6c8a
 
     ; initialize isr with 24576
     set x, 3
@@ -59,10 +68,10 @@ waitrdata:
 delayloop:
     jmp x-- delayloop
 
-    ; check if RDATA is still H
-    jmp pin longrdata  ; jump if rdata is H
+    ; check if RDATA is still HIGH
+    jmp pin longrdata  ; jump if rdata is HIGH
 
-    ; rdata pin was low, wait for next
+    ; RDATA pin was LOW, wait for next
     jmp waitrdata
 
 longrdata:

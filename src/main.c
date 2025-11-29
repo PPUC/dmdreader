@@ -5,17 +5,13 @@
 #include <stdbool.h>
 
 #include "dmd_reader.h"
-#include "hardware/gpio.h"
-#include "logic_analyzer.h"
-#include "pico/stdlib.h"
+#include "hardware/clocks.h"
 
 int main() {
-  int result = read_dmd();
+  // overclock to achieve higher SPI transfer speed
+  set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
 
-  if (result == -1) {
-    analyze();
-    return 0;
-  }
+  int result = read_dmd();
 
   return result;
 }
