@@ -2,25 +2,20 @@
 #define DMD_COUNTER_H
 
 #include "dmd_counter.pio.h"
-#include "dmd_reader_pins.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 
-void dmd_counter_program_init(PIO pio, uint sm, uint offset) {
-  pio_sm_config c = dmd_count_dotclk_program_get_default_config(offset);
+void dmd_counter_program_init(PIO pio, uint sm, uint offset, uint pin) {
+  pio_sm_config c = dmd_count_signal_program_get_default_config(offset);
 
   // Set the IN base pin
-  sm_config_set_in_pins(&c, DE);
+  sm_config_set_in_pins(&c, pin);
 
   // Set the pin direction at the PIO
-  pio_sm_set_consecutive_pindirs(pio, sm, DOTCLK, 1, false);
-  pio_sm_set_consecutive_pindirs(pio, sm, RCLK, 3, false);  // RCLK, RDATA, DE
+  pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
 
   // Connect these GPIOs to this PIO block
-  pio_gpio_init(pio, DOTCLK);
-  pio_gpio_init(pio, DE);
-  pio_gpio_init(pio, RDATA);
-  pio_gpio_init(pio, RCLK);
+  pio_gpio_init(pio, pin);
 
   // Shifting to left matches the customary MSB-first ordering of SPI.
   sm_config_set_in_shift(&c,

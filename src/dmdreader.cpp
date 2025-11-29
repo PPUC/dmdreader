@@ -271,26 +271,26 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
  *
  * @return uint32_t Number of clocks per second
  */
-uint32_t count_clock(const pio_program_t *program) {
+uint32_t count_clock(uint pin) {
   dmd_pio = pio0;
-  uint offset = pio_add_program(dmd_pio, program);
+  uint offset = pio_add_program(dmd_pio, &dmd_count_signal_program);
   dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-  dmd_counter_program_init(dmd_pio, dmd_sm, offset);
+  dmd_counter_program_init(dmd_pio, dmd_sm, offset, pin);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
   delay(500);
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
   uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
   pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-  pio_remove_program(dmd_pio, program, offset);
+  pio_remove_program(dmd_pio, &dmd_count_signal_program, offset);
   pio_sm_unclaim(dmd_pio, dmd_sm);
 
   return count * 2;
 }
 
 int detect_dmd() {
-  uint32_t dotclk = count_clock(&dmd_count_dotclk_program);
-  uint32_t de = count_clock(&dmd_count_de_program);
-  uint32_t rdata = count_clock(&dmd_count_rdata_program);
+  uint32_t dotclk = count_clock(DOTCLK);
+  uint32_t de = count_clock(DE);
+  uint32_t rdata = count_clock(RDATA);
 
   // By checking DOTCLK, DE and RDATA we can identify system types
   // All values are based on a 500ms sample of data, multiplied by 2
@@ -464,9 +464,11 @@ bool dmdreader_init() {
   int dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
-       digitalWrite(LED_BUILTIN, HIGH);
   while (dmd_type == DMD_UNKNOWN) {
+    digitalWrite(LED_BUILTIN, HIGH);
     dmd_type = detect_dmd();
+    delay(400);
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   delay(1000);
