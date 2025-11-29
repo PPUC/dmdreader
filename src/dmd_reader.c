@@ -1,19 +1,12 @@
 #include "dmd_reader.h"
 
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "crc32.h"
 #include "dmd_counter.h"
 #include "dmd_interface.h"
 #include "dmd_reader_pins.h"
-#include "hardware/clocks.h"
 #include "hardware/dma.h"
-#include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"
-#include "hardware/uart.h"
-#include "pico/stdlib.h"
 #include "spi_slave_sender.pio.h"
 
 // should CRC32 checksum be caculated and sent with each frame
@@ -229,24 +222,24 @@ void spi_abort() {
  * signal is received It toggles pin SPI0_CS to H
  *
  */
-void start_spi() { gpio_put(SPI0_CS, 1); }
+void start_spi() { digitalWrite(SPI0_CS, HIGH); }
 
 /**
  * @brief Set pin SPI0_CS to L to signal that there is no active SPI data
  * transfer
  *
  */
-void finish_spi() { gpio_put(SPI0_CS, 0); }
+void finish_spi() { digitalWrite(SPI0_CS, LOW); }
 
 /**
  * @brief A simple debug procedure that toggles the SPI0_CS pin multiple times
  */
 void spi_notify_onoff(int count) {
   for (int i = 0; i < count; i++) {
-    gpio_put(SPI0_CS, 1);
-    sleep_ms(100);
-    gpio_put(SPI0_CS, 0);
-    sleep_ms(100);
+    start_spi();
+    delay(100);
+    finish_spi();
+    delay(100);
   }
 }
 
@@ -296,7 +289,7 @@ uint32_t count_clock(const pio_program_t *program) {
   dmd_sm = pio_claim_unused_sm(dmd_pio, true);
   dmd_counter_program_init(dmd_pio, dmd_sm, offset);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-  sleep_ms(500);
+  delay(500);
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
   uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
   pio_sm_set_enabled(dmd_pio, dmd_sm, false);
@@ -482,11 +475,10 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
-bool init() {
+bool init_dmd() {
   // this is used to notify the Pi that data is available
-  gpio_init(SPI0_CS);
-  gpio_set_dir(SPI0_CS, GPIO_OUT);
-  gpio_put(SPI0_CS, 0);
+  pinMode(SPI0_CS, OUTPUT);
+  digitalWrite(SPI0_CS, LOW);
 
   int dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
@@ -495,7 +487,7 @@ bool init() {
     dmd_type = detect_dmd();
   }
 
-  sleep_ms(1000);
+  delay(1000);
 
   uint offset;
 
@@ -736,7 +728,7 @@ int read_dmd() {
     // Wait for the next frame
     while (!frame_received) {
       // @todo use an interrupt to avoid waiting
-      sleep_us(200);
+      delay(1);
     }
     frame_received = false;
 
