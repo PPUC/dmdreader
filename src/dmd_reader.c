@@ -805,7 +805,7 @@ int read_dmd() {
 
   while (true) {
     // Wait for the next frame
-    if (!(frame_received)) sleep_ms(1);
+    if (!(frame_received)) sleep_us(100);
     frame_received = false;
 
     // do something
