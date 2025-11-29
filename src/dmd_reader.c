@@ -574,7 +574,7 @@ bool init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint input_pins[] = {RDATA, RCLK};
+      uint input_pins[] = {RCLK, RDATA};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
@@ -730,14 +730,7 @@ bool init() {
 }
 
 int read_dmd() {
-  gpio_init(SPI0_CS);
-  gpio_set_dir(SPI0_CS, GPIO_IN);
-  gpio_disable_pulls(SPI0_CS);
-
   uint32_t crc_previous_frame = 0;
-  if (!init()) {
-    return 0;
-  }
 
   while (true) {
     // Wait for the next frame
