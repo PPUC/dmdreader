@@ -314,51 +314,39 @@ int detect_dmd() {
   // By checking DOTCLK, DE and RDATA we can identify system types
   // All values are based on a 500ms sample of data, multiplied by 2
 
-  printf("", dotclk, de, rdata);
-
   // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
   if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
       (rdata > 115) && (rdata < 130)) {
-    printf("WPC detected\n");
     spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
 
     // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 75) && (rdata < 85)) {
-    printf("Data East detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
     // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
-    printf("Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
     // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
-    printf("Stern Whitestar detected\n");
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
     // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
   } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
              (de < 8300) && (rdata > 245) && (rdata < 265)) {
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1);
-
-    printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
 
     // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
   } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
              (de < 8100) && (rdata > 55) && (rdata < 65)) {
-    printf("Stern SAM detected\n");
     spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
   }
@@ -495,15 +483,10 @@ void dmd_dma_handler() {
 }
 
 bool init() {
-  // stdio_init_all();
-
-  printf("DMD reader starting\n");
-
   // this is used to notify the Pi that data is available
   gpio_init(SPI0_CS);
   gpio_set_dir(SPI0_CS, GPIO_OUT);
   gpio_put(SPI0_CS, 0);
-  printf("IRQ pin initialized\n");
 
   int dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
@@ -525,7 +508,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_wpc_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("WPC DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -538,7 +520,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 3, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("WPC frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -557,7 +538,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_whitestar_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("Whitestar DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -570,7 +550,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("Whitestar frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -592,7 +571,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_spike_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("Spike DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -605,7 +583,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, RDATA);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("Spike frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -624,7 +601,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_sam_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("SAM DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -637,7 +613,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("SAM frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -657,7 +632,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_desega_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("Data East/Sega DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -670,7 +644,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, DE);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("Data East/Sega frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -686,7 +659,6 @@ bool init() {
     }
 
     default:
-      printf("Unknown DMD type, aborting\n");
       return false;
   }
 
@@ -703,8 +675,6 @@ bool init() {
   source_wordsperframe = source_wordsperplane * source_planesperframe;
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_wordsperline = source_width * source_bitsperpixel / 32;
-
-  printf("Source buffer initialized");
 
   // DMA for DMD reader
   dmd_dma_chan_cfg = dma_channel_get_default_config(dmd_dma_chan);
@@ -733,7 +703,6 @@ bool init() {
   offset = pio_add_program(spi_pio, &clocked_output_program);
   spi_sm = pio_claim_unused_sm(spi_pio, true);
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
-  printf("SPI slave initialized \n");
 
   // DMA for SPI
   spi_dma_chan_cfg = dma_channel_get_default_config(spi_dma_chan);
@@ -767,7 +736,6 @@ int read_dmd() {
 
   uint32_t crc_previous_frame = 0;
   if (!init()) {
-    printf("Error during initialisation, aborting...\n");
     return 0;
   }
 
