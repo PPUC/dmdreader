@@ -43,17 +43,17 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
 void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                                   pio_sm_config c, const uint* input_pins,
                                   uint num_input_pins, uint jump_pin) {
-  if (jump_pin > 0) {
+  //if (jump_pin > 0) {
     // Pin is used for jump control
-    sm_config_set_jmp_pin(&c, 6);
-  }
+  sm_config_set_jmp_pin(&c, 6);
+  //}
 
-  for (uint i = 0; i < num_input_pins; i++) {
+  //for (uint i = 0; i < num_input_pins; i++) {
     // Set the pin direction at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false);
+  pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false);
     // Connect that GPIO to this PIO block
-    pio_gpio_init(pio, 6);
-  }
+  pio_gpio_init(pio, 6);
+  //}
 
   // For the 200MHz clock
   sm_config_set_clkdiv(&c, 1.6f);
