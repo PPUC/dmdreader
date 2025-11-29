@@ -741,10 +741,12 @@ int read_dmd() {
 
   while (true) {
     // Wait for the next frame
-    if (!(frame_received)) sleep_us(100);
+    while (!frame_received) {
+      // @todo use an interrupt to avoid waiting
+      sleep_us(200);
+    }
     frame_received = false;
 
-    // do something
 #ifdef SUPRESS_DUPLICATES
     if (*lastcrc != crc_previous_frame) {
       spi_send_pix(lastframe, *lastcrc, true);
