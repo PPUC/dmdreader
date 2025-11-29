@@ -232,18 +232,6 @@ void start_spi() { digitalWrite(SPI0_CS, HIGH); }
 void finish_spi() { digitalWrite(SPI0_CS, LOW); }
 
 /**
- * @brief A simple debug procedure that toggles the SPI0_CS pin multiple times
- */
-void spi_notify_onoff(int count) {
-  for (int i = 0; i < count; i++) {
-    start_spi();
-    delay(100);
-    finish_spi();
-    delay(100);
-  }
-}
-
-/**
  * @brief Send a pix buffer via SPI
  *
  * @param pixbuf a frame to send
@@ -310,41 +298,34 @@ int detect_dmd() {
   // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
   if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
       (rdata > 115) && (rdata < 130)) {
-    spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
 
     // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 75) && (rdata < 85)) {
-    spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
     // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
-    spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
     // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
-    spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
     // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
   } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
              (de < 8300) && (rdata > 245) && (rdata < 265)) {
-    spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
 
     // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
   } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
              (de < 8100) && (rdata > 55) && (rdata < 65)) {
-    spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
   }
 
-  spi_notify_onoff(1);
   return DMD_UNKNOWN;
 }
 
@@ -483,6 +464,7 @@ bool dmdreader_init() {
   int dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
+       digitalWrite(LED_BUILTIN, HIGH);
   while (dmd_type == DMD_UNKNOWN) {
     dmd_type = detect_dmd();
   }
