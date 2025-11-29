@@ -43,24 +43,27 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
 void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                                   pio_sm_config c, const uint* input_pins,
                                   uint num_input_pins, uint jump_pin) {
-  //if (jump_pin > 0) {
+  if (jump_pin > 0) {
     // Pin is used for jump control
-  sm_config_set_jmp_pin(&c, 6);
-  //}
+    sm_config_set_jmp_pin(&c, jump_pin);
 
-    // Shifting to left matches the customary MSB-first ordering of SPI.
-  sm_config_set_in_shift(
-      &c,
-      false, // Shift-to-right = false
-      false, // No autopull, we don't read data from this SM
-      32     // Autopull threshold
-  );
-  //for (uint i = 0; i < num_input_pins; i++) {
-    // Set the pin direction at the PIO
-  pio_sm_set_consecutive_pindirs(pio, sm, 6, 1, false);
+    if (jump_pin == 6) {
+      // Spike1 requirement...
+      sm_config_set_in_shift(
+          &c,
+          false, // Shift-to-right = false
+          false, // No autopull, we don't read data from this SM
+          32     // Autopull threshold
+      );
+    }
+  }
+
+  for (uint i = 0; i < num_input_pins; i++) {
     // Connect that GPIO to this PIO block
-  pio_gpio_init(pio, 6);
-  //}
+    pio_gpio_init(pio, input_pins[i]);
+    // Set the pin direction at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, input_pins[i], 1, false);
+  }
 
   // For the 200MHz clock
   sm_config_set_clkdiv(&c, 1.6f);
