@@ -33,32 +33,44 @@ dotloop:
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_spike
-    ; Spike1 frame start detection
-    ; A new frame is assumed when RDATA stays HIGH for more than 132 µs.
-    ; Using 300 iterations (about 512 ns each) gives roughly 153.6 µs
+    ; Frame detection in Spike:
+    ; Wait for RDATA to go HIGH
+    ; Check if it is still HIGH 150-250ms later - in this case, this is the most significant bit which is the last plane
+    ; Then wait for RDATA to go LOW and HIGH again, this is the beginning of a new frame
+    ; Based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
+    ; We use 24576 here, because it0s 0b11 << 13
 
-    ; initialize isr with ~300 (304)
-    set x, 19        ; load 19 into X
-    in  x, 5         ; shift in 5 bits of X  → ISR = 19
-    in  null, 4      ; shift in 4 zero bits → ISR = 19 << 4 = 304
+    ; initialize isr with 24576
+    set x, 3
+    in x, 2
+    in null, 13
 
 .wrap_target
 
-wait_high:
-    wait 1 gpio RDATA   ; Wait for RDATA HIGH
-    mov x, isr          ; refill x
+; synchronize on the least significant plane
 
-loop:
-    nop [31]            ; ~256 ns
-    nop [31]            ; ~256 ns  → 512 ns per iteration
-    jmp pin, wait_high  ; If RDATA LOW before done → short pulse, restart
-    jmp x-- loop        ; Continue timing if RDATA still HIGH
+waitrdata:
+    ; wait for RDATA to measure the length of the impulse
+    wait 1 gpio RDATA
 
-    ; Reading was high long enough, beginning of new frame found
-    wait 0 gpio RDATA   ; Let it fast forward to the dotloop
-    wait 1 gpio RDATA   ; We have arrived at the start of the dotloop
+    mov x, isr
+delayloop:
+    jmp x-- delayloop
+
+    ; check if RDATA is still HIGH
+    jmp pin longrdata  ; jump if rdata is HIGH
+
+    ; RDATA pin was LOW, wait for next
+    jmp waitrdata
+
+longrdata:
+
+    ; skip the next 30 lines
+    set x,30
+lineloop:
+    wait 1 gpio RCLK
+    wait 0 gpio RCLK
+    jmp x-- lineloop
+
     irq FRAME_START_IRQ
-
-    wait 0 gpio RDATA   ; Wait for RDATA LOW before restarting
-    jmp wait_high
 .wrap

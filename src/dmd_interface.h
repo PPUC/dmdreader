@@ -24,9 +24,9 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
 
   // Shifting to left matches the customary MSB-first ordering of SPI.
   sm_config_set_in_shift(&c,
-                         false,  // Shift-to-right = false
-                         true,   // Autopull enabled
-                         32      // Autopull threshold
+                         false,  // shift-to-right = false
+                         true,   // autopush enabled
+                         32      // autopush threshold
   );
 
   // We only send, so disable the TX FIFO to make the RX FIFO deeper.
@@ -54,6 +54,11 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
     // Set the pin direction at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, input_pins[i], 1, false);
   }
+
+  sm_config_set_in_shift(&c,
+                         false,  // shift-to-right = false
+                         false,  // no autopush
+                         0);
 
   // For the 200MHz clock
   sm_config_set_clkdiv(&c, 1.6f);
