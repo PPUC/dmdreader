@@ -48,17 +48,17 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
     sm_config_set_jmp_pin(&c, jump_pin);
   }
 
+  sm_config_set_in_shift(&c,
+                         false,  // shift-to-right = false
+                         false,  // no autopush
+                         0);
+
   for (uint i = 0; i < num_input_pins; i++) {
     // Connect that GPIO to this PIO block
     pio_gpio_init(pio, input_pins[i]);
     // Set the pin direction at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, input_pins[i], 1, false);
   }
-
-  sm_config_set_in_shift(&c,
-                         false,  // shift-to-right = false
-                         false,  // no autopush
-                         0);
 
   // For the 200MHz clock
   sm_config_set_clkdiv(&c, 1.6f);
