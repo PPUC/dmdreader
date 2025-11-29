@@ -372,9 +372,6 @@ int detect_dmd() {
   // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255 
   } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
              (de < 8300) && (rdata > 245) && (rdata < 265)) {
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1);
     printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
@@ -462,6 +459,9 @@ void dmd_dma_handler() {
   planebuf = (uint32_t *)lastplane;
   for (int px = 0; px < source_wordsperplane; px++) {
     uint32_t pixval = 0;
+    gpio_init(25);
+    gpio_set_dir(25, GPIO_OUT);
+    gpio_put(25, 1);
     for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
@@ -632,7 +632,7 @@ bool init() {
       pio_sm_config frame_config =
           dmd_framedetect_spike_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 1, RDATA);
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
       printf("Spike frame detection initialized\n");
 
