@@ -157,31 +157,6 @@ uint dmd_int = 0;
 
 volatile bool frame_received = false;
 
-/* ---------- Stable-High Check on SPI0_CS at boot ---------- */
-
-static bool pin_is_stably_high(uint pin, uint32_t stable_ms, uint32_t sample_ms,
-                               uint32_t timeout_ms) {
-  if (sample_ms == 0) sample_ms = 5;
-  if (stable_ms == 0) stable_ms = 50;
-  if (timeout_ms == 0) timeout_ms = 1000;
-
-  uint32_t elapsed = 0;
-  while (elapsed < timeout_ms) {
-    if (gpio_get(pin)) {
-      uint32_t kept = 0;
-      while (kept < stable_ms) {
-        if (!gpio_get(pin)) break;
-        sleep_ms(sample_ms);
-        kept += sample_ms;
-      }
-      if (kept >= stable_ms) return true;
-    }
-    sleep_ms(sample_ms);
-    elapsed += sample_ms;
-  }
-  return false;
-}
-
 /**
  * @brief Send data via SPI, transfer data via DMA
  *
@@ -341,42 +316,42 @@ int detect_dmd() {
 
   printf("", dotclk, de, rdata);
 
-  // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120 
+  // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
   if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
       (rdata > 115) && (rdata < 130)) {
     printf("WPC detected\n");
     spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
 
-  // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80    
+    // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 75) && (rdata < 85)) {
     printf("Data East detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
-  
-  // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580 
+
+    // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
     printf("Sega detected\n");
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
-  // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80 
+    // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     printf("Stern Whitestar detected\n");
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
-  // SPIKE1 -> unknown for now
+    // SPIKE1 -> unknown for now
   } else if ((dotclk > 1000000) && (dotclk < 1100000) && (de > 8000) &&
              (de < 8400) && (rdata > 240) && (rdata < 270)) {
     printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
 
-  // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
+    // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
   } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
              (de < 8100) && (rdata > 55) && (rdata < 65)) {
     printf("Stern SAM detected\n");
@@ -516,7 +491,7 @@ void dmd_dma_handler() {
 }
 
 bool init() {
-  stdio_init_all();
+  //stdio_init_all();
 
   printf("DMD reader starting\n");
 
@@ -787,15 +762,9 @@ bool init() {
 }
 
 int read_dmd() {
-  stdio_init_all();
-
   gpio_init(SPI0_CS);
   gpio_set_dir(SPI0_CS, GPIO_IN);
   gpio_disable_pulls(SPI0_CS);
-
-  if (pin_is_stably_high(SPI0_CS, 100, 5, 1500)) {
-    return -1;
-  }
 
   uint32_t crc_previous_frame = 0;
   if (!init()) {

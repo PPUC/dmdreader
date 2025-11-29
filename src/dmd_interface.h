@@ -43,7 +43,7 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
 void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                                   pio_sm_config c, const uint* input_pins,
                                   uint num_input_pins, uint jump_pin) {
-  if (jump_pin >= 0) {
+  if (jump_pin > 0) {
     // Pin is used for jump control
     sm_config_set_jmp_pin(&c, jump_pin);
   }

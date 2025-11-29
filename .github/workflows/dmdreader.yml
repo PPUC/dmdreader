@@ -47,21 +47,48 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Checkout pico-sdk
-        uses: actions/checkout@v4
+      - name: Cache pip
+        uses: actions/cache@v4
         with:
-          repository: raspberrypi/pico-sdk
-          path: pico-sdk
-          ref: 2.2.0
-          fetch-depth: 1
-      - if: (matrix.platform == 'linux' && matrix.arch == 'x64')
-        run: sudo apt install gdb-multiarch cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib cmake
-      - if: (!(matrix.platform == 'linux' && matrix.arch == 'aarch64'))
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
+      - name: Install PlatformIO
         run: |
-          cd pico-sdk
-          git submodule update --init --recursive
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+
+      - name: Build elf2uf2 from source
+        run: |
+          sudo apt update && sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi
+          git clone https://github.com/ckormanyos/elf2uf2.git
+          cd elf2uf2
+          make all
+          sudo cp bin/elf2uf2 /usr/local/bin/
           cd ..
-          scripts/compile.sh
+
+      - name: Run PlatformIO
+        run: |
+          pio run
+
+      - name: Create UF2 file (using elf2uf2)
+        run: |
+          ELF_FILE=$(find .pio/build/ -name "*.elf" | head -n 1)
+          echo "Found ELF file: $ELF_FILE"
+          elf2uf2 "$ELF_FILE" "${ELF_FILE%.elf}.uf2"
+          cp ${ELF_FILE%.elf}.uf2 dmdreader.uf2
+          cp "$ELF_FILE" dmdreader.elf
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
