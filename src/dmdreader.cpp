@@ -1,4 +1,4 @@
-#include "dmd_reader.h"
+#include "dmdreader.h"
 
 #include "crc32.h"
 #include "dmd_counter.h"
@@ -475,7 +475,7 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
-bool init_dmd() {
+bool dmdreader_init() {
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
@@ -721,7 +721,7 @@ bool init_dmd() {
   return true;
 }
 
-int read_dmd() {
+void dmdreader_read() {
   uint32_t crc_previous_frame = 0;
 
   while (true) {
@@ -741,6 +741,4 @@ int read_dmd() {
     spi_send_pix(lastframe, *lastcrc, true);
 #endif
   }
-
-  return 0;
 }

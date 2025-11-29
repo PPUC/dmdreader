@@ -4,16 +4,16 @@
 
 #include <Arduino.h>
 
-#include "dmd_reader.h"
+#include "dmdreader.h"
 #include "hardware/clocks.h"
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+
   // overclock to achieve higher SPI transfer speed
   set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
 
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  if (!init_dmd()) {
+  if (!dmdreader_init()) {
     while (true) {
       digitalWrite(LED_BUILTIN, HIGH);
       delay(200);
@@ -25,4 +25,4 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
 }
 
-void loop() { read_dmd(); }
+void loop() { dmdreader_read(); }
