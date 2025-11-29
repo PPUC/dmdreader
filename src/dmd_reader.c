@@ -372,6 +372,9 @@ int detect_dmd() {
   // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255 
   } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
              (de < 8300) && (rdata > 245) && (rdata < 265)) {
+    gpio_init(25);
+    gpio_set_dir(25, GPIO_OUT);
+    gpio_put(25, 1);
     printf("Stern Spike1 detected\n");
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
