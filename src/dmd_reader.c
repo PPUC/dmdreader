@@ -323,17 +323,6 @@ int detect_dmd() {
     // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 75) && (rdata < 85)) {
-<<<<<<< HEAD
-    printf("Data East detected\n");
-    spi_notify_onoff(DMD_DESEGA);
-    return DMD_DESEGA;
-
-  // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580 
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
-             (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
-    printf("Sega detected\n");
-=======
->>>>>>> 23f11c701eb6b2b7afcc3cca0bf42c10b79b6c8a
     spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
@@ -349,16 +338,9 @@ int detect_dmd() {
     spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
-<<<<<<< HEAD
-  // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255 
-  } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
-             (de < 8300) && (rdata > 245) && (rdata < 265)) {
-    printf("Stern Spike1 detected\n");
-=======
     // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
   } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
              (de < 8300) && (rdata > 245) && (rdata < 265)) {
->>>>>>> 23f11c701eb6b2b7afcc3cca0bf42c10b79b6c8a
     spi_notify_onoff(DMD_SPIKE1);
     return DMD_SPIKE1;
 
@@ -762,14 +744,10 @@ int read_dmd() {
 
   while (true) {
     // Wait for the next frame
-<<<<<<< HEAD
-    if (!(frame_received)) sleep_us(100);
-=======
     while (!frame_received) {
       // @todo use an interrupt to avoid waiting
       sleep_us(200);
     }
->>>>>>> 23f11c701eb6b2b7afcc3cca0bf42c10b79b6c8a
     frame_received = false;
 
 #ifdef SUPRESS_DUPLICATES
