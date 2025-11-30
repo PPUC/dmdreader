@@ -23,7 +23,6 @@ void loop() {
 
 void loop1() {
   if (!dmdreader_send()) {
-    // @todo use interrupt to be as fats as possible
-    delayMicroseconds(100);
+    tight_loop_contents();
   }
 }
