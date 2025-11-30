@@ -513,6 +513,7 @@ void dmdreader_init() {
       source_planesperframe = 3;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
+      digitalWrite(LED_BUILTIN, HIGH);
       break;
     }
 
