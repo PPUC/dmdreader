@@ -109,19 +109,13 @@ uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
                   MAX_PLANESPERFRAME / 8];
 uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
                   MAX_PLANESPERFRAME / 8];
-uint8_t *lastplane = planebuf2;
+uint8_t *currentPlaneBuffer = planebuf2;
 
-// processed frames (merged planes)
-uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD];
-uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD];
-uint32_t crc1;
-uint32_t crc2;
-uint8_t *lastframe = framebuf1;
-uint32_t *lastcrc;
+// processed frame (merged planes)
+uint8_t framebuf[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                 MAX_MEMORY_OVERHEAD];
+uint32_t frame_crc;
 
-uint32_t stat_frames_received = 0;
 uint32_t stat_spi_skipped = 0;
 
 // SPI PIO
@@ -137,11 +131,11 @@ PIO frame_pio;
 uint frame_sm;
 
 // DMA
-uint dmd_dma_chan = 0;
-uint spi_dma_chan = 1;
+uint dmd_dma_channel = 0;
+uint spi_dma_channel = 1;
 
-dma_channel_config dmd_dma_chan_cfg;
-dma_channel_config spi_dma_chan_cfg;
+dma_channel_config dmd_dma_channel_cfg;
+dma_channel_config spi_dma_channel_cfg;
 
 volatile bool spi_dma_running = false;
 
@@ -159,8 +153,8 @@ volatile bool frame_received = false;
 void spi_send_dma(uint32_t *buf, uint16_t len) {
   spi_dma_running = true;
   // SET DMA source address and immediately start transfer
-  dma_channel_set_read_addr(spi_dma_chan, buf, false);
-  dma_channel_set_trans_count(spi_dma_chan, len / 4, true);
+  dma_channel_set_read_addr(spi_dma_channel, buf, false);
+  dma_channel_set_trans_count(spi_dma_channel, len / 4, true);
 }
 
 /**
@@ -187,7 +181,7 @@ bool spi_busy() {
     return true;
   }
 
-  if (dma_channel_is_busy(spi_dma_chan)) {
+  if (dma_channel_is_busy(spi_dma_channel)) {
     return true;
   }
 
@@ -204,8 +198,8 @@ bool spi_busy() {
  *
  */
 void spi_abort() {
-  if (dma_channel_is_busy(spi_dma_chan)) {
-    dma_channel_abort(spi_dma_chan);
+  if (dma_channel_is_busy(spi_dma_channel)) {
+    dma_channel_abort(spi_dma_channel);
   }
 
   if (!(pio_sm_is_tx_fifo_empty(spi_pio, spi_sm))) {
@@ -335,10 +329,24 @@ int detect_dmd() {
  */
 void spi_dma_handler() {
   // Clear the interrupt request
-  dma_hw->ints1 = 1u << spi_dma_chan;
+  dma_hw->ints1 = 1u << spi_dma_channel;
 
   finish_spi();
   spi_dma_running = false;
+}
+
+/**
+ * @brief
+ *
+ */
+void dmd_set_and_enable_new_dma_target() {
+  // Set the other plane buffer as new DMA transfer target
+  dma_channel_set_write_addr(
+      dmd_dma_channel,
+      (currentPlaneBuffer == planebuf1) ? planebuf2 : planebuf1, true);
+
+  // Clear the interrupt request, enable a new transfer
+  dma_hw->ints0 = 1u << dmd_dma_channel;
 }
 
 /**
@@ -346,36 +354,10 @@ void spi_dma_handler() {
  *
  */
 void dmd_dma_handler() {
-  uint8_t *target;
-  uint32_t *targetcrc;
-  uint32_t *planebuf;
-
-  // Switch between buffers
-  if (lastplane == planebuf1) {
-    target = planebuf1;
-    lastplane = planebuf2;
-    lastframe = framebuf2;
-    lastcrc = &crc2;
-    targetcrc = &crc1;
-  } else {
-    target = planebuf2;
-    lastplane = planebuf1;
-    lastframe = framebuf1;
-    lastcrc = &crc1;
-    targetcrc = &crc2;
-  }
-
-  // Clear the interrupt request
-  dma_hw->ints0 = 1u << dmd_dma_chan;
-
-  // Start a new DMA transfer to the new buffer
-  dma_channel_set_write_addr(dmd_dma_chan, target, true);
-
-  // Just for debugging purposes
-  stat_frames_received++;
+  dmd_set_and_enable_new_dma_target();
 
   // Fix byte order within the buffer
-  planebuf = (uint32_t *)lastplane;
+  uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
   uint32_t res;
   for (int i = 0; i < source_wordsperframe; i++) {
@@ -388,7 +370,6 @@ void dmd_dma_handler() {
   // Merge multiple planes
 
   // add all planes to get the frame data
-  uint32_t *framebuf = (uint32_t *)lastframe;
   // calculate offsets for each plane and cache these
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
@@ -397,7 +378,7 @@ void dmd_dma_handler() {
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
-  planebuf = (uint32_t *)lastplane;
+  planebuf = (uint32_t *)currentPlaneBuffer;
   for (int px = 0; px < source_wordsperplane; px++) {
     uint32_t pixval = 0;
     for (int plane = 0; plane < source_planesperframe; plane++) {
@@ -414,8 +395,8 @@ void dmd_dma_handler() {
   if (source_lineoversampling == LINEOVERSAMPLING_2X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2;
-    dst = src1 = framebuf;
-    src2 = framebuf + source_wordsperline;
+    dst = src1 = (uint32_t *)&framebuf[0];
+    src2 = src1 + source_wordsperline;
     uint32_t v;
 
     for (int l = 0; l < source_height; l++) {
@@ -430,7 +411,7 @@ void dmd_dma_handler() {
   } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2, *src3, *src4;
-    dst = src1 = framebuf;
+    dst = src1 = (uint32_t *)&framebuf[0];
     src2 = src1 + source_wordsperline;
     src3 = src2 + source_wordsperline;
     src4 = src3 + source_wordsperline;
@@ -449,9 +430,17 @@ void dmd_dma_handler() {
       dst += source_wordsperline;  // destination skips only one line
     }
   }
+
 #ifdef USE_CRC
-  *lastcrc = crc32(0, (const uint8_t *)framebuf, source_bytes);
+  frame_crc = crc32(0, (const uint8_t *)framebuf, source_bytes);
 #endif
+
+  // Switch to next plane buffer
+  if (currentPlaneBuffer == planebuf1) {
+    currentPlaneBuffer == planebuf2;
+  } else {
+    currentPlaneBuffer = planebuf1;
+  }
 
   frame_received = true;
 }
@@ -659,23 +648,23 @@ void dmdreader_init() {
   source_wordsperline = source_width * source_bitsperpixel / 32;
 
   // DMA for DMD reader
-  dmd_dma_chan_cfg = dma_channel_get_default_config(dmd_dma_chan);
-  channel_config_set_read_increment(&dmd_dma_chan_cfg, false);
-  channel_config_set_write_increment(&dmd_dma_chan_cfg, true);
-  channel_config_set_dreq(&dmd_dma_chan_cfg,
+  dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
+  channel_config_set_read_increment(&dmd_dma_channel_cfg, false);
+  channel_config_set_write_increment(&dmd_dma_channel_cfg, true);
+  channel_config_set_dreq(&dmd_dma_channel_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
 
   // Configure the DMA channel. As soon as the PIO pushed a specified number of
   // words to its RX FIFO, the DMA transfer will be triggered.
   // The amount of words to transfer is source_wordsperframe.
-  dma_channel_configure(dmd_dma_chan, &dmd_dma_chan_cfg,
+  dma_channel_configure(dmd_dma_channel, &dmd_dma_channel_cfg,
                         NULL,  // Destination pointer, needs to be set later
                         &dmd_pio->rxf[dmd_sm],  // Source pointer
                         source_wordsperframe,   // Number of transfers
                         false                   // Do not yet start
   );
   // Enable DMA interrupt 0 to be triggered when the transfer is done.
-  dma_channel_set_irq0_enabled(dmd_dma_chan, true);
+  dma_channel_set_irq0_enabled(dmd_dma_channel, true);
   // Set the IRQ handler function.
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
@@ -687,26 +676,25 @@ void dmdreader_init() {
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
 
   // DMA for SPI
-  spi_dma_chan_cfg = dma_channel_get_default_config(spi_dma_chan);
-  channel_config_set_read_increment(&spi_dma_chan_cfg, true);
-  channel_config_set_write_increment(&spi_dma_chan_cfg, false);
-  channel_config_set_dreq(&spi_dma_chan_cfg,
+  spi_dma_channel_cfg = dma_channel_get_default_config(spi_dma_channel);
+  channel_config_set_read_increment(&spi_dma_channel_cfg, true);
+  channel_config_set_write_increment(&spi_dma_channel_cfg, false);
+  channel_config_set_dreq(&spi_dma_channel_cfg,
                           pio_get_dreq(spi_pio, spi_sm, true));
 
-  dma_channel_configure(spi_dma_chan, &spi_dma_chan_cfg,
+  dma_channel_configure(spi_dma_channel, &spi_dma_channel_cfg,
                         &spi_pio->txf[spi_sm],  // Destination pointer
                         NULL,                   // Source pointer
                         0,                      // Number of transfers
                         false                   // Do not yet start
   );
 
-  dma_channel_set_irq1_enabled(spi_dma_chan, true);
+  dma_channel_set_irq1_enabled(spi_dma_channel, true);
   irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_handler);
   irq_set_enabled(DMA_IRQ_1, true);
 
   // Finally start DMD reader PIO program and DMA
-  dmd_dma_handler();
-  digitalWrite(LED_BUILTIN, HIGH);
+  dmd_set_and_enable_new_dma_target();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
@@ -722,12 +710,12 @@ void dmdreader_read() {
     frame_received = false;
 
 #ifdef SUPRESS_DUPLICATES
-    if (*lastcrc != crc_previous_frame) {
-      spi_send_pix(lastframe, *lastcrc, true);
-      crc_previous_frame = *lastcrc;
+    if (frame_crc != crc_previous_frame) {
+      spi_send_pix(framebuf, frame_crc, true);
+      crc_previous_frame = frame_crc;
     }
 #else
-    spi_send_pix(lastframe, *lastcrc, true);
+    spi_send_pix(framebuf, frame_crc, true);
 #endif
   }
 }
