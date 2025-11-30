@@ -5,6 +5,6 @@
 #include <Arduino.h>
 
 void dmdreader_init();
-void dmdreader_read();
+bool dmdreader_send();
 
 #endif

@@ -18,4 +18,14 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
 }
 
-void loop() { dmdreader_read(); }
+void loop() {
+  // Everything is triggered by interrupts, so nothing to do here
+  delay(10);
+}
+
+void loop1() {
+  if (!dmdreader_send()) {
+    // @todo use interrupt to be as fats as possible
+    delayMicroseconds(200);
+  }
+}

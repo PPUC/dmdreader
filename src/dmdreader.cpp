@@ -112,11 +112,14 @@ uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
 uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
-uint8_t framebuf[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                 MAX_MEMORY_OVERHEAD];
+uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                  MAX_MEMORY_OVERHEAD];
+uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                  MAX_MEMORY_OVERHEAD];
+uint8_t *currentFrameBuffer = framebuf1;
+uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
-
-uint32_t stat_spi_skipped = 0;
+int32_t crc_previous_frame = 0;
 
 // SPI PIO
 PIO spi_pio;
@@ -349,11 +352,15 @@ void dmd_set_and_enable_new_dma_target() {
   dma_hw->ints0 = 1u << dmd_dma_channel;
 }
 
+bool flicker = true;
 /**
  * @brief Handles DMD DMA requests by switching between the buffers
  *
  */
 void dmd_dma_handler() {
+  digitalWrite(LED_BUILTIN, flicker);
+  flicker != flicker;
+
   dmd_set_and_enable_new_dma_target();
 
   // Fix byte order within the buffer
@@ -370,6 +377,7 @@ void dmd_dma_handler() {
   // Merge multiple planes
 
   // add all planes to get the frame data
+  uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
   // calculate offsets for each plane and cache these
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
@@ -395,7 +403,7 @@ void dmd_dma_handler() {
   if (source_lineoversampling == LINEOVERSAMPLING_2X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2;
-    dst = src1 = (uint32_t *)&framebuf[0];
+    dst = src1 = framebuf;
     src2 = src1 + source_wordsperline;
     uint32_t v;
 
@@ -411,7 +419,7 @@ void dmd_dma_handler() {
   } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2, *src3, *src4;
-    dst = src1 = (uint32_t *)&framebuf[0];
+    dst = src1 = framebuf;
     src2 = src1 + source_wordsperline;
     src3 = src2 + source_wordsperline;
     src4 = src3 + source_wordsperline;
@@ -435,11 +443,15 @@ void dmd_dma_handler() {
   frame_crc = crc32(0, (const uint8_t *)framebuf, source_bytes);
 #endif
 
-  // Switch to next plane buffer
+  // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
-    currentPlaneBuffer == planebuf2;
+    currentPlaneBuffer = planebuf2;
+    currentFrameBuffer = framebuf2;
+    frameBufferToSend = framebuf1;
   } else {
     currentPlaneBuffer = planebuf1;
+    currentFrameBuffer = framebuf1;
+    frameBufferToSend = framebuf2;
   }
 
   frame_received = true;
@@ -698,24 +710,21 @@ void dmdreader_init() {
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
-void dmdreader_read() {
-  uint32_t crc_previous_frame = 0;
-
-  while (true) {
-    // Wait for the next frame
-    while (!frame_received) {
-      // @todo use an interrupt to avoid waiting
-      delay(1);
-    }
+bool dmdreader_send() {
+  if (frame_received) {
     frame_received = false;
 
 #ifdef SUPRESS_DUPLICATES
     if (frame_crc != crc_previous_frame) {
-      spi_send_pix(framebuf, frame_crc, true);
+      spi_send_pix(frameBufferToSend, frame_crc, true);
       crc_previous_frame = frame_crc;
     }
 #else
-    spi_send_pix(framebuf, frame_crc, true);
+    spi_send_pix(frameBufferToSend, frame_crc, true);
 #endif
+
+    return true;
   }
+
+  return false;
 }
