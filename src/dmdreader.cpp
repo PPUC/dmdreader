@@ -465,13 +465,15 @@ bool dmdreader_init() {
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   while (dmd_type == DMD_UNKNOWN) {
-    digitalWrite(LED_BUILTIN, HIGH);
     dmd_type = detect_dmd();
-    delay(400);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
     digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
   }
 
-  delay(1000);
+  // Delay is needed if blink gets removed above.
+  //delay(1000);
 
   uint offset;
 
