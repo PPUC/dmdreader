@@ -679,7 +679,7 @@ void dmdreader_init() {
   // Set the IRQ handler function.
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
-
+  digitalWrite(LED_BUILTIN, HIGH);
   // initialize SPI slave PIO
   spi_pio = pio0;
   offset = pio_add_program(spi_pio, &clocked_output_program);
@@ -707,8 +707,6 @@ void dmdreader_init() {
   // Finally start DMD reader PIO program and DMA
   dmd_dma_handler();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-
-  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 void dmdreader_read() {
