@@ -476,12 +476,14 @@ void dmdreader_init() {
   // Delay is still needed if blink gets removed above.
   delay(1000);
 
-  for (uint8_t i = 0; i < dmd_type; i++) {
+  for (uint8_t i = 0; i < (dmd_type * 3); i++) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);
     delay(200);
   }
+
+  delay(1000);
 
   uint offset;
 
@@ -707,6 +709,14 @@ void dmdreader_init() {
 
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();
+
+  for (uint8_t i = 0; i < 10; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(100);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(100);
+  }
+
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
