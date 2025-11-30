@@ -513,7 +513,6 @@ void dmdreader_init() {
       source_planesperframe = 3;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
-      digitalWrite(LED_BUILTIN, HIGH);
       break;
     }
 
@@ -708,6 +707,8 @@ void dmdreader_init() {
   // Finally start DMD reader PIO program and DMA
   dmd_dma_handler();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 void dmdreader_read() {
