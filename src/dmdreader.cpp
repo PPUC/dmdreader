@@ -704,10 +704,9 @@ void dmdreader_init() {
   irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_handler);
   irq_set_enabled(DMA_IRQ_1, true);
 
-    digitalWrite(LED_BUILTIN, HIGH);
-
   // Finally start DMD reader PIO program and DMA
   dmd_dma_handler();
+  digitalWrite(LED_BUILTIN, HIGH);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
