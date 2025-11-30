@@ -386,6 +386,13 @@ void dmd_dma_handler() {
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
+  for (uint8_t i = 0; i < 10; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(100);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(100);
+  }
+
   planebuf = (uint32_t *)currentPlaneBuffer;
   for (int px = 0; px < source_wordsperplane; px++) {
     uint32_t pixval = 0;
@@ -397,6 +404,13 @@ void dmd_dma_handler() {
       pixval += v;
     }
     framebuf[px] = pixval;
+  }
+
+  for (uint8_t i = 0; i < 10; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(100);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(100);
   }
 
   // deal with whitestar line oversampling directly within framebuf
@@ -709,14 +723,6 @@ void dmdreader_init() {
 
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();
-
-  for (uint8_t i = 0; i < 10; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(100);
-  }
-
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
