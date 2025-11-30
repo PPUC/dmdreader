@@ -357,15 +357,11 @@ void dmd_set_and_enable_new_dma_target() {
   dma_hw->ints0 = 1u << dmd_dma_channel;
 }
 
-bool flicker = true;
 /**
  * @brief Handles DMD DMA requests by switching between the buffers
  *
  */
 void dmd_dma_handler() {
-  digitalWrite(LED_BUILTIN, flicker);
-  flicker != flicker;
-
   dmd_set_and_enable_new_dma_target();
 
   // Fix byte order within the buffer
@@ -478,15 +474,18 @@ void dmdreader_init() {
     delay(500);
   }
 
-  // Delay is still needed if blink gets removed above.
-  //delay(1000);
+  // Delay is still needed when blink gets removed above.
+  // delay(1000);
 
-  for (uint8_t i = 0; i < (dmd_type * 2); i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(200);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(200);
-  }
+  // Debug blinking to indicate the detected system:
+  /*
+    for (uint8_t i = 0; i < (dmd_type * 3); i++) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(200);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(200);
+    }
+  */
 
   uint offset;
 
