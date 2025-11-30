@@ -2,3 +2,4 @@
 .pio
 generated
 src/*.pio.h
+.vscode
