@@ -8,9 +8,6 @@
 #define DOTCLK 3
 #define SDATA 2
 
-#define LED1_PIN 27
-#define LED2_PIN 28
-
 // SPI Defines
 #define SPI0 spi0
 #define SPI_BASE 16

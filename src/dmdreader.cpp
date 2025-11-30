@@ -1,19 +1,12 @@
-#include "dmd_reader.h"
-
-#include <stdbool.h>
-#include <stdio.h>
+#include "dmdreader.h"
 
 #include "crc32.h"
 #include "dmd_counter.h"
 #include "dmd_interface.h"
-#include "dmd_reader_pins.h"
-#include "hardware/clocks.h"
+#include "dmdreader_pins.h"
 #include "hardware/dma.h"
-#include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"
-#include "hardware/uart.h"
-#include "pico/stdlib.h"
 #include "spi_slave_sender.pio.h"
 
 // should CRC32 checksum be caculated and sent with each frame
@@ -53,14 +46,14 @@ typedef struct buf32_t {
 typedef struct __attribute__((__packed__)) block_header_t {
   uint16_t block_type;  // block type
   uint16_t len;         // length of the whole data including header in bytes
-} block_header_t;
+} block_header_t __attribute__((aligned(4)));
 
 typedef struct __attribute__((__packed__)) block_pix_header_t {
   uint16_t columns;       // number of columns
   uint16_t rows;          // number of rows
   uint16_t bitsperpixel;  // bits per pixel
   uint16_t padding;
-} block_pix_header_t;
+} block_pix_header_t __attribute__((aligned(4)));
 
 typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t columns;       // number of columns
@@ -68,7 +61,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t bitsperpixel;  // bits per pixel
   uint16_t padding;
   uint32_t crc32;  // crc32 of the pixel data
-} block_pix_crc_header_t;
+} block_pix_crc_header_t __attribute__((aligned(4)));
 
 // DMD types
 #define DMD_UNKNOWN 0
@@ -111,25 +104,27 @@ uint16_t source_lineoversampling;
 uint16_t source_wordsperline;
 uint8_t source_mergeplanes;
 
-// raw data read from DMD
+// the buffers need to be aligned to 4 byte because we work with uint32_t
+// pointers later. raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8];
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
+;
 uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8];
-uint8_t *lastplane = planebuf2;
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
+;
+uint8_t *currentPlaneBuffer = planebuf2;
 
-// processed frames (merged planes)
+// processed frame (merged planes)
 uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD];
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+;
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD];
-uint32_t crc1;
-uint32_t crc2;
-uint8_t *lastframe = framebuf1;
-uint32_t *lastcrc;
-
-uint32_t stat_frames_received = 0;
-uint32_t stat_spi_skipped = 0;
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+;
+uint8_t *currentFrameBuffer = framebuf1;
+uint8_t *frameBufferToSend = framebuf2;
+uint32_t frame_crc;
+int32_t crc_previous_frame = 0;
 
 // SPI PIO
 PIO spi_pio;
@@ -144,11 +139,11 @@ PIO frame_pio;
 uint frame_sm;
 
 // DMA
-uint dmd_dma_chan = 0;
-uint spi_dma_chan = 1;
+uint dmd_dma_channel = 0;
+uint spi_dma_channel = 1;
 
-dma_channel_config dmd_dma_chan_cfg;
-dma_channel_config spi_dma_chan_cfg;
+dma_channel_config dmd_dma_channel_cfg;
+dma_channel_config spi_dma_channel_cfg;
 
 volatile bool spi_dma_running = false;
 
@@ -166,8 +161,8 @@ volatile bool frame_received = false;
 void spi_send_dma(uint32_t *buf, uint16_t len) {
   spi_dma_running = true;
   // SET DMA source address and immediately start transfer
-  dma_channel_set_read_addr(spi_dma_chan, buf, false);
-  dma_channel_set_trans_count(spi_dma_chan, len / 4, true);
+  dma_channel_set_read_addr(spi_dma_channel, buf, false);
+  dma_channel_set_trans_count(spi_dma_channel, len / 4, true);
 }
 
 /**
@@ -194,7 +189,7 @@ bool spi_busy() {
     return true;
   }
 
-  if (dma_channel_is_busy(spi_dma_chan)) {
+  if (dma_channel_is_busy(spi_dma_channel)) {
     return true;
   }
 
@@ -211,8 +206,8 @@ bool spi_busy() {
  *
  */
 void spi_abort() {
-  if (dma_channel_is_busy(spi_dma_chan)) {
-    dma_channel_abort(spi_dma_chan);
+  if (dma_channel_is_busy(spi_dma_channel)) {
+    dma_channel_abort(spi_dma_channel);
   }
 
   if (!(pio_sm_is_tx_fifo_empty(spi_pio, spi_sm))) {
@@ -229,26 +224,14 @@ void spi_abort() {
  * signal is received It toggles pin SPI0_CS to H
  *
  */
-void start_spi() { gpio_put(SPI0_CS, 1); }
+void start_spi() { digitalWrite(SPI0_CS, HIGH); }
 
 /**
  * @brief Set pin SPI0_CS to L to signal that there is no active SPI data
  * transfer
  *
  */
-void finish_spi() { gpio_put(SPI0_CS, 0); }
-
-/**
- * @brief A simple debug procedure that toggles the SPI0_CS pin multiple times
- */
-void spi_notify_onoff(int count) {
-  for (int i = 0; i < count; i++) {
-    gpio_put(SPI0_CS, 1);
-    sleep_ms(100);
-    gpio_put(SPI0_CS, 0);
-    sleep_ms(100);
-  }
-}
+void finish_spi() { digitalWrite(SPI0_CS, LOW); }
 
 /**
  * @brief Send a pix buffer via SPI
@@ -290,76 +273,61 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
  *
  * @return uint32_t Number of clocks per second
  */
-uint32_t count_clock(const pio_program_t *program) {
+uint32_t count_clock(uint pin) {
   dmd_pio = pio0;
-  uint offset = pio_add_program(dmd_pio, program);
+  uint offset = pio_add_program(dmd_pio, &dmd_count_signal_program);
   dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-  dmd_counter_program_init(dmd_pio, dmd_sm, offset);
+  dmd_counter_program_init(dmd_pio, dmd_sm, offset, pin);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-  sleep_ms(500);
+  delay(500);
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
   uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
   pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-  pio_remove_program(dmd_pio, program, offset);
+  pio_remove_program(dmd_pio, &dmd_count_signal_program, offset);
   pio_sm_unclaim(dmd_pio, dmd_sm);
 
   return count * 2;
 }
 
 int detect_dmd() {
-  uint32_t dotclk = count_clock(&dmd_count_dotclk_program);
-  uint32_t de = count_clock(&dmd_count_de_program);
-  uint32_t rdata = count_clock(&dmd_count_rdata_program);
+  uint32_t dotclk = count_clock(DOTCLK);
+  uint32_t de = count_clock(DE);
+  uint32_t rdata = count_clock(RDATA);
 
   // By checking DOTCLK, DE and RDATA we can identify system types
   // All values are based on a 500ms sample of data, multiplied by 2
 
-  printf("", dotclk, de, rdata);
-
   // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
   if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
       (rdata > 115) && (rdata < 130)) {
-    printf("WPC detected\n");
-    spi_notify_onoff(DMD_WPC);
     return DMD_WPC;
 
     // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 75) && (rdata < 85)) {
-    printf("Data East detected\n");
-    spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
     // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
-    printf("Sega detected\n");
-    spi_notify_onoff(DMD_DESEGA);
     return DMD_DESEGA;
 
     // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
-    printf("Stern Whitestar detected\n");
-    spi_notify_onoff(DMD_WHITESTAR);
     return DMD_WHITESTAR;
 
-    // SPIKE1 -> unknown for now
-  } else if ((dotclk > 1000000) && (dotclk < 1100000) && (de > 8000) &&
-             (de < 8400) && (rdata > 240) && (rdata < 270)) {
-    printf("Stern Spike1 detected\n");
-    spi_notify_onoff(DMD_SPIKE1);
+    // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
+  } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
+             (de < 8300) && (rdata > 245) && (rdata < 265)) {
     return DMD_SPIKE1;
 
     // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
   } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
              (de < 8100) && (rdata > 55) && (rdata < 65)) {
-    printf("Stern SAM detected\n");
-    spi_notify_onoff(DMD_SAM);
     return DMD_SAM;
   }
 
-  spi_notify_onoff(1);
   return DMD_UNKNOWN;
 }
 
@@ -369,10 +337,24 @@ int detect_dmd() {
  */
 void spi_dma_handler() {
   // Clear the interrupt request
-  dma_hw->ints1 = 1u << spi_dma_chan;
+  dma_hw->ints1 = 1u << spi_dma_channel;
 
   finish_spi();
   spi_dma_running = false;
+}
+
+/**
+ * @brief
+ *
+ */
+void dmd_set_and_enable_new_dma_target() {
+  // Set the other plane buffer as new DMA transfer target
+  dma_channel_set_write_addr(
+      dmd_dma_channel,
+      (currentPlaneBuffer == planebuf1) ? planebuf2 : planebuf1, true);
+
+  // Clear the interrupt request, enable a new transfer
+  dma_hw->ints0 = 1u << dmd_dma_channel;
 }
 
 /**
@@ -380,36 +362,10 @@ void spi_dma_handler() {
  *
  */
 void dmd_dma_handler() {
-  uint8_t *target;
-  uint32_t *targetcrc;
-  uint32_t *planebuf;
-
-  // Switch between buffers
-  if (lastplane == planebuf1) {
-    target = planebuf1;
-    lastplane = planebuf2;
-    lastframe = framebuf2;
-    lastcrc = &crc2;
-    targetcrc = &crc1;
-  } else {
-    target = planebuf2;
-    lastplane = planebuf1;
-    lastframe = framebuf1;
-    lastcrc = &crc1;
-    targetcrc = &crc2;
-  }
-
-  // Clear the interrupt request
-  dma_hw->ints0 = 1u << dmd_dma_chan;
-
-  // Start a new DMA transfer to the new buffer
-  dma_channel_set_write_addr(dmd_dma_chan, target, true);
-
-  // Just for debugging purposes
-  stat_frames_received++;
+  dmd_set_and_enable_new_dma_target();
 
   // Fix byte order within the buffer
-  planebuf = (uint32_t *)lastplane;
+  uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
   uint32_t res;
   for (int i = 0; i < source_wordsperframe; i++) {
@@ -422,7 +378,7 @@ void dmd_dma_handler() {
   // Merge multiple planes
 
   // add all planes to get the frame data
-  uint32_t *framebuf = (uint32_t *)lastframe;
+  uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
   // calculate offsets for each plane and cache these
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
@@ -431,7 +387,7 @@ void dmd_dma_handler() {
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
-  planebuf = (uint32_t *)lastplane;
+  planebuf = (uint32_t *)currentPlaneBuffer;
   for (int px = 0; px < source_wordsperplane; px++) {
     uint32_t pixval = 0;
     for (int plane = 0; plane < source_planesperframe; plane++) {
@@ -449,7 +405,7 @@ void dmd_dma_handler() {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2;
     dst = src1 = framebuf;
-    src2 = framebuf + source_wordsperline;
+    src2 = src1 + source_wordsperline;
     uint32_t v;
 
     for (int l = 0; l < source_height; l++) {
@@ -483,37 +439,53 @@ void dmd_dma_handler() {
       dst += source_wordsperline;  // destination skips only one line
     }
   }
+
 #ifdef USE_CRC
-  *lastcrc = crc32(0, (const uint8_t *)framebuf, source_bytes);
+  frame_crc = crc32(0, (const uint8_t *)framebuf, source_bytes);
 #endif
+
+  // Switch to next plane and frame buffers
+  if (currentPlaneBuffer == planebuf1) {
+    currentPlaneBuffer = planebuf2;
+    currentFrameBuffer = framebuf2;
+    frameBufferToSend = framebuf1;
+  } else {
+    currentPlaneBuffer = planebuf1;
+    currentFrameBuffer = framebuf1;
+    frameBufferToSend = framebuf2;
+  }
 
   frame_received = true;
 }
 
-bool init() {
-  //stdio_init_all();
-
-  printf("DMD reader starting\n");
-
-  // overclock to achieve higher SPI transfer speed
-  set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
-  uint32_t freq = clock_get_hz(clk_sys);
-  printf("System clock: %.2f MHz\n", freq / 1e6);
-
+void dmdreader_init() {
   // this is used to notify the Pi that data is available
-  gpio_init(SPI0_CS);
-  gpio_set_dir(SPI0_CS, GPIO_OUT);
-  gpio_put(SPI0_CS, 0);
-  printf("IRQ pin initialized\n");
+  pinMode(SPI0_CS, OUTPUT);
+  digitalWrite(SPI0_CS, LOW);
 
   int dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   while (dmd_type == DMD_UNKNOWN) {
     dmd_type = detect_dmd();
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
   }
 
-  sleep_ms(1000);
+  // Delay is still needed when blink gets removed above.
+  // delay(1000);
+
+  // Debug blinking to indicate the detected system:
+  /*
+    for (uint8_t i = 0; i < (dmd_type * 3); i++) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(200);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(200);
+    }
+  */
 
   uint offset;
 
@@ -526,7 +498,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_wpc_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("WPC DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -539,7 +510,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 3, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("WPC frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -558,7 +528,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_whitestar_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("Whitestar DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -571,7 +540,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("Whitestar frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -593,7 +561,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_spike_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("Spike DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -606,7 +573,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 2, RDATA);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("Spike frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -625,7 +591,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_sam_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("SAM DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -638,7 +603,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("SAM frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -658,7 +622,6 @@ bool init() {
       pio_sm_config dmd_config =
           dmd_reader_desega_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-      printf("Data East/Sega DMD reader initialized\n");
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
@@ -671,7 +634,6 @@ bool init() {
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, DE);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
-      printf("Data East/Sega frame detection initialized\n");
 
       source_width = 128;
       source_height = 32;
@@ -685,10 +647,6 @@ bool init() {
       source_mergeplanes = MERGEPLANES_NONE;
       break;
     }
-
-    default:
-      printf("Unknown DMD type, aborting\n");
-      return false;
   }
 
   // Calculate display parameters
@@ -705,26 +663,24 @@ bool init() {
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_wordsperline = source_width * source_bitsperpixel / 32;
 
-  printf("Source buffer initialized");
-
   // DMA for DMD reader
-  dmd_dma_chan_cfg = dma_channel_get_default_config(dmd_dma_chan);
-  channel_config_set_read_increment(&dmd_dma_chan_cfg, false);
-  channel_config_set_write_increment(&dmd_dma_chan_cfg, true);
-  channel_config_set_dreq(&dmd_dma_chan_cfg,
+  dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
+  channel_config_set_read_increment(&dmd_dma_channel_cfg, false);
+  channel_config_set_write_increment(&dmd_dma_channel_cfg, true);
+  channel_config_set_dreq(&dmd_dma_channel_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
 
   // Configure the DMA channel. As soon as the PIO pushed a specified number of
   // words to its RX FIFO, the DMA transfer will be triggered.
   // The amount of words to transfer is source_wordsperframe.
-  dma_channel_configure(dmd_dma_chan, &dmd_dma_chan_cfg,
+  dma_channel_configure(dmd_dma_channel, &dmd_dma_channel_cfg,
                         NULL,  // Destination pointer, needs to be set later
                         &dmd_pio->rxf[dmd_sm],  // Source pointer
                         source_wordsperframe,   // Number of transfers
                         false                   // Do not yet start
   );
   // Enable DMA interrupt 0 to be triggered when the transfer is done.
-  dma_channel_set_irq0_enabled(dmd_dma_chan, true);
+  dma_channel_set_irq0_enabled(dmd_dma_channel, true);
   // Set the IRQ handler function.
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
@@ -734,59 +690,45 @@ bool init() {
   offset = pio_add_program(spi_pio, &clocked_output_program);
   spi_sm = pio_claim_unused_sm(spi_pio, true);
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
-  printf("SPI slave initialized \n");
 
   // DMA for SPI
-  spi_dma_chan_cfg = dma_channel_get_default_config(spi_dma_chan);
-  channel_config_set_read_increment(&spi_dma_chan_cfg, true);
-  channel_config_set_write_increment(&spi_dma_chan_cfg, false);
-  channel_config_set_dreq(&spi_dma_chan_cfg,
+  spi_dma_channel_cfg = dma_channel_get_default_config(spi_dma_channel);
+  channel_config_set_read_increment(&spi_dma_channel_cfg, true);
+  channel_config_set_write_increment(&spi_dma_channel_cfg, false);
+  channel_config_set_dreq(&spi_dma_channel_cfg,
                           pio_get_dreq(spi_pio, spi_sm, true));
 
-  dma_channel_configure(spi_dma_chan, &spi_dma_chan_cfg,
+  dma_channel_configure(spi_dma_channel, &spi_dma_channel_cfg,
                         &spi_pio->txf[spi_sm],  // Destination pointer
                         NULL,                   // Source pointer
                         0,                      // Number of transfers
                         false                   // Do not yet start
   );
 
-  dma_channel_set_irq1_enabled(spi_dma_chan, true);
+  dma_channel_set_irq1_enabled(spi_dma_channel, true);
   irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_handler);
   irq_set_enabled(DMA_IRQ_1, true);
 
   // Finally start DMD reader PIO program and DMA
-  dmd_dma_handler();
+  dmd_set_and_enable_new_dma_target();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-
-  return true;
 }
 
-int read_dmd() {
-  gpio_init(SPI0_CS);
-  gpio_set_dir(SPI0_CS, GPIO_IN);
-  gpio_disable_pulls(SPI0_CS);
-
-  uint32_t crc_previous_frame = 0;
-  if (!init()) {
-    printf("Error during initialisation, aborting...\n");
-    return 0;
-  }
-
-  while (true) {
-    // Wait for the next frame
-    if (!(frame_received)) sleep_ms(1);
+bool dmdreader_send() {
+  if (frame_received) {
     frame_received = false;
 
-    // do something
 #ifdef SUPRESS_DUPLICATES
-    if (*lastcrc != crc_previous_frame) {
-      spi_send_pix(lastframe, *lastcrc, true);
-      crc_previous_frame = *lastcrc;
+    if (frame_crc != crc_previous_frame) {
+      spi_send_pix(frameBufferToSend, frame_crc, true);
+      crc_previous_frame = frame_crc;
     }
 #else
-    spi_send_pix(lastframe, *lastcrc, true);
+    spi_send_pix(frameBufferToSend, frame_crc, true);
 #endif
+
+    return true;
   }
 
-  return 0;
+  return false;
 }

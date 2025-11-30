@@ -6,10 +6,10 @@
   "frameworks": "arduino",
   "platforms": "raspberrypi",
   "build": {
-    "srcFilter": "-<main.c>"
+    "srcFilter": "-<main.cpp>"
   },
   "headers": [
-    "dmd_reader.h"
+    "dmdreader.h"
   ],
   "license": "GPL-3.0"
 }

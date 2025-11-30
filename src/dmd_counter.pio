@@ -1,52 +1,8 @@
-.define DE 7
-.define RDATA 6
-.define RCLK 5
-.define COLLAT 4
-.define DOTCLK 3
-.define SDATA 2
-
-; As all programs use the same configuration, the length of these programs need to be identical!
-
-.program dmd_count_dotclk
-; Count DMD dot clock
-
+.program dmd_count_signal
     mov x, null
 .wrap_target
-    wait 0 gpio DOTCLK
-    jmp x-- clockdecrement
-clockdecrement:
-    wait 1 gpio DOTCLK
-.wrap
-
-.program dmd_count_de
- ; count DMD data enable
-
-    mov x, null
-.wrap_target
-    wait 0 gpio DE
-    jmp x-- clockdecrement
-clockdecrement:
-    wait 1 gpio DE
-.wrap
-
-.program dmd_count_rdata
- ; count DMD RDATA
-
-    mov x, null
-.wrap_target
-    wait 0 gpio RDATA
-    jmp x-- clockdecrement
-clockdecrement:
-    wait 1 gpio RDATA
-.wrap
-
-.program dmd_count_rclk
- ; count DMD RCLK
-
-    mov x, null
-.wrap_target
-    wait 0 gpio RCLK
-    jmp x-- clockdecrement
-clockdecrement:
-    wait 1 gpio RCLK
+    wait 0 pin 0
+    jmp x-- decrement
+decrement:
+    wait 1 pin 0
 .wrap
