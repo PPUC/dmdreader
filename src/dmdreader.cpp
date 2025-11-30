@@ -3,7 +3,7 @@
 #include "crc32.h"
 #include "dmd_counter.h"
 #include "dmd_interface.h"
-#include "dmd_reader_pins.h"
+#include "dmdreader_pins.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"

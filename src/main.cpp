@@ -8,14 +8,12 @@
 #include "hardware/clocks.h"
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-
   // overclock to achieve higher SPI transfer speed
   set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
 
-  dmdreader_init();
+  pinMode(LED_BUILTIN, OUTPUT);
 
-  digitalWrite(LED_BUILTIN, HIGH);
+  dmdreader_init();
 }
 
 void loop() {
@@ -26,6 +24,6 @@ void loop() {
 void loop1() {
   if (!dmdreader_send()) {
     // @todo use interrupt to be as fats as possible
-    delayMicroseconds(200);
+    delayMicroseconds(100);
   }
 }

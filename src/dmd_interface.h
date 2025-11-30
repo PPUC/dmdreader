@@ -6,7 +6,7 @@
 #include "dmd_interface_spike.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
-#include "dmd_reader_pins.h"
+#include "dmdreader_pins.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 
