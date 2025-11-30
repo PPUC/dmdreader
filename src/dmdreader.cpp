@@ -679,7 +679,7 @@ void dmdreader_init() {
   // Set the IRQ handler function.
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
-  digitalWrite(LED_BUILTIN, HIGH);
+
   // initialize SPI slave PIO
   spi_pio = pio0;
   offset = pio_add_program(spi_pio, &clocked_output_program);
@@ -699,6 +699,7 @@ void dmdreader_init() {
                         0,                      // Number of transfers
                         false                   // Do not yet start
   );
+  digitalWrite(LED_BUILTIN, HIGH);
 
   dma_channel_set_irq1_enabled(spi_dma_chan, true);
   irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_handler);
