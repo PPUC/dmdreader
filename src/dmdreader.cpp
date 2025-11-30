@@ -472,8 +472,8 @@ void dmdreader_init() {
     delay(500);
   }
 
-  // Delay is needed if blink gets removed above.
-  //delay(1000);
+  // Delay is still needed if blink gets removed above.
+  delay(1000);
 
   for (uint8_t i = 0; i < dmd_type; i++) {
     digitalWrite(LED_BUILTIN, HIGH);
