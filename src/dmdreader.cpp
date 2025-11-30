@@ -699,11 +699,12 @@ void dmdreader_init() {
                         0,                      // Number of transfers
                         false                   // Do not yet start
   );
-  digitalWrite(LED_BUILTIN, HIGH);
 
   dma_channel_set_irq1_enabled(spi_dma_chan, true);
   irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_handler);
   irq_set_enabled(DMA_IRQ_1, true);
+
+    digitalWrite(LED_BUILTIN, HIGH);
 
   // Finally start DMD reader PIO program and DMA
   dmd_dma_handler();
