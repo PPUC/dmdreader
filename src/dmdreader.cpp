@@ -104,18 +104,19 @@ uint16_t source_lineoversampling;
 uint16_t source_wordsperline;
 uint8_t source_mergeplanes;
 
+// the buffers need to be aligned to 4 byte because we work with uint32_t pointers later.
 // raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8];
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));;
 uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8];
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));;
 uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
 uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD];
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));;
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD];
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));;
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
@@ -385,13 +386,6 @@ void dmd_dma_handler() {
   }
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
-
-  for (uint8_t i = 0; i < 10; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(100);
-  }
 
   planebuf = (uint32_t *)currentPlaneBuffer;
   for (int px = 0; px < source_wordsperplane; px++) {
