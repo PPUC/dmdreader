@@ -707,8 +707,6 @@ void dmdreader_init() {
   // Finally start DMD reader PIO program and DMA
   dmd_dma_handler();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-
-  return true;
 }
 
 void dmdreader_read() {
