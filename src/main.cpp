@@ -13,14 +13,7 @@ void setup() {
   // overclock to achieve higher SPI transfer speed
   set_sys_clock_khz(SYS_CLK_MHZ * 1000, true);
 
-  if (!dmdreader_init()) {
-    while (true) {
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay(200);
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(200);
-    }
-  }
+  dmdreader_init();
 
   digitalWrite(LED_BUILTIN, HIGH);
 }

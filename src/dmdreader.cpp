@@ -456,7 +456,7 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
-bool dmdreader_init() {
+void dmdreader_init() {
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
@@ -474,6 +474,13 @@ bool dmdreader_init() {
 
   // Delay is needed if blink gets removed above.
   //delay(1000);
+
+  for (uint8_t i = 0; i < dmd_type; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(200);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(200);
+  }
 
   uint offset;
 
@@ -635,9 +642,6 @@ bool dmdreader_init() {
       source_mergeplanes = MERGEPLANES_NONE;
       break;
     }
-
-    default:
-      return false;
   }
 
   // Calculate display parameters

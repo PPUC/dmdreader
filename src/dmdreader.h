@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 
-bool dmdreader_init();
+void dmdreader_init();
 void dmdreader_read();
 
 #endif
