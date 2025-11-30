@@ -46,14 +46,14 @@ typedef struct buf32_t {
 typedef struct __attribute__((__packed__)) block_header_t {
   uint16_t block_type;  // block type
   uint16_t len;         // length of the whole data including header in bytes
-} block_header_t;
+} block_header_t __attribute__((aligned(4)));
 
 typedef struct __attribute__((__packed__)) block_pix_header_t {
   uint16_t columns;       // number of columns
   uint16_t rows;          // number of rows
   uint16_t bitsperpixel;  // bits per pixel
   uint16_t padding;
-} block_pix_header_t;
+} block_pix_header_t __attribute__((aligned(4)));
 
 typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t columns;       // number of columns
@@ -61,7 +61,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t bitsperpixel;  // bits per pixel
   uint16_t padding;
   uint32_t crc32;  // crc32 of the pixel data
-} block_pix_crc_header_t;
+} block_pix_crc_header_t __attribute__((aligned(4)));
 
 // DMD types
 #define DMD_UNKNOWN 0
@@ -104,19 +104,23 @@ uint16_t source_lineoversampling;
 uint16_t source_wordsperline;
 uint8_t source_mergeplanes;
 
-// the buffers need to be aligned to 4 byte because we work with uint32_t pointers later.
-// raw data read from DMD
+// the buffers need to be aligned to 4 byte because we work with uint32_t
+// pointers later. raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));;
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
+;
 uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));;
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
+;
 uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
 uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));;
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+;
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));;
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+;
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
