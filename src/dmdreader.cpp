@@ -404,13 +404,6 @@ void dmd_dma_handler() {
     framebuf[px] = pixval;
   }
 
-  for (uint8_t i = 0; i < 10; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(100);
-  }
-
   // deal with whitestar line oversampling directly within framebuf
   if (source_lineoversampling == LINEOVERSAMPLING_2X) {
     uint16_t i = 0;
@@ -486,16 +479,14 @@ void dmdreader_init() {
   }
 
   // Delay is still needed if blink gets removed above.
-  delay(1000);
+  //delay(1000);
 
-  for (uint8_t i = 0; i < (dmd_type * 3); i++) {
+  for (uint8_t i = 0; i < (dmd_type * 2); i++) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);
     delay(200);
   }
-
-  delay(1000);
 
   uint offset;
 
