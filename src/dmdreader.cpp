@@ -297,9 +297,20 @@ int detect_dmd() {
   // By checking DOTCLK, DE and RDATA we can identify system types
   // All values are based on a 500ms sample of data, multiplied by 2
 
+  // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
+  if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) && (de < 8300) &&
+      (rdata > 245) && (rdata < 265)) {
+    return DMD_SPIKE1;
+
+    // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
+  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
+             (de < 8100) && (rdata > 55) && (rdata < 65)) {
+    return DMD_SAM;
+  }
+#ifndef ALPHADMD
   // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
-  if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) && (de < 4000) &&
-      (rdata > 115) && (rdata < 130)) {
+  else if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) &&
+           (de < 4000) && (rdata > 115) && (rdata < 130)) {
     return DMD_WPC;
 
     // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
@@ -316,17 +327,8 @@ int detect_dmd() {
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
-
-    // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
-  } else if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) &&
-             (de < 8300) && (rdata > 245) && (rdata < 265)) {
-    return DMD_SPIKE1;
-
-    // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
-  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
-             (de < 8100) && (rdata > 55) && (rdata < 65)) {
-    return DMD_SAM;
   }
+#endif
 
   return DMD_UNKNOWN;
 }

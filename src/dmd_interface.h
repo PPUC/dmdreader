@@ -1,9 +1,14 @@
 #ifndef DMD_INTERFACE_H
 #define DMD_INTERFACE_H
 
-#include "dmd_interface_desega.pio.h"
+#ifdef ALPHADMD
+#include "dmd_interface_sam_alphadmd.pio.h"
+#include "dmd_interface_spike_alphadmd.pio.h"
+#else
 #include "dmd_interface_sam.pio.h"
 #include "dmd_interface_spike.pio.h"
+#endif
+#include "dmd_interface_desega.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
 #include "dmdreader_pins.h"
@@ -19,8 +24,9 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
   pio_gpio_init(pio, DOTCLK);
   pio_gpio_init(pio, SDATA);
 
-  // Set the pin direction at the PIO
-  pio_sm_set_consecutive_pindirs(pio, sm, SDATA, 2, false);  // SDATA, DOTCLK
+  // Set the pin direction at the PIO, handle pins seprately to support alphaDMD as well
+  pio_sm_set_consecutive_pindirs(pio, sm, SDATA, 1, false);
+  pio_sm_set_consecutive_pindirs(pio, sm, DOTCLK, 1, false);
 
   // Shifting to left matches the customary MSB-first ordering of SPI.
   sm_config_set_in_shift(&c,
