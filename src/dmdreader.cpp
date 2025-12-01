@@ -333,8 +333,6 @@ int detect_dmd() {
              (de < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
   }
-
-  
 #endif
 
   return DMD_UNKNOWN;
