@@ -1,3 +1,11 @@
+#ifdef RP2350
+// Set the official 200 MHz system clock
+// For RP2350, PLL parameters must be provided
+#define PLL_SYS_VCO_FREQ_HZ (1600ul * 1000ul * 1000ul)
+#define PLL_SYS_POSTDIV1    4
+#define PLL_SYS_POSTDIV2    2
+#endif
+
 // set to officially supported 200MHz clock
 // @see SYS_CLK_MHZ https://github.com/raspberrypi/pico-sdk/releases/tag/2.1.1
 #define SYS_CLK_MHZ 200
