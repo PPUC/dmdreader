@@ -1,12 +1,24 @@
 #ifndef DMD_READER_PINS_H
 #define DMD_READER_PINS_H
 
+#ifndef DE
 #define DE 7
+#endif
+#ifndef RDATA
 #define RDATA 6
+#endif
+#ifndef RCLK
 #define RCLK 5
+#endif
+#ifndef COLLAT
 #define COLLAT 4
+#endif
+#ifndef DOTCLK
 #define DOTCLK 3
+#endif
+#ifndef SDATA
 #define SDATA 2
+#endif
 
 // SPI Defines
 #define SPI0 spi0

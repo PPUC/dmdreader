@@ -33,16 +33,15 @@ jobs:
           fi
 
   build:
-    name: Build dmdreader
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     needs: [ version ]
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
+        dmd: ['ppucdmd', 'alphadmd']
+
+    name: Build for ${{ matrix.dmd }}
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,35 +66,22 @@ jobs:
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade platformio
+          pip install --upgrade platformio rich_click intelhex
 
-      - name: Build elf2uf2 from source
+      - name: Build dmdreader
         run: |
-          sudo apt update && sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi
-          git clone https://github.com/ckormanyos/elf2uf2.git
-          cd elf2uf2
-          make all
-          sudo cp bin/elf2uf2 /usr/local/bin/
-          cd ..
+          pio run -e ${{ matrix.dmd }}
+          cp .pio/build/${{ matrix.dmd }}/firmware.elf dmdreader-${{ matrix.dmd }}.elf
+          pio run -e ${{ matrix.dmd }} -t buildunified
+          cp .pio/build/${{ matrix.dmd }}/firmware.uf2 dmdreader-${{ matrix.dmd }}.uf2
 
-      - name: Run PlatformIO
-        run: |
-          pio run
-
-      - name: Create UF2 file (using elf2uf2)
-        run: |
-          ELF_FILE=$(find .pio/build/ -name "*.elf" | head -n 1)
-          echo "Found ELF file: $ELF_FILE"
-          elf2uf2 "$ELF_FILE" "${ELF_FILE%.elf}.uf2"
-          cp ${ELF_FILE%.elf}.uf2 dmdreader.uf2
-          cp "$ELF_FILE" dmdreader.elf
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dmdreader-${{ needs.version.outputs.tag }}
+          name: dmdreader-${{ matrix.dmd }}
           path: |
-            dmdreader.elf
-            dmdreader.uf2
+            dmdreader-${{ matrix.dmd }}.elf
+            dmdreader-${{ matrix.dmd }}.uf2
             VERSION
             LICENSE
             README.md
@@ -109,8 +95,10 @@ jobs:
       - name: Package
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-            cd dmdreader-${{ needs.version.outputs.tag }}
-            zip ../dmdreader-${{ needs.version.outputs.tag }}.zip dmdreader.elf dmdreader.uf2 VERSION LICENSE README.md
+            cd dmdreader-ppucdmd
+            zip ../dmdreader-ppucdmd.zip dmdreader-ppucdmd.elf dmdreader-ppucdmd.uf2 VERSION LICENSE README.md
+            cd ../dmdreader-alphadmd
+            zip ../dmdreader-alphadmd.zip dmdreader-alphadmd.elf dmdreader-alphadmd.uf2 VERSION LICENSE README.md
             cd ..
 
       - name: Release
@@ -119,4 +107,5 @@ jobs:
         with:
           draft: true
           files: |
-            dmdreader-${{ needs.version.outputs.tag }}.zip
+            dmdreader-ppucdmd.zip
+            dmdreader-alphadmd.zip
