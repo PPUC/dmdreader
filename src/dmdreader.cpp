@@ -327,7 +327,14 @@ int detect_dmd() {
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
+
+    // Capcom -> DOTCLK: 2084000 | DE: 16280 | RDATA: 510
+  } else if ((dotclk > 2000000) && (dotclk < 2150000) && (de > 16000) &&
+             (de < 16500) && (rdata > 490) && (rdata < 530)) {
+    return DMD_CAPCOM;
   }
+
+  
 #endif
 
   return DMD_UNKNOWN;
