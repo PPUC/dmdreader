@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dmd: ['ppucdmd', 'alphadmd']
+        dmd: ['ppucdmd', 'ppucdmd2', 'alphadmd']
 
     name: Build for ${{ matrix.dmd }}
 
