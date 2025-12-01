@@ -72,7 +72,6 @@ jobs:
         run: |
           pio run -e ${{ matrix.dmd }}
           cp .pio/build/${{ matrix.dmd }}/firmware.elf dmdreader-${{ matrix.dmd }}.elf
-          pio run -e ${{ matrix.dmd }} -t buildunified
           cp .pio/build/${{ matrix.dmd }}/firmware.uf2 dmdreader-${{ matrix.dmd }}.uf2
 
       - name: Upload artifacts
@@ -97,6 +96,8 @@ jobs:
         run: |
             cd dmdreader-ppucdmd
             zip ../dmdreader-ppucdmd.zip dmdreader-ppucdmd.elf dmdreader-ppucdmd.uf2 VERSION LICENSE README.md
+            cd ../dmdreader-ppucdmd2
+            zip ../dmdreader-ppucdmd2.zip dmdreader-ppucdmd2.elf dmdreader-ppucdmd2.uf2 VERSION LICENSE README.md
             cd ../dmdreader-alphadmd
             zip ../dmdreader-alphadmd.zip dmdreader-alphadmd.elf dmdreader-alphadmd.uf2 VERSION LICENSE README.md
             cd ..
@@ -108,4 +109,5 @@ jobs:
           draft: true
           files: |
             dmdreader-ppucdmd.zip
+            dmdreader-ppucdmd2.zip
             dmdreader-alphadmd.zip
