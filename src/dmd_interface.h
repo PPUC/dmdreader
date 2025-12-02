@@ -42,7 +42,7 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
                         0);
 
   // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-  sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+  // sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
   // For the 200MHz clock
   sm_config_set_clkdiv(&c, 1.6f);
