@@ -16,24 +16,25 @@
 
 .wrap_target
     set y, 31          ; number of rows
-    mov x, osr         ; load number of dots to skip (128)
 
     irq clear PLANE_START_IRQ
     wait irq PLANE_START_IRQ
 
-skip_loop:
+row_loop:
+    mov x, osr         ; load number of dots to skip (128)
+dot_skip_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
     wait 1 gpio DOTCLK
-    jmp x-- skip_loop       ; skip 128 dots
+    jmp x-- dot_skip_loop       ; skip 128 dots
 
     mov x, osr         ; load number of pixels to read (128)
-read_loop:
+dot_read_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
     in null 1          ; left padding a 0 to the output as WPC is 2bit/px
     wait 1 gpio DOTCLK ; raising edge
     in pins 1          ; read 1 bit pin data
-    jmp x-- read_loop
-    jmp y-- skip_loop
+    jmp x-- dot_read_loop
+    jmp y-- row_loop
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
