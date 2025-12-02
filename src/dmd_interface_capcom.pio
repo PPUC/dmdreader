@@ -17,8 +17,8 @@
 .wrap_target
     set y, 31          ; number of rows
 
-    irq clear PLANE_START_IRQ
     wait irq PLANE_START_IRQ
+    irq clear PLANE_START_IRQ
 
 row_loop:
     mov x, osr         ; load number of dots to skip (128)
