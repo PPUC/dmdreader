@@ -4,31 +4,30 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-.define FRAME_START_IRQ 4
+.define PLANE_START_IRQ 4
 
 .program dmd_reader_capcom
-    ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
-    set x, 31          ; x = 31 (max 5-bit value)
-    in x, 5            ; shift in 5 bits, isr = 31
-    set x, 31          ; x = 31
-    in x, 5            ; shift in 5 bits, isr = 1023
-    set x, 15          ; x = 15
-    in x, 4            ; shift in 4 bits, isr = 16383
-    mov y, isr         ; y = 16383
+    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
+    in x, 5            ; shift in 5 bits, isr is 31 now
+    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
+    in x, 5            ; shift in 5 bits, isr is 1023 now
+    set x, 3           ; load 3
+    in x, 2            ; shift in 2 bits, isr is 4095 now (128x32 - 1)
+    mov y, isr         ; copy 4095 to y
 
 .wrap_target
-    mov x, y       ; load number of pixels
-    mov isr, null  ; reset shift counter
+    mov x, y           ; load number of pixels per plane (128x32 - 1)
+    mov isr, null      ; reset shift counter
 
-    irq clear FRAME_START_IRQ
-    wait irq FRAME_START_IRQ
+    irq clear PLANE_START_IRQ
+    wait irq PLANE_START_IRQ
 
-dotloop:
-    wait 0 gpio DOTCLK  ; falling edge
-    in null, 3          ; left padding with 3 zeros
-    wait 1 gpio DOTCLK  ; raising edge
-    in pins 1           ; read pin data
-    jmp x-- dotloop
+plane_loop:
+    wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
+    in null 1          ; left padding a 0 to the output as Capcom is 2bit/px
+    wait 1 gpio DOTCLK ; raising edge
+    in pins 1          ; read 1 bit pin data
+    jmp x-- plane_loop
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
@@ -36,5 +35,6 @@ dotloop:
 .wrap_target
     wait 0 gpio RDATA
     wait 1 gpio RDATA
-    irq FRAME_START_IRQ
+    wait 0 gpio RCLK
+    irq PLANE_START_IRQ
 .wrap

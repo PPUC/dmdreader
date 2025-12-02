@@ -673,16 +673,16 @@ void dmdreader_init() {
       pio_sm_config frame_config =
           dmd_framedetect_capcom_program_get_default_config(offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
-                                   input_pins, 1, DE);
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2; 
       source_pixelsperbyte = 8 / source_bitsperpixel;
-      source_planesperframe = 1;
-      source_lineoversampling = LINEOVERSAMPLING_2X;
-      source_mergeplanes = MERGEPLANES_NONE;
+      source_planesperframe = 3;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
   }
