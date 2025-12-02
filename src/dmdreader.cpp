@@ -127,6 +127,8 @@ uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
 
+uint8_t dmd_type = DMD_UNKNOWN;
+
 // SPI PIO
 PIO spi_pio;
 uint spi_sm;
@@ -403,6 +405,9 @@ void dmd_dma_handler() {
       if (source_shiftplanesatmerge) {
         v <<= plane;
       }
+      else if (plane > 0 && v && !planebuf[offset[0] + px]) {
+        // Transitional frame detected
+      }
       pixval += v;
     }
     framebuf[px] = pixval;
@@ -471,7 +476,6 @@ void dmdreader_init() {
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
 
-  int dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   while (dmd_type == DMD_UNKNOWN) {
