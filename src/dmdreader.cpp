@@ -680,7 +680,7 @@ void dmdreader_init() {
       source_height = 32;
       source_bitsperpixel = 2; 
       source_pixelsperbyte = 8 / source_bitsperpixel;
-      source_planesperframe = 3;
+      source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
