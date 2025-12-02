@@ -36,6 +36,11 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
                          32      // autopush threshold
   );
 
+  sm_config_set_out_shift(&c,
+                        false,  // shift-to-right = false
+                        false,  // no autopush
+                        0);
+
   // We only send, so disable the TX FIFO to make the RX FIFO deeper.
   sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
