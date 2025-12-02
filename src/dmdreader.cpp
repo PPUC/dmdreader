@@ -666,7 +666,7 @@ void dmdreader_init() {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint input_pins[] = {DE};
+      uint input_pins[] = {RDATA, RCLK};
       frame_pio = pio0;
       offset = pio_add_program(frame_pio, &dmd_framedetect_capcom_program);
       frame_sm = pio_claim_unused_sm(frame_pio, true);
