@@ -70,6 +70,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define DMD_SPIKE1 3
 #define DMD_SAM 4
 #define DMD_DESEGA 5
+#define DMD_CAPCOM 6
 
 // Line oversampling
 #define LINEOVERSAMPLING_NONE 1
@@ -327,6 +328,11 @@ int detect_dmd() {
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
+
+    // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
+  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
+             (de < 16500) && (rdata > 490) && (rdata < 530)) {
+    return DMD_CAPCOM;
   }
 #endif
 
@@ -647,6 +653,36 @@ void dmdreader_init() {
       // in DE-Sega each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
+    case DMD_CAPCOM: {
+      dmd_pio = pio0;
+      offset = pio_add_program(dmd_pio, &dmd_reader_capcom_program);
+      dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config dmd_config =
+          dmd_reader_capcom_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
+
+      // The framedetect program just runs and detects the beginning of a new
+      // frame
+      uint input_pins[] = {RDATA, RCLK};
+      frame_pio = pio0;
+      offset = pio_add_program(frame_pio, &dmd_framedetect_capcom_program);
+      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      pio_sm_config frame_config =
+          dmd_framedetect_capcom_program_get_default_config(offset);
+      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+                                   input_pins, 2, 0);
+      pio_sm_set_enabled(frame_pio, frame_sm, true);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 2; 
+      source_pixelsperbyte = 8 / source_bitsperpixel;
+      source_planesperframe = 4;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
   }
