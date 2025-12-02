@@ -329,7 +329,7 @@ int detect_dmd() {
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
 
-    // Capcom -> DOTCLK: 2084000 | DE: 16280 | RDATA: 510
+    // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
              (de < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
