@@ -431,7 +431,7 @@ void dmd_dma_handler() {
           // Stop state machine
           pio_sm_set_enabled(frame_pio, frame_sm, false);
           // Wait 2ms to skip one plane (Capcom is one plane every 2ms)
-          delay(2);
+          // delay(2);
           // start state machine again
           pio_sm_set_enabled(frame_pio, frame_sm, true);
           return;
