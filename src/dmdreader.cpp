@@ -423,7 +423,7 @@ void dmd_dma_handler() {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      } else if (plane > 0 && v > 0 && planebuf[offset[0] + px] == 0) {
+      } else if (plane == 1 && v > 0 && planebuf[offset[0] + px] == 0) {
         // Transitional frame detected
         if (DMD_CAPCOM == dmd_type) {
           skip_one_frame = true;
