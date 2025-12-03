@@ -45,7 +45,7 @@ dot_read_loop:
 .wrap_target
 waitrdata:
     wait 1 gpio RDATA ; RDATA rising edge 
-    mov x, isr        ; Fill x with 31 loops
+    mov x, isr        ; Fill x with 32 loops
 
 rclkloop:
     wait 1 gpio RCLK
