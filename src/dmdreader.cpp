@@ -423,7 +423,7 @@ void dmd_dma_handler() {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      } else if (plane == 2 && v > 0 && planebuf[offset[1] + px] == 0) {
+      } else if (plane == 2 && v > 0 && planebuf[offset[0] + px] == 0) {
         // Transitional frame detected
         if (DMD_CAPCOM == dmd_type) {
           skip_one_frame = true;
@@ -434,17 +434,6 @@ void dmd_dma_handler() {
           delay(2);
           // start state machine again
           pio_sm_set_enabled(frame_pio, frame_sm, true);
-          return;
-        } else if (DMD_WPC == dmd_type) {
-          skip_one_frame = true;
-          switch_buffers();
-          // Stop state machine
-          pio_sm_set_enabled(frame_pio, frame_sm, false);
-          // Wait 9ms to skip one plane (WPC is one plane every 9ms)
-          delay(9);
-          // start state machine again
-          pio_sm_set_enabled(frame_pio, frame_sm, true);
-          return;
           return;
         }
       }
