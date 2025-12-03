@@ -39,9 +39,19 @@ dot_read_loop:
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_capcom
+; We skip 32 rows to find the correct starting point for Capcom, the image is shifted by 1 row otherwise.
+    set x, 31
+
 .wrap_target
-    wait 1 gpio RDATA
+waitrdata:
+    wait 1 gpio RDATA ; RDATA rising edge 
+    mov x, isr        ; Fill x with 31 loops
+
+rclkloop:
+    wait 1 gpio RCLK
     wait 0 gpio RCLK
+    jmp x-- rclkloop
+
     irq PLANE_START_IRQ
     wait 0 gpio RDATA
 .wrap

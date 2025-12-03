@@ -17,7 +17,6 @@
     mov y, isr         ; y = 8191
 
 .wrap_target
-
     mov x, y       ; load number of pixels
     mov isr, null  ; reset shift counter
 
