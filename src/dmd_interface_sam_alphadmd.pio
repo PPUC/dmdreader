@@ -17,8 +17,8 @@
     mov y, isr         ; y = 16383
 
 .wrap_target
-    mov x, y       ; load number of pixels
-    mov isr, null  ; reset shift counter
+    mov x, y           ; load number of pixels
+    mov isr, null      ; clear ISR and reset shift counter
 
     irq clear FRAME_START_IRQ
     wait irq FRAME_START_IRQ
