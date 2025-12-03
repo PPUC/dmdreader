@@ -126,7 +126,7 @@ uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
-
+bool skip_one_frame = false;
 uint8_t dmd_type = DMD_UNKNOWN;
 
 // SPI PIO
@@ -353,6 +353,19 @@ void spi_dma_handler() {
   spi_dma_running = false;
 }
 
+void switch_buffers() {
+  // Switch to next plane and frame buffers
+  if (currentPlaneBuffer == planebuf1) {
+    currentPlaneBuffer = planebuf2;
+    currentFrameBuffer = framebuf2;
+    frameBufferToSend = framebuf1;
+  } else {
+    currentPlaneBuffer = planebuf1;
+    currentFrameBuffer = framebuf1;
+    frameBufferToSend = framebuf2;
+  }
+}
+
 /**
  * @brief
  *
@@ -373,6 +386,12 @@ void dmd_set_and_enable_new_dma_target() {
  */
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
+
+  if (skip_one_frame) {
+    skip_one_frame = false;
+    switch_buffers();
+    return;
+  }
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
@@ -404,9 +423,23 @@ void dmd_dma_handler() {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      }
-      else if (plane > 0 && v && !planebuf[offset[0] + px]) {
+      } else if (plane > 0 && v > 0 && planebuf[offset[0] + px] == 0) {
         // Transitional frame detected
+        if (DMD_CAPCOM == dmd_type) {
+          skip_one_frame = true;
+          switch_buffers();
+          // Stop state machine
+          pio_sm_set_enabled(frame_pio, frame_sm, false);
+          // Wait 2ms to skip one plane (Capcom is one plane every 2ms)
+          delay(2);
+          // start state machine again
+          pio_sm_set_enabled(frame_pio, frame_sm, true);
+          return;
+        } else if (DMD_WPC == dmd_type) {
+          // Don't render a transitional frame
+          switch_buffers();
+          return;
+        }
       }
       pixval += v;
     }
@@ -457,16 +490,7 @@ void dmd_dma_handler() {
   frame_crc = crc32(0, (const uint8_t *)framebuf, source_bytes);
 #endif
 
-  // Switch to next plane and frame buffers
-  if (currentPlaneBuffer == planebuf1) {
-    currentPlaneBuffer = planebuf2;
-    currentFrameBuffer = framebuf2;
-    frameBufferToSend = framebuf1;
-  } else {
-    currentPlaneBuffer = planebuf1;
-    currentFrameBuffer = framebuf1;
-    frameBufferToSend = framebuf2;
-  }
+  switch_buffers();
 
   frame_received = true;
 }
