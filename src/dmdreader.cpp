@@ -436,8 +436,15 @@ void dmd_dma_handler() {
           pio_sm_set_enabled(frame_pio, frame_sm, true);
           return;
         } else if (DMD_WPC == dmd_type) {
-          // Don't render a transitional frame
+          skip_one_frame = true;
           switch_buffers();
+          // Stop state machine
+          pio_sm_set_enabled(frame_pio, frame_sm, false);
+          // Wait 9ms to skip one plane (WPC is one plane every 9ms)
+          delay(9);
+          // start state machine again
+          pio_sm_set_enabled(frame_pio, frame_sm, true);
+          return;
           return;
         }
       }
