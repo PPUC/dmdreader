@@ -30,7 +30,7 @@ dot_skip_loop:
     mov x, osr         ; load number of pixels to read (128)
 dot_read_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
-    in null 1          ; left padding a 0 to the output as WPC is 2bit/px
+    in null 3          ; left padding a 0 to the output as WPC is 2bit/px
     wait 1 gpio DOTCLK ; raising edge
     in pins 1          ; read 1 bit pin data
     jmp x-- dot_read_loop
