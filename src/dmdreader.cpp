@@ -126,7 +126,7 @@ uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
-bool skip_one_frame = false;
+uint8_t skip_frames = 0;
 uint8_t dmd_type = DMD_UNKNOWN;
 
 // SPI PIO
@@ -387,8 +387,8 @@ void dmd_set_and_enable_new_dma_target() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
-  if (skip_one_frame) {
-    skip_one_frame = false;
+  if (skip_frames > 0) {
+    skip_frames--;
     switch_buffers();
     return;
   }
@@ -426,7 +426,7 @@ void dmd_dma_handler() {
       } else if (plane == 2 && v > 0 && planebuf[offset[0] + px] == 0) {
         // Transitional frame detected
         if (DMD_CAPCOM == dmd_type) {
-          skip_one_frame = true;
+          skip_frames = 2;
           switch_buffers();
           // Stop state machine
           pio_sm_set_enabled(frame_pio, frame_sm, false);
