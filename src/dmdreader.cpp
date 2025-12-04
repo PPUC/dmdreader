@@ -88,7 +88,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define MAX_WIDTH 192
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
-#define MAX_PLANESPERFRAME 6
+#define MAX_PLANESPERFRAME 4
 #define MAX_MEMORY_OVERHEAD \
   4  // reserve additional memory in framebuf for line oversampling
 
@@ -122,12 +122,9 @@ uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
-uint8_t framebuf4[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
-uint32_t *tempFrameBuffer1 = (uint32_t *)framebuf3;
-uint32_t *tempFrameBuffer2 = (uint32_t *)framebuf4;
+uint8_t *prevFrameBuffer = framebuf3;
 
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
@@ -384,6 +381,54 @@ bool matchGroupsAtLeastBytes(const uint8_t *a, const uint8_t *b,
   return ok >= minMatchingBytes;
 }
 
+// 16-byte LUT for 4-bit combinations (since each pixel is 2 bits)
+static const uint8_t lut4bit[16] = {
+    // Maps [0..3] + [0..3] -> result
+    // Index = (pixel_a << 2) | pixel_b
+    0,  // 0+0 = 0 -> 0
+    1,  // 0+1 = 1 -> 1
+    1,  // 0+2 = 2 -> 1
+    2,  // 0+3 = 3 -> 2
+
+    1,  // 1+0 = 1 -> 1
+    1,  // 1+1 = 2 -> 1
+    2,  // 1+2 = 3 -> 2
+    2,  // 1+3 = 4 -> 2
+
+    1,  // 2+0 = 2 -> 1
+    2,  // 2+1 = 3 -> 2
+    2,  // 2+2 = 4 -> 2
+    3,  // 2+3 = 5 -> 3
+
+    2,  // 3+0 = 3 -> 2
+    2,  // 3+1 = 4 -> 2
+    3,  // 3+2 = 5 -> 3
+    3   // 3+3 = 6 -> 3
+};
+
+void combineArraysLUT4bit(uint8_t *a, const uint8_t *b, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    uint8_t val1 = a[i];
+    uint8_t val2 = b[i];
+    uint8_t result = 0;
+
+    // Process 4 pixels
+    for (int pixel = 0; pixel < 4; pixel++) {
+      // Extract 2-bit pixels
+      int pixel_a = (val1 >> (pixel * 2)) & 0x03;
+      int pixel_b = (val2 >> (pixel * 2)) & 0x03;
+
+      // Look up result (4 bits per pixel combination)
+      int result_pixel = lut4bit[(pixel_a << 2) | pixel_b];
+
+      // Pack result
+      result |= (result_pixel & 0x03) << (pixel * 2);
+    }
+
+    a[i] = result;
+  }
+}
+
 void switch_buffers() {
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
@@ -461,55 +506,33 @@ void dmd_dma_handler() {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      } else if (DMD_CAPCOM == dmd_type && !locked_in && plane == 2 && v > 0) {
+      } else if (DMD_CAPCOM == dmd_type && !locked_in && plane == 2 && v > 0 &&
+                 planebuf[offset[0] + px] == 0) {
         // If a pixel in plane 2 is not present in plane 0, we're not locked-in
         // and need to shift planes
-        if (planebuf[offset[0] + px] == 0) {
-          // Transitional frame detected
-          skip_frames = 1;
-          switch_buffers();
-          // Stop state machine
-          pio_sm_set_enabled(frame_pio, frame_sm, false);
-          // Start state machine again. The PIO program autamtically will skip a
-          // plane.
-          pio_sm_set_enabled(frame_pio, frame_sm, true);
-          return;
-        }
+        // Transitional frame detected
+        skip_frames = 1;
+        switch_buffers();
+        // Stop state machine
+        pio_sm_set_enabled(frame_pio, frame_sm, false);
+        // Start state machine again. The PIO program autamtically will skip a
+        // plane.
+        pio_sm_set_enabled(frame_pio, frame_sm, true);
+        return;
       }
       pixval += v;
-
-      if (DMD_CAPCOM == dmd_type && !locked_in) {
-        if (plane == 2) {
-          tempFrameBuffer1[px] = pixval;
-        } else if (plane == 5) {
-          tempFrameBuffer2[px] = pixval - tempFrameBuffer1[px];
-        }
-      }
-    }
-
-    // Capcom: calculate a 2bit representation compatible to PinMAME
-    if (DMD_CAPCOM == dmd_type) {
-      pixval = (pixval >> 1) + (pixval & 1);
-      // @todo if we're in a monochrome loopback mode, it would be better to
-      // treat Capcom as 4bit and to devide the 7 shades between 0 (0%) and 15
-      // (100%)
     }
 
     framebuf[px] = pixval;
   }
 
-  if (DMD_CAPCOM == dmd_type && !locked_in &&
-      !matchGroupsAtLeastBytes((uint8_t *)tempFrameBuffer1,
-                               (uint8_t *)tempFrameBuffer1, 1024, 900)) {
-    // Plane groups are out of sync
-    skip_frames = 1;
-    switch_buffers();
-    // Stop state machine
-    pio_sm_set_enabled(frame_pio, frame_sm, false);
-    // Start state machine again. The PIO program autamtically will skip a
-    // plane.
-    pio_sm_set_enabled(frame_pio, frame_sm, true);
-    return;
+  if (DMD_CAPCOM == dmd_type) {
+    if (locked_in &&
+        matchGroupsAtLeastBytes((uint8_t *)framebuf, prevFrameBuffer,
+                                source_bytes, (int)(source_bytes / 4 * 3))) {
+      combineArraysLUT4bit((uint8_t *)framebuf, prevFrameBuffer, source_bytes);
+    }
+    memcpy(prevFrameBuffer, (uint8_t *)framebuf, source_bytes);
   }
 
   // deal with whitestar line oversampling directly within framebuf
@@ -774,7 +797,7 @@ void dmdreader_init() {
       source_height = 32;
       source_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
-      source_planesperframe = 6;
+      source_planesperframe = 3;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
