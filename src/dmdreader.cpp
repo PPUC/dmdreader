@@ -86,7 +86,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define MAX_WIDTH 192
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
-#define MAX_PLANESPERFRAME 4
+#define MAX_PLANESPERFRAME 6
 #define MAX_MEMORY_OVERHEAD \
   4  // reserve additional memory in framebuf for line oversampling
 
@@ -128,6 +128,8 @@ uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
 uint8_t skip_frames = 0;
 uint8_t dmd_type = DMD_UNKNOWN;
+bool locked_in = false;
+uint32_t num_frames = 0;
 
 // SPI PIO
 PIO spi_pio;
@@ -387,6 +389,13 @@ void dmd_set_and_enable_new_dma_target() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
+  // Capcom has error reports at the beginning which don't contain a lot of
+  // shades. Let the lock-in algorithm run for 48 seconds. That should be enough
+  // to enter the attract mode.
+  if (!locked_in && ++num_frames > 24000) {
+    locked_in = true;
+  }
+
   if (skip_frames > 0) {
     skip_frames--;
     switch_buffers();
@@ -423,22 +432,32 @@ void dmd_dma_handler() {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      } else if (plane == 2 && v > 0 && planebuf[offset[0] + px] == 0) {
-        // Transitional frame detected
-        if (DMD_CAPCOM == dmd_type) {
-          skip_frames = 2;
+      } else if (DMD_CAPCOM == dmd_type && !locked_in && plane == 2 && v > 0) {
+        // If a pixel in plane 2 is not present in plane 0, we're not locked-in
+        // and need to shift planes
+        if (planebuf[offset[0] + px] == 0) {
+          // Transitional frame detected
+          skip_frames = 1;
           switch_buffers();
           // Stop state machine
           pio_sm_set_enabled(frame_pio, frame_sm, false);
-          // Wait 2ms to skip one plane (Capcom is one plane every 2ms)
-          // delay(2);
-          // start state machine again
+          // Start state machine again. The PIO program autamtically will skip a
+          // plane.
           pio_sm_set_enabled(frame_pio, frame_sm, true);
           return;
         }
       }
       pixval += v;
     }
+
+    // Capcom: calculate a 2bit representation compatible to PinMAME
+    if (DMD_CAPCOM == dmd_type) {
+      pixval = (pixval >> 1) + (pixval & 1);
+      // @todo if we're in a monochrome loopback mode, it would be better to
+      // treat Capcom as 4bit and to devide the 7 shades between 0 (0%) and 15
+      // (100%)
+    }
+
     framebuf[px] = pixval;
   }
 
@@ -704,7 +723,7 @@ void dmdreader_init() {
       source_height = 32;
       source_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
-      source_planesperframe = 3;
+      source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
