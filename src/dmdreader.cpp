@@ -1,5 +1,7 @@
 #include "dmdreader.h"
 
+#include <array>
+
 #include "crc32.h"
 #include "dmd_counter.h"
 #include "dmd_interface.h"
@@ -109,21 +111,24 @@ uint8_t source_mergeplanes;
 // pointers later. raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
                   MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
-;
 uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
                   MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
-;
 uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
 uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
-;
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
-;
+uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+uint8_t framebuf4[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
+uint32_t *tempFrameBuffer1 = (uint32_t *)framebuf3;
+uint32_t *tempFrameBuffer2 = (uint32_t *)framebuf4;
+
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
 uint8_t skip_frames = 0;
@@ -355,6 +360,30 @@ void spi_dma_handler() {
   spi_dma_running = false;
 }
 
+constexpr uint8_t nzMask4_const(uint8_t x) {
+  return uint8_t((x | (x >> 1)) & 0x55);
+}
+constexpr auto makeLUT() {
+  std::array<uint8_t, 256> lut{};
+  for (int i = 0; i < 256; ++i) lut[i] = nzMask4_const(uint8_t(i));
+  return lut;
+}
+static constexpr auto LUT = makeLUT();
+
+bool matchGroupsAtLeastBytes(const uint8_t *a, const uint8_t *b,
+                             std::size_t bytes, std::size_t minMatchingBytes) {
+  minMatchingBytes = std::min(minMatchingBytes, bytes);
+
+  std::size_t ok = 0;
+  for (std::size_t i = 0; i < bytes; ++i) {
+    ok += (LUT[a[i]] == LUT[b[i]]);
+    if (ok >= minMatchingBytes) return true;        // early success
+    if (ok + (bytes - (i + 1)) < minMatchingBytes)  // early fail
+      return false;
+  }
+  return ok >= minMatchingBytes;
+}
+
 void switch_buffers() {
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
@@ -448,6 +477,14 @@ void dmd_dma_handler() {
         }
       }
       pixval += v;
+
+      if (DMD_CAPCOM == dmd_type && !locked_in) {
+        if (plane == 2) {
+          tempFrameBuffer1[px] = pixval;
+        } else if (plane == 5) {
+          tempFrameBuffer2[px] = pixval - tempFrameBuffer1[px];
+        }
+      }
     }
 
     // Capcom: calculate a 2bit representation compatible to PinMAME
@@ -459,6 +496,20 @@ void dmd_dma_handler() {
     }
 
     framebuf[px] = pixval;
+  }
+
+  if (DMD_CAPCOM == dmd_type && !locked_in &&
+      !matchGroupsAtLeastBytes((uint8_t *)tempFrameBuffer1,
+                               (uint8_t *)tempFrameBuffer1, 1024, 900)) {
+    // Plane groups are out of sync
+    skip_frames = 1;
+    switch_buffers();
+    // Stop state machine
+    pio_sm_set_enabled(frame_pio, frame_sm, false);
+    // Start state machine again. The PIO program autamtically will skip a
+    // plane.
+    pio_sm_set_enabled(frame_pio, frame_sm, true);
+    return;
   }
 
   // deal with whitestar line oversampling directly within framebuf
