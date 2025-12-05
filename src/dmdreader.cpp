@@ -123,6 +123,8 @@ uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+uint8_t framebuf4[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 uint8_t *prevFrameBuffer = framebuf3;
@@ -539,6 +541,14 @@ void dmd_dma_handler() {
       combineArraysLUT4bit((uint8_t *)framebuf, prevFrameBuffer, source_bytes);
     }
     memcpy(prevFrameBuffer, (uint8_t *)framebuf, source_bytes);
+  } else if (DMD_GOTTLIEB == dmd_type) {
+    memcpy(prevFrameBuffer, (uint8_t *)framebuf, source_bytes);
+    if (prevFrameBuffer == framebuf3) {
+      prevFrameBuffer == framebuf4;
+    } else {
+      prevFrameBuffer == framebuf3;
+    }
+    combineArraysLUT4bit((uint8_t *)framebuf, prevFrameBuffer, source_bytes);
   }
 
   // deal with whitestar line oversampling directly within framebuf
