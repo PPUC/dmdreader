@@ -336,15 +336,15 @@ int detect_dmd() {
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
 
+    // Gottlieb -> DOTCLK: 1647000 | DE: 12930 | RDATA: 390
+  } else if ((dotclk > 1550000) && (dotclk < 1750000) && (de > 12700) &&
+             (de < 13100) && (rdata > 370) && (rdata < 410)) {
+    return DMD_GOTTLIEB;
+
     // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
              (de < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
-
-    // Gottlieb -> DOTCLK:  | DE:  | RDATA: 
-  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
-             (de < 16500) && (rdata > 490) && (rdata < 530)) {
-    return DMD_GOTTLIEB;
   }
 #endif
 
