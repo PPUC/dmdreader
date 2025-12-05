@@ -16,6 +16,7 @@ Since not any consumer (especially the Raspverry Pi) can act as an SPI slave thi
 * Stern Whitestar -> 128x32
 * Stern SAM -> 128x32
 * Stern SPIKE 1 -> 128x32
+* Capcom -> 128x32
 
 ## Reading data
 
