@@ -12,6 +12,7 @@
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
 #include "dmd_interface_capcom.pio.h"
+#include "dmd_interface_gottlieb.pio.h"
 #include "dmdreader_pins.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
