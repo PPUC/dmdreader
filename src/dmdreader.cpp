@@ -381,6 +381,11 @@ bool matchGroupsAtLeastBytes(const uint8_t *a, const uint8_t *b,
 
   std::size_t ok = 0;
   for (std::size_t i = 0; i < bytes; ++i) {
+    // exclude bytes that are black in both screen
+    if (0 == a[i] && 0 == b[i]) {
+      minMatchingBytes--;
+      continue;
+    }
     ok += (LUT[a[i]] == LUT[b[i]]);
     if (ok >= minMatchingBytes) return true;        // early success
     if (ok + (bytes - (i + 1)) < minMatchingBytes)  // early fail
