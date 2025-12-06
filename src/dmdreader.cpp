@@ -430,10 +430,11 @@ void dmd_dma_handler() {
         v <<= plane;
       } else if (DMD_CAPCOM == dmd_type && !locked_in) {
           // Ugly but required for the lock-in
-          if ((planebuf[offset[0] + px] & 1) == 1 &&
-          (planebuf[offset[1] + px] & 1) == 0 &&
-          (planebuf[offset[2] + px] & 1) == 0 &&
-          (planebuf[offset[3] + px] & 1) == 0) {
+          if (planebuf[offset[0] + px] == 1 &&
+              planebuf[offset[1] + px] == 0 &&
+              planebuf[offset[2] + px] == 0 &&
+              planebuf[offset[3] + px] == 0) {
+            // If the string is 1 0 0 0, we are sure of a lock-in     
             locked_in = true;
           } else {
             // As long as there is no string of 1 0 0 0 being detected,
