@@ -89,7 +89,7 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define MAX_WIDTH 192
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
-#define MAX_PLANESPERFRAME 4
+#define MAX_PLANESPERFRAME 6
 #define MAX_MEMORY_OVERHEAD \
   4  // reserve additional memory in framebuf for line oversampling
 
@@ -831,9 +831,9 @@ void dmdreader_init() {
 
       source_width = 128;
       source_height = 32;
-      source_bitsperpixel = 2;
+      source_bitsperpixel = 4;
       source_pixelsperbyte = 8 / source_bitsperpixel;
-      source_planesperframe = 3;
+      source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;

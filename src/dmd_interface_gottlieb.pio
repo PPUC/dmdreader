@@ -24,7 +24,7 @@
 
 plane_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
-    in null 1          ; left padding a 0 to the output
+    in null 3          ; left padding a 0 to the output
     wait 1 gpio DOTCLK ; raising edge
     in pins 1          ; read 1 bit pin data
     jmp x-- plane_loop
