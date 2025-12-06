@@ -79,11 +79,13 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define LINEOVERSAMPLING_NONE 1
 #define LINEOVERSAMPLING_2X 2
 #define LINEOVERSAMPLING_4X 4
+#define LINEOVERSAMPLING_CAPCOM 2
 
 // Merging multiple planes
 #define MERGEPLANES_NONE 0
 #define MERGEPLANES_ADD 0
 #define MERGEPLANES_ADDSHIFT 1
+#define MERGEPLANES_CAPCOM 1
 
 // data buffer
 #define MAX_WIDTH 192
@@ -129,9 +131,7 @@ uint8_t *prevFrameBuffer = framebuf3;
 
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
-uint8_t skip_frames = 0;
 uint8_t dmd_type = DMD_UNKNOWN;
-bool locked_in = false;
 uint32_t num_frames = 0;
 
 // SPI PIO
@@ -363,78 +363,6 @@ void spi_dma_handler() {
   spi_dma_running = false;
 }
 
-constexpr uint8_t nzMask4_const(uint8_t x) {
-  return uint8_t((x | (x >> 1)) & 0x55);
-}
-constexpr auto makeLUT() {
-  std::array<uint8_t, 256> lut{};
-  for (int i = 0; i < 256; ++i) lut[i] = nzMask4_const(uint8_t(i));
-  return lut;
-}
-static constexpr auto LUT = makeLUT();
-
-bool matchGroupsAtLeastBytes(const uint8_t *a, const uint8_t *b,
-                             std::size_t bytes, std::size_t minMatchingBytes) {
-  minMatchingBytes = std::min(minMatchingBytes, bytes);
-
-  std::size_t ok = 0;
-  for (std::size_t i = 0; i < bytes; ++i) {
-    ok += (LUT[a[i]] == LUT[b[i]]);
-    if (ok >= minMatchingBytes) return true;        // early success
-    if (ok + (bytes - (i + 1)) < minMatchingBytes)  // early fail
-      return false;
-  }
-  return ok >= minMatchingBytes;
-}
-
-// 16-byte LUT for 4-bit combinations (since each pixel is 2 bits)
-static const uint8_t lut4bit[16] = {
-    // Maps [0..3] + [0..3] -> result
-    // Index = (pixel_a << 2) | pixel_b
-    0,  // 0+0 = 0 -> 0
-    1,  // 0+1 = 1 -> 1
-    1,  // 0+2 = 2 -> 1
-    2,  // 0+3 = 3 -> 2
-
-    1,  // 1+0 = 1 -> 1
-    1,  // 1+1 = 2 -> 1
-    2,  // 1+2 = 3 -> 2
-    2,  // 1+3 = 4 -> 2
-
-    1,  // 2+0 = 2 -> 1
-    2,  // 2+1 = 3 -> 2
-    2,  // 2+2 = 4 -> 2
-    3,  // 2+3 = 5 -> 3
-
-    2,  // 3+0 = 3 -> 2
-    2,  // 3+1 = 4 -> 2
-    3,  // 3+2 = 5 -> 3
-    3   // 3+3 = 6 -> 3
-};
-
-void combineArraysLUT4bit(uint8_t *a, const uint8_t *b, size_t size) {
-  for (size_t i = 0; i < size; i++) {
-    uint8_t val1 = a[i];
-    uint8_t val2 = b[i];
-    uint8_t result = 0;
-
-    // Process 4 pixels
-    for (int pixel = 0; pixel < 4; pixel++) {
-      // Extract 2-bit pixels
-      int pixel_a = (val1 >> (pixel * 2)) & 0x03;
-      int pixel_b = (val2 >> (pixel * 2)) & 0x03;
-
-      // Look up result (4 bits per pixel combination)
-      int result_pixel = lut4bit[(pixel_a << 2) | pixel_b];
-
-      // Pack result
-      result |= (result_pixel & 0x03) << (pixel * 2);
-    }
-
-    a[i] = result;
-  }
-}
-
 void switch_buffers() {
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
@@ -469,19 +397,6 @@ void dmd_set_and_enable_new_dma_target() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
-  // Capcom has error reports at the beginning which don't contain a lot of
-  // shades. Let the lock-in algorithm run for 48 seconds. That should be enough
-  // to enter the attract mode.
-  if (!locked_in && ++num_frames > 24000) {
-    locked_in = true;
-  }
-
-  if (skip_frames > 0) {
-    skip_frames--;
-    switch_buffers();
-    return;
-  }
-
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
@@ -504,6 +419,7 @@ void dmd_dma_handler() {
   }
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
+  static bool locked_in = false;
 
   planebuf = (uint32_t *)currentPlaneBuffer;
   for (int px = 0; px < source_wordsperplane; px++) {
@@ -512,33 +428,30 @@ void dmd_dma_handler() {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      } else if (DMD_CAPCOM == dmd_type && !locked_in && plane == 2 && v > 0 &&
-                 planebuf[offset[0] + px] == 0) {
-        // If a pixel in plane 2 is not present in plane 0, we're not locked-in
-        // and need to shift planes
-        // Transitional frame detected
-        skip_frames = 1;
-        switch_buffers();
-        // Stop state machine
-        pio_sm_set_enabled(frame_pio, frame_sm, false);
-        // Start state machine again. The PIO program autamtically will skip a
-        // plane.
-        pio_sm_set_enabled(frame_pio, frame_sm, true);
-        return;
+      } else if (DMD_CAPCOM == dmd_type && !locked_in) {
+          // Ugly but required for the lock-in
+          if ((planebuf[offset[0] + px] & 1) == 1 &&
+          (planebuf[offset[1] + px] & 1) == 0 &&
+          (planebuf[offset[2] + px] & 1) == 0 &&
+          (planebuf[offset[3] + px] & 1) == 0) {
+            locked_in = true;
+          } else {
+            // As long as there is no string of 1 0 0 0 being detected,
+            // we can't be certain of a lock-in and need to shift planes
+            pio_sm_set_enabled(frame_pio, frame_sm, false);
+            // Start state machine again. The PIO program will skip a plane
+            pio_sm_set_enabled(frame_pio, frame_sm, true);
+            return;
+          }
       }
       pixval += v;
     }
+    // Capcom has 4 planes, when full intensity, we have 4 planes with 01
+    if (DMD_CAPCOM == dmd_type && pixval > 3) {
+      pixval = 3;
+    }
 
     framebuf[px] = pixval;
-  }
-
-  if (DMD_CAPCOM == dmd_type) {
-    if (locked_in &&
-        matchGroupsAtLeastBytes((uint8_t *)framebuf, prevFrameBuffer,
-                                source_bytes, (int)(source_bytes / 4 * 3))) {
-      combineArraysLUT4bit((uint8_t *)framebuf, prevFrameBuffer, source_bytes);
-    }
-    memcpy(prevFrameBuffer, (uint8_t *)framebuf, source_bytes);
   }
 
   // deal with whitestar line oversampling directly within framebuf
@@ -578,7 +491,7 @@ void dmd_dma_handler() {
       src3 += source_wordsperline * 4;
       src4 += source_wordsperline * 4;
       dst += source_wordsperline;  // destination skips only one line
-    }
+    } 
   }
 
 #ifdef USE_CRC
@@ -803,7 +716,7 @@ void dmdreader_init() {
       source_height = 32;
       source_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
-      source_planesperframe = 3;
+      source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
