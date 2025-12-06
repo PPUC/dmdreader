@@ -79,13 +79,11 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define LINEOVERSAMPLING_NONE 1
 #define LINEOVERSAMPLING_2X 2
 #define LINEOVERSAMPLING_4X 4
-#define LINEOVERSAMPLING_CAPCOM 2
 
 // Merging multiple planes
 #define MERGEPLANES_NONE 0
 #define MERGEPLANES_ADD 0
 #define MERGEPLANES_ADDSHIFT 1
-#define MERGEPLANES_CAPCOM 1
 
 // data buffer
 #define MAX_WIDTH 192
@@ -492,7 +490,7 @@ void dmd_dma_handler() {
       src3 += source_wordsperline * 4;
       src4 += source_wordsperline * 4;
       dst += source_wordsperline;  // destination skips only one line
-    } 
+    }
   }
 
 #ifdef USE_CRC
