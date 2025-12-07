@@ -93,22 +93,23 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 #define MAX_MEMORY_OVERHEAD \
   4  // reserve additional memory in framebuf for line oversampling
 
+// Use uint16_t for all of these variables to erase calculations:
 uint16_t source_width;
 uint16_t source_height;
-uint8_t source_bitsperpixel;
-uint8_t target_bitsperpixel;
-uint8_t source_pixelsperbyte;
+uint16_t source_bitsperpixel;
+uint16_t target_bitsperpixel;
+uint16_t source_pixelsperbyte;
 uint16_t source_bytes;
 uint16_t target_bytes;
 uint16_t source_pixelsperframe;
 uint16_t source_dwordsperplane;
 uint16_t source_bytesperplane;
-uint8_t source_planesperframe;
-uint8_t source_wordsperframe;
+uint16_t source_planesperframe;
+uint16_t source_dwordsperframe;
 uint16_t source_bytesperframe;
-uint8_t source_lineoversampling;
-uint8_t source_wordsperline;
-uint8_t source_mergeplanes;
+uint16_t source_lineoversampling;
+uint16_t source_dwordsperline;
+uint16_t source_mergeplanes;
 
 // the buffers need to be aligned to 4 byte because we work with uint32_t
 // pointers later. raw data read from DMD
@@ -470,7 +471,7 @@ void dmd_dma_handler() {
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
   uint32_t res;
-  for (int i = 0; i < source_wordsperframe; i++) {
+  for (int i = 0; i < source_dwordsperframe; i++) {
     v = (buf32_t *)planebuf;
     res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
     *planebuf = res;
@@ -534,38 +535,38 @@ void dmd_dma_handler() {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2;
     dst = src1 = framebuf;
-    src2 = src1 + source_wordsperline;
+    src2 = src1 + source_dwordsperline;
     uint32_t v;
 
     for (int l = 0; l < source_height; l++) {
-      for (int w = 0; w < source_wordsperline; w++) {
+      for (int w = 0; w < source_dwordsperline; w++) {
         v = src1[w] * 2 + src2[w];
         dst[w] = v;
       }
-      src1 += source_wordsperline * 2;  // source skips 2 lines forward
-      src2 += source_wordsperline * 2;
-      dst += source_wordsperline;  // destination skips only one line
+      src1 += source_dwordsperline * 2;  // source skips 2 lines forward
+      src2 += source_dwordsperline * 2;
+      dst += source_dwordsperline;  // destination skips only one line
     }
   } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
     uint16_t i = 0;
     uint32_t *dst, *src1, *src2, *src3, *src4;
     dst = src1 = framebuf;
-    src2 = src1 + source_wordsperline;
-    src3 = src2 + source_wordsperline;
-    src4 = src3 + source_wordsperline;
+    src2 = src1 + source_dwordsperline;
+    src3 = src2 + source_dwordsperline;
+    src4 = src3 + source_dwordsperline;
     uint32_t v;
 
-    for (int l = 0; l < source_height; l++) {
-      for (int w = 0; w < source_wordsperline; w++) {
+    for (int l   = 0; l < source_height; l++) {
+      for (int w = 0; w < source_dwordsperline; w++) {
         // On SAM line order is really messed up :-(
         v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
         dst[w] = v;
       }
-      src1 += source_wordsperline * 4;  // source skips 4 lines forward
-      src2 += source_wordsperline * 4;
-      src3 += source_wordsperline * 4;
-      src4 += source_wordsperline * 4;
-      dst += source_wordsperline;  // destination skips only one line
+      src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+      src2 += source_dwordsperline * 4;
+      src3 += source_dwordsperline * 4;
+      src4 += source_dwordsperline * 4;
+      dst += source_dwordsperline;  // destination skips only one line
     }
   }
 
@@ -846,9 +847,9 @@ void dmdreader_init() {
     source_dwordsperplane *= 4;
   }
   source_bytesperplane = source_bytes;
-  source_wordsperframe = source_dwordsperplane * source_planesperframe;
+  source_dwordsperframe = source_dwordsperplane * source_planesperframe;
   source_bytesperframe = source_bytesperplane * source_planesperframe;
-  source_wordsperline = source_width * source_bitsperpixel / 32;
+  source_dwordsperline = source_width * source_bitsperpixel / 32;
 
   // DMA for DMD reader
   dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
@@ -859,11 +860,11 @@ void dmdreader_init() {
 
   // Configure the DMA channel. As soon as the PIO pushed a specified number of
   // words to its RX FIFO, the DMA transfer will be triggered.
-  // The amount of words to transfer is source_wordsperframe.
+  // The amount of words to transfer is source_dwordsperframe.
   dma_channel_configure(dmd_dma_channel, &dmd_dma_channel_cfg,
                         NULL,  // Destination pointer, needs to be set later
                         &dmd_pio->rxf[dmd_sm],  // Source pointer
-                        source_wordsperframe,   // Number of transfers
+                        source_dwordsperframe,   // Number of transfers
                         false                   // Do not yet start
   );
   // Enable DMA interrupt 0 to be triggered when the transfer is done.
