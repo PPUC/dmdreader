@@ -21,7 +21,11 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);
 
-  dmdreader_init();
+  dmdreader_init(pio0);
+}
+
+void setup1() {
+  dmdreader_spi_init(pio0);
 }
 
 void loop() {
@@ -30,7 +34,7 @@ void loop() {
 }
 
 void loop1() {
-  if (!dmdreader_send()) {
+  if (!dmdreader_spi_send()) {
     tight_loop_contents();
   }
 }

@@ -8,7 +8,6 @@
 #include "dmdreader_pins.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
-#include "hardware/pio.h"
 #include "spi_slave_sender.pio.h"
 
 // should CRC32 checksum be caculated and sent with each frame
@@ -99,8 +98,10 @@ uint16_t source_height;
 uint16_t source_bitsperpixel;
 uint16_t target_bitsperpixel;
 uint16_t source_pixelsperbyte;
+uint16_t source_pixelsperdword;
 uint16_t source_bytes;
 uint16_t target_bytes;
+uint16_t source_dwords;
 uint16_t source_pixelsperframe;
 uint16_t source_dwordsperplane;
 uint16_t source_bytesperplane;
@@ -140,9 +141,6 @@ uint spi_sm;
 // DMD reader PIO
 PIO dmd_pio;
 uint dmd_sm;
-
-// Frame detection PIO
-PIO frame_pio;
 uint frame_sm;
 
 // DMA
@@ -158,6 +156,10 @@ volatile bool spi_dma_running = false;
 uint dmd_int = 0;
 
 volatile bool frame_received = false;
+
+uint8_t *renderbuf1;
+uint8_t *renderbuf2;
+uint8_t *currentRenderBuffer = renderbuf1;
 
 /**
  * @brief Send data via SPI, transfer data via DMA
@@ -281,7 +283,6 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
  * @return uint32_t Number of clocks per second
  */
 uint32_t count_clock(uint pin) {
-  dmd_pio = pio0;
   uint offset = pio_add_program(dmd_pio, &dmd_count_signal_program);
   dmd_sm = pio_claim_unused_sm(dmd_pio, true);
   dmd_counter_program_init(dmd_pio, dmd_sm, offset, pin);
@@ -362,6 +363,98 @@ void spi_dma_handler() {
   spi_dma_running = false;
 }
 
+void convert_to_8bit_fast(uint8_t *output, uint32_t input) {
+  uint8_t p;
+
+  for (uint8_t i = 0; i < source_pixelsperdword; i++) {
+    p = (input >> (i * source_bitsperpixel)) & 0xF;
+
+    switch (dmd_type) {
+      case DMD_CAPCOM: {
+        if (p == 0) {
+          output[i] = 0U;
+        } else if (p == 1) {
+          output[i] = 64U;
+        } else if (p == 2) {
+          output[i] = 128U;
+        } else if (p == 3) {
+          output[i] = 196U;
+        } else {
+          output[i] = 255U;
+        }
+        break;
+      }
+      case DMD_GOTTLIEB: {
+        if (p == 0) {
+          output[i] = 0U;
+        } else if (p == 1) {
+          output[i] = 42U;
+        } else if (p == 2) {
+          output[i] = 84U;
+        } else if (p == 3) {
+          output[i] = 126U;
+        } else if (p == 4) {
+          output[i] = 168U;
+        } else if (p == 5) {
+          output[i] = 210U;
+        } else {
+          output[i] = 255U;
+        }
+        break;
+      }
+      case DMD_SAM:
+      case DMD_SPIKE1: {
+        if (p == 0) {
+          output[i] = 0U;
+        } else if (p == 1) {
+          output[i] = 17U;
+        } else if (p == 2) {
+          output[i] = 34U;
+        } else if (p == 3) {
+          output[i] = 53U;
+        } else if (p == 4) {
+          output[i] = 68U;
+        } else if (p == 5) {
+          output[i] = 85U;
+        } else if (p == 6) {
+          output[i] = 102U;
+        } else if (p == 7) {
+          output[i] = 119U;
+        } else if (p == 8) {
+          output[i] = 136U;
+        } else if (p == 9) {
+          output[i] = 153U;
+        } else if (p == 10) {
+          output[i] = 170U;
+        } else if (p == 11) {
+          output[i] = 187U;
+        } else if (p == 12) {
+          output[i] = 204U;
+        } else if (p == 13) {
+          output[i] = 221U;
+        } else if (p == 14) {
+          output[i] = 238U;
+        } else {
+          output[i] = 255U;
+        }
+        break;
+      }
+      default: {
+        if (p == 0) {
+          output[i] = 0U;
+        } else if (p == 1) {
+          output[i] = 85U;
+        } else if (p == 2) {
+          output[i] = 170U;
+        } else {
+          output[i] = 255U;
+        }
+        break;
+      }
+    }
+  }
+}
+
 uint16_t convert_4bit_to_2bit_fast(uint32_t input) {
   uint32_t p0 = (input >> 0) & 0xF;
   uint32_t p1 = (input >> 4) & 0xF;
@@ -374,7 +467,6 @@ uint16_t convert_4bit_to_2bit_fast(uint32_t input) {
 
   switch (dmd_type) {
     case DMD_CAPCOM: {
-      // Quelle 1: Clippe auf 0-3
       p0 = (p0 > 3) ? 3 : p0;
       p1 = (p1 > 3) ? 3 : p1;
       p2 = (p2 > 3) ? 3 : p2;
@@ -421,7 +513,7 @@ uint16_t convert_4bit_to_2bit_fast(uint32_t input) {
     }
   }
 
-  // pack as 16 Bit
+  // pack as 16 bit
   return static_cast<uint16_t>((p0 << 0) | (p1 << 2) | (p2 << 4) | (p3 << 6) |
                                (p4 << 8) | (p5 << 10) | (p6 << 12) |
                                (p7 << 14));
@@ -510,15 +602,15 @@ void dmd_dma_handler() {
         // We are in sync.
         locked_in = true;
       } else {
-        // We're out of sync. Skip the next frame which will contain garbage as
-        // it gets filles already in the background in this moment.
+        // We're out of sync. Skip the next frame which will contain garbage
+        // as it gets filles already in the background in this moment.
         skip_frames = 1;
         switch_buffers();
         // Stop the state machine that detects frames.
-        pio_sm_set_enabled(frame_pio, frame_sm, false);
+        pio_sm_set_enabled(dmd_pio, frame_sm, false);
         // Start state machine again. The PIO program will skip at least one
         // plane as it is waiting for RDATA at the beginning.
-        pio_sm_set_enabled(frame_pio, frame_sm, true);
+        pio_sm_set_enabled(dmd_pio, frame_sm, true);
         return;
       }
     }
@@ -556,7 +648,7 @@ void dmd_dma_handler() {
     src4 = src3 + source_dwordsperline;
     uint32_t v;
 
-    for (int l   = 0; l < source_height; l++) {
+    for (int l = 0; l < source_height; l++) {
       for (int w = 0; w < source_dwordsperline; w++) {
         // On SAM line order is really messed up :-(
         v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
@@ -579,11 +671,7 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
-void dmdreader_init() {
-  // this is used to notify the Pi that data is available
-  pinMode(SPI0_CS, OUTPUT);
-  digitalWrite(SPI0_CS, LOW);
-
+void dmdreader_init(PIO dmd_pio) {
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   while (dmd_type == DMD_UNKNOWN) {
@@ -612,7 +700,6 @@ void dmdreader_init() {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_wpc_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -622,20 +709,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA, DE, DOTCLK};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_wpc_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_wpc_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_wpc_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 3, 0);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;
       target_bitsperpixel = 2;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 3;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
@@ -643,7 +728,6 @@ void dmdreader_init() {
     }
 
     case DMD_WHITESTAR: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_whitestar_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -653,20 +737,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_whitestar_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_whitestar_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_whitestar_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;  // Whitestar is 2bpp
       target_bitsperpixel = 2;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       // in Whitestar, there's only one plane, containg
       // one LSB row followed by one MSB row and so on
       source_planesperframe = 1;
@@ -677,7 +759,6 @@ void dmdreader_init() {
     }
 
     case DMD_SPIKE1: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_spike_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -687,20 +768,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RCLK, RDATA};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_spike_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_spike_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_spike_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 2, RDATA);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 4;  // in Spike there are 4 planes
       source_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
       source_mergeplanes = MERGEPLANES_ADDSHIFT;
@@ -708,7 +787,6 @@ void dmdreader_init() {
     }
 
     case DMD_SAM: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_sam_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -718,20 +796,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_sam_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_sam_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_sam_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 1;  // in SAM there is one plane
       // with 4x line oversampling
       source_lineoversampling = LINEOVERSAMPLING_4X;
@@ -740,7 +816,6 @@ void dmdreader_init() {
     }
 
     case DMD_DESEGA: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_desega_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -750,20 +825,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {DE};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_desega_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_desega_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_desega_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, DE);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;  // Data East and Sega are 2bpp
       target_bitsperpixel = 2;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       // in DE-Sega, there's only one plane,
       // containg one LSB row followed by one MSB row and so on
       source_planesperframe = 1;
@@ -774,7 +847,6 @@ void dmdreader_init() {
     }
 
     case DMD_CAPCOM: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_capcom_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -784,20 +856,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA, RCLK};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_capcom_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_capcom_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_capcom_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 2, 0);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
@@ -805,7 +875,6 @@ void dmdreader_init() {
     }
 
     case DMD_GOTTLIEB: {
-      dmd_pio = pio0;
       offset = pio_add_program(dmd_pio, &dmd_reader_gottlieb_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config dmd_config =
@@ -815,20 +884,18 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      frame_pio = pio0;
-      offset = pio_add_program(frame_pio, &dmd_framedetect_gottlieb_program);
-      frame_sm = pio_claim_unused_sm(frame_pio, true);
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_gottlieb_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_gottlieb_program_get_default_config(offset);
-      dmd_framedetect_program_init(frame_pio, frame_sm, offset, frame_config,
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
                                    input_pins, 1, 0);
-      pio_sm_set_enabled(frame_pio, frame_sm, true);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
-      source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
@@ -837,9 +904,12 @@ void dmdreader_init() {
   }
 
   // Calculate display parameters
+  source_pixelsperbyte = 8 / source_bitsperpixel;
+  source_pixelsperdword = 4 * source_pixelsperbyte;
   source_bytes = source_width * source_height * source_bitsperpixel / 8;
   target_bytes = source_width * source_height * target_bitsperpixel / 8;
   source_pixelsperframe = source_width * source_height;
+  source_dwords = source_bytes / 4;
   source_dwordsperplane = source_bytes / 4;
   if (source_lineoversampling == LINEOVERSAMPLING_2X) {
     source_dwordsperplane *= 2;
@@ -858,13 +928,13 @@ void dmdreader_init() {
   channel_config_set_dreq(&dmd_dma_channel_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
 
-  // Configure the DMA channel. As soon as the PIO pushed a specified number of
-  // words to its RX FIFO, the DMA transfer will be triggered.
-  // The amount of words to transfer is source_dwordsperframe.
+  // Configure the DMA channel. As soon as the PIO pushed a specified number
+  // of words to its RX FIFO, the DMA transfer will be triggered. The amount
+  // of words to transfer is source_dwordsperframe.
   dma_channel_configure(dmd_dma_channel, &dmd_dma_channel_cfg,
                         NULL,  // Destination pointer, needs to be set later
                         &dmd_pio->rxf[dmd_sm],  // Source pointer
-                        source_dwordsperframe,   // Number of transfers
+                        source_dwordsperframe,  // Number of transfers
                         false                   // Do not yet start
   );
   // Enable DMA interrupt 0 to be triggered when the transfer is done.
@@ -873,9 +943,18 @@ void dmdreader_init() {
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
 
+  // Finally start DMD reader PIO program and DMA
+  dmd_set_and_enable_new_dma_target();
+  pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+}
+
+void dmdreader_spi_init(PIO spi_pio) {
+  // this is used to notify the Pi that data is available
+  pinMode(SPI0_CS, OUTPUT);
+  digitalWrite(SPI0_CS, LOW);
+
   // initialize SPI slave PIO
-  spi_pio = pio0;
-  offset = pio_add_program(spi_pio, &clocked_output_program);
+  uint offset = pio_add_program(spi_pio, &clocked_output_program);
   spi_sm = pio_claim_unused_sm(spi_pio, true);
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
 
@@ -896,13 +975,9 @@ void dmdreader_init() {
   dma_channel_set_irq1_enabled(spi_dma_channel, true);
   irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_handler);
   irq_set_enabled(DMA_IRQ_1, true);
-
-  // Finally start DMD reader PIO program and DMA
-  dmd_set_and_enable_new_dma_target();
-  pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
-bool dmdreader_send() {
+bool dmdreader_spi_send() {
   if (frame_received) {
     frame_received = false;
 
@@ -915,6 +990,34 @@ bool dmdreader_send() {
     spi_send_pix(frameBufferToSend, frame_crc, true);
 #endif
 
+    return true;
+  }
+
+  return false;
+}
+
+void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2) {
+  renderbuf1 = buffer1;
+  renderbuf2 = buffer2;
+}
+
+bool dmdreader_loopback_render() {
+  if (frame_received) {
+    frame_received = false;
+    if (frame_crc != crc_previous_frame) {
+      if (currentFrameBuffer == renderbuf1) {
+        currentRenderBuffer = renderbuf2;
+      } else {
+        currentFrameBuffer = renderbuf1;
+      }
+
+      for (uint16_t i = 0; i < source_dwords; i++) {
+        convert_to_8bit_fast(&currentRenderBuffer[source_pixelsperdword * i],
+                             frameBufferToSend[i]);
+      }
+
+      crc_previous_frame = frame_crc;
+    }
     return true;
   }
 
