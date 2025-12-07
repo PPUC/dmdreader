@@ -43,7 +43,7 @@ dot_read_loop:
     in x, 5            ; shift in 5 bits, isr is 31 now
     set x, 3           ; load 3
     in x, 2            ; shift in 2 bits, isr is 127 now
-    mov osr, isr       ; copy 127 to OSR
+    mov y, isr       ; copy 127 to OSR
 
 .wrap_target
     mov isr, null      ; clear ISR and reset shift counter
@@ -51,7 +51,7 @@ dot_read_loop:
     wait 0 gpio RDATA
     wait 1 gpio RDATA
 
-    mov x, osr         ; 128 rows need to be skipped as we are working with 4 planes per frame
+    mov x, y         ; 128 rows need to be skipped as we are working with 4 planes per frame
 rclk_loop:
     wait 1 gpio RCLK
     wait 0 gpio RCLK
