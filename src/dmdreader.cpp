@@ -95,17 +95,19 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 
 uint16_t source_width;
 uint16_t source_height;
-uint16_t source_bitsperpixel;
-uint16_t source_pixelsperbyte;
+uint8_t source_bitsperpixel;
+uint8_t target_bitsperpixel;
+uint8_t source_pixelsperbyte;
 uint16_t source_bytes;
+uint16_t target_bytes;
 uint16_t source_pixelsperframe;
-uint16_t source_wordsperplane;
+uint16_t source_dwordsperplane;
 uint16_t source_bytesperplane;
-uint16_t source_planesperframe;
-uint16_t source_wordsperframe;
+uint8_t source_planesperframe;
+uint8_t source_wordsperframe;
 uint16_t source_bytesperframe;
-uint16_t source_lineoversampling;
-uint16_t source_wordsperline;
+uint8_t source_lineoversampling;
+uint8_t source_wordsperline;
 uint8_t source_mergeplanes;
 
 // the buffers need to be aligned to 4 byte because we work with uint32_t
@@ -121,16 +123,14 @@ uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
-uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
-uint8_t *prevFrameBuffer = framebuf3;
 
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
+uint8_t skip_frames = 0;
 uint8_t dmd_type = DMD_UNKNOWN;
-uint32_t num_frames = 0;
+bool locked_in = false;
 
 // SPI PIO
 PIO spi_pio;
@@ -257,7 +257,7 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
   h.len = (((source_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
   ph.columns = source_width;
   ph.rows = source_height;
-  ph.bitsperpixel = source_bitsperpixel;
+  ph.bitsperpixel = target_bitsperpixel;
 #ifdef USE_CRC
   ph.crc32 = crc32;
 #endif
@@ -268,7 +268,7 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
 
   spi_send_blocking((uint32_t *)&h, sizeof(h));
   spi_send_blocking((uint32_t *)&ph, sizeof(ph));
-  spi_send_dma((uint32_t *)pixbuf, source_bytes);
+  spi_send_dma((uint32_t *)pixbuf, target_bytes);
   start_spi();
 
   return true;
@@ -361,6 +361,71 @@ void spi_dma_handler() {
   spi_dma_running = false;
 }
 
+uint16_t convert_4bit_to_2bit_fast(uint32_t input) {
+  uint32_t p0 = (input >> 0) & 0xF;
+  uint32_t p1 = (input >> 4) & 0xF;
+  uint32_t p2 = (input >> 8) & 0xF;
+  uint32_t p3 = (input >> 12) & 0xF;
+  uint32_t p4 = (input >> 16) & 0xF;
+  uint32_t p5 = (input >> 20) & 0xF;
+  uint32_t p6 = (input >> 24) & 0xF;
+  uint32_t p7 = (input >> 28) & 0xF;
+
+  switch (dmd_type) {
+    case DMD_CAPCOM: {
+      // Quelle 1: Clippe auf 0-3
+      p0 = (p0 > 3) ? 3 : p0;
+      p1 = (p1 > 3) ? 3 : p1;
+      p2 = (p2 > 3) ? 3 : p2;
+      p3 = (p3 > 3) ? 3 : p3;
+      p4 = (p4 > 3) ? 3 : p4;
+      p5 = (p5 > 3) ? 3 : p5;
+      p6 = (p6 > 3) ? 3 : p6;
+      p7 = (p7 > 3) ? 3 : p7;
+      break;
+    }
+    case DMD_GOTTLIEB: {
+      auto map = [](uint32_t p) {
+        if (p == 0) return 0U;
+        if (p == 1 || p == 2) return 1U;
+        if (p == 3 || p == 4) return 2U;
+        return 3U;
+      };
+      p0 = map(p0);
+      p1 = map(p1);
+      p2 = map(p2);
+      p3 = map(p3);
+      p4 = map(p4);
+      p5 = map(p5);
+      p6 = map(p6);
+      p7 = map(p7);
+      break;
+    }
+    default: {
+      auto map = [](uint32_t p) {
+        if (p == 0) return 0U;
+        if (p == 1 || p == 2 || p == 3 || p == 4 || p == 5) return 1U;
+        if (p == 6 || p == 7 || p == 8 || p == 9 || p == 10) return 2U;
+        return 3U;
+      };
+      p0 = map(p0);
+      p1 = map(p1);
+      p2 = map(p2);
+      p3 = map(p3);
+      p4 = map(p4);
+      p5 = map(p5);
+      p6 = map(p6);
+      p7 = map(p7);
+      break;
+    }
+  }
+
+  // pack as 16 Bit
+  return static_cast<uint16_t>((p0 << 0) | (p1 << 2) | (p2 << 4) | (p3 << 6) |
+                               (p4 << 8) | (p5 << 10) | (p6 << 12) |
+                               (p7 << 14));
+}
+
 void switch_buffers() {
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
@@ -395,6 +460,12 @@ void dmd_set_and_enable_new_dma_target() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
+  if (skip_frames > 0) {
+    skip_frames--;
+    switch_buffers();
+    return;
+  }
+
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
@@ -413,44 +484,49 @@ void dmd_dma_handler() {
   // calculate offsets for each plane and cache these
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
-    offset[i] = i * source_wordsperplane;
+    offset[i] = i * source_dwordsperplane;
   }
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
-  static bool locked_in = false;
 
   planebuf = (uint32_t *)currentPlaneBuffer;
-  for (int px = 0; px < source_wordsperplane; px++) {
+  for (int px = 0; px < source_dwordsperplane; px++) {
     uint32_t pixval = 0;
     for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
         v <<= plane;
-      } else if (DMD_CAPCOM == dmd_type && !locked_in) {
-          // Ugly but required for the lock-in
-          if (planebuf[offset[0] + 37] == 1 &&
-              planebuf[offset[1] + 37] == 0 &&
-              planebuf[offset[2] + 37] == 0 &&
-              planebuf[offset[3] + 37] == 0) {
-            // If the string is 1 0 0 0, we are sure of a lock-in     
-            locked_in = true;
-          } else {
-            // As long as there is no string of 1 0 0 0 being detected,
-            // we can't be certain of a lock-in and need to shift planes
-            pio_sm_set_enabled(frame_pio, frame_sm, false);
-            // Start state machine again. The PIO program will skip a plane
-            pio_sm_set_enabled(frame_pio, frame_sm, true);
-            return;
-          }
       }
       pixval += v;
     }
-    // Capcom has 4 planes, when full intensity, we have 4 planes with 01
-    if (DMD_CAPCOM == dmd_type && pixval > 3) {
-      pixval = 3;
+
+    // Search vor 1/0/0/0 pattern for CAPCOM.
+    // The other three combinations that reuslt in a valus of 1 indicate that
+    // the signal is out of sync. It is sufficient to check one pixel of the
+    // group.
+    if (DMD_CAPCOM == dmd_type && !locked_in && 1 == (pixval & 0xF)) {
+      if (planebuf[offset[0] + px] & 0xF) {
+        // We are in sync.
+        locked_in = true;
+      } else {
+        // We're out of sync. Skip the next frame which will contain garbage as
+        // it gets filles already in the background in this moment.
+        skip_frames = 1;
+        switch_buffers();
+        // Stop the state machine that detects frames.
+        pio_sm_set_enabled(frame_pio, frame_sm, false);
+        // Start state machine again. The PIO program will skip at least one
+        // plane as it is waiting for RDATA at the beginning.
+        pio_sm_set_enabled(frame_pio, frame_sm, true);
+        return;
+      }
     }
 
-    framebuf[px] = pixval;
+    if (source_bitsperpixel == target_bitsperpixel) {
+      framebuf[px] = pixval;
+    } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
+      ((uint16_t *)framebuf)[px] = convert_4bit_to_2bit_fast(pixval);
+    }
   }
 
   // deal with whitestar line oversampling directly within framebuf
@@ -557,6 +633,7 @@ void dmdreader_init() {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 3;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
@@ -587,6 +664,7 @@ void dmdreader_init() {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;  // Whitestar is 2bpp
+      target_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       // in Whitestar, there's only one plane, containg
       // one LSB row followed by one MSB row and so on
@@ -620,6 +698,7 @@ void dmdreader_init() {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 4;  // in Spike there are 4 planes
       source_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
@@ -650,6 +729,7 @@ void dmdreader_init() {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 1;  // in SAM there is one plane
       // with 4x line oversampling
@@ -681,6 +761,7 @@ void dmdreader_init() {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;  // Data East and Sega are 2bpp
+      target_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       // in DE-Sega, there's only one plane,
       // containg one LSB row followed by one MSB row and so on
@@ -713,7 +794,8 @@ void dmdreader_init() {
 
       source_width = 128;
       source_height = 32;
-      source_bitsperpixel = 2;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
@@ -744,6 +826,7 @@ void dmdreader_init() {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
+      target_bitsperpixel = 2;
       source_pixelsperbyte = 8 / source_bitsperpixel;
       source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
@@ -754,15 +837,16 @@ void dmdreader_init() {
 
   // Calculate display parameters
   source_bytes = source_width * source_height * source_bitsperpixel / 8;
+  target_bytes = source_width * source_height * target_bitsperpixel / 8;
   source_pixelsperframe = source_width * source_height;
-  source_wordsperplane = source_bytes / 4;
+  source_dwordsperplane = source_bytes / 4;
   if (source_lineoversampling == LINEOVERSAMPLING_2X) {
-    source_wordsperplane *= 2;
+    source_dwordsperplane *= 2;
   } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
-    source_wordsperplane *= 4;
+    source_dwordsperplane *= 4;
   }
   source_bytesperplane = source_bytes;
-  source_wordsperframe = source_wordsperplane * source_planesperframe;
+  source_wordsperframe = source_dwordsperplane * source_planesperframe;
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_wordsperline = source_width * source_bitsperpixel / 32;
 

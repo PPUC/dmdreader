@@ -14,7 +14,7 @@
     mov osr, isr       ; copy 127 to OSR
 
 .wrap_target
-    mov y, osr         ; copy 127 to y, so we read 4 planes
+    mov y, osr         ; copy 127 to y, so we read 4 planes of 32 rows
     mov isr, null      ; clear ISR and reset shift counter
 
     irq clear PLANE_START_IRQ
@@ -30,7 +30,7 @@ dot_skip_loop:
     mov x, osr         ; load number of pixels to read (128)
 dot_read_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
-    in null 1          ; left padding a 0 to the output as WPC is 2bit/px
+    in null 3          ; left padding three 0 to the output as CAPCOM is 4bit/px
     wait 1 gpio DOTCLK ; raising edge
     in pins 1          ; read 1 bit pin data
     jmp x-- dot_read_loop
@@ -43,15 +43,14 @@ dot_read_loop:
     in x, 5            ; shift in 5 bits, isr is 31 now
     set x, 3           ; load 3
     in x, 2            ; shift in 2 bits, isr is 127 now
-    mov y, isr       ; copy 127 to OSR
-
-.wrap_target
-    mov isr, null      ; clear ISR and reset shift counter
+    mov y, isr         ; copy 127 to OSR
 
     wait 0 gpio RDATA
     wait 1 gpio RDATA
 
-    mov x, y         ; 128 rows need to be skipped as we are working with 4 planes per frame
+.wrap_target
+    mov x, y           ; 128 rows need to be skipped as we are working with 4 planes per frame
+
 rclk_loop:
     wait 1 gpio RCLK
     wait 0 gpio RCLK
