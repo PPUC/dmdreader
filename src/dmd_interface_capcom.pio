@@ -45,15 +45,16 @@ dot_read_loop:
     in x, 2            ; shift in 2 bits, isr is 127 now
     mov y, isr         ; copy 127 to Y
     mov isr, null      ; clear ISR and reset shift counter
-    set x, 30
+    set x, 31
 
     wait 0 gpio RDATA
     wait 1 gpio RDATA
 
-skip_31_rows:
+    ; When RDATA got HIGH, we already missed the start of the first row, so we skip 32 end of rows.
+skip_32_rows:
     wait 1 gpio RCLK
     wait 0 gpio RCLK
-    jmp x-- skip_31_rows
+    jmp x-- skip_32_rows
 
 .wrap_target
     irq FRAME_START_IRQ
