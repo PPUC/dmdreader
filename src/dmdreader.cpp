@@ -503,6 +503,8 @@ void dmd_set_and_enable_new_dma_target() {
  *
  */
 void dmd_dma_handler() {
+  digitalWrite(LED_BUILTIN, HIGH);
+
   dmd_set_and_enable_new_dma_target();
 
   if (skip_frames > 0) {
@@ -564,7 +566,6 @@ void dmd_dma_handler() {
         // trigger the same correction.
         skip_frames = 1;
         // Do not switch buffers and return here. The DMD should show something.
-        digitalWrite(LED_BUILTIN, HIGH);
       }
     }
 
