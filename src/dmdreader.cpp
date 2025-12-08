@@ -820,7 +820,6 @@ void dmdreader_init(PIO pio) {
       source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
-      set_4to2_converter();
       break;
     }
 
@@ -849,7 +848,6 @@ void dmdreader_init(PIO pio) {
       source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
-      set_4to2_converter();
       break;
     }
   }
@@ -871,6 +869,10 @@ void dmdreader_init(PIO pio) {
   source_dwordsperframe = source_dwordsperplane * source_planesperframe;
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_dwordsperline = source_width * source_bitsperpixel / 32;
+
+  if (source_bitsperpixel == 4 && target_bitsperpixel == 2) {
+    set_4to2_converter();
+  }
 
   // DMA for DMD reader
   dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
