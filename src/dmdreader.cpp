@@ -263,7 +263,7 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
 #endif
 
   // round length to 4-byte blocks
-  h.len = (((source_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
+  h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
   ph.columns = source_width;
   ph.rows = source_height;
   ph.bitsperpixel = target_bitsperpixel;
