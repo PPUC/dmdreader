@@ -553,7 +553,6 @@ void dmd_dma_handler() {
       if (planebuf[offset[0] + px] & 0xF) {
         // We are in sync.
         locked_in = true;
-        digitalWrite(LED_BUILTIN, HIGH);
       } else {
         // Stop the state machine that detects frames.
         pio_sm_set_enabled(dmd_pio, frame_sm, false);
@@ -565,6 +564,7 @@ void dmd_dma_handler() {
         // trigger the same correction.
         skip_frames = 1;
         // Do not switch buffers and return here. The DMD should show something.
+        digitalWrite(LED_BUILTIN, HIGH);
       }
     }
 
