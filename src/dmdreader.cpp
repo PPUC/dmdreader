@@ -66,14 +66,18 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
 } block_pix_crc_header_t __attribute__((aligned(4)));
 
 // DMD types
-#define DMD_UNKNOWN 0
-#define DMD_WPC 1
-#define DMD_WHITESTAR 2
-#define DMD_SPIKE1 3
-#define DMD_SAM 4
-#define DMD_DESEGA 5
-#define DMD_CAPCOM 6
-#define DMD_GOTTLIEB 7
+enum DmdType {
+  DMD_UNKNOWN,
+  DMD_WPC,
+  DMD_WHITESTAR,
+  DMD_SPIKE1,
+  DMD_SAM,
+  DMD_DESEGA,
+  DMD_CAPCOM,
+  DMD_GOTTLIEB,
+};
+
+DmdType dmd_type;
 
 // Line oversampling
 #define LINEOVERSAMPLING_NONE 1
@@ -134,7 +138,6 @@ uint8_t *frameBufferToSend = framebuf2;
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
 uint8_t skip_frames = 0;
-uint8_t dmd_type = DMD_UNKNOWN;
 bool locked_in = false;
 
 // SPI PIO
@@ -300,7 +303,7 @@ uint32_t count_clock(uint pin) {
   return count * 2;
 }
 
-int detect_dmd() {
+DmdType detect_dmd() {
   uint32_t dotclk = count_clock(DOTCLK);
   uint32_t de = count_clock(DE);
   uint32_t rdata = count_clock(RDATA);
@@ -389,68 +392,77 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
   return result;
 }
 
-uint16_t convert_4bit_to_2bit_fast(uint32_t input) {
-  uint32_t p0 = (input >> 0) & 0xF;
-  uint32_t p1 = (input >> 4) & 0xF;
-  uint32_t p2 = (input >> 8) & 0xF;
-  uint32_t p3 = (input >> 12) & 0xF;
-  uint32_t p4 = (input >> 16) & 0xF;
-  uint32_t p5 = (input >> 20) & 0xF;
-  uint32_t p6 = (input >> 24) & 0xF;
-  uint32_t p7 = (input >> 28) & 0xF;
-
-  switch (dmd_type) {
-    case DMD_CAPCOM: {
-      p0 = (p0 > 3) ? 3 : p0;
-      p1 = (p1 > 3) ? 3 : p1;
-      p2 = (p2 > 3) ? 3 : p2;
-      p3 = (p3 > 3) ? 3 : p3;
-      p4 = (p4 > 3) ? 3 : p4;
-      p5 = (p5 > 3) ? 3 : p5;
-      p6 = (p6 > 3) ? 3 : p6;
-      p7 = (p7 > 3) ? 3 : p7;
-      break;
-    }
-    case DMD_GOTTLIEB: {
-      auto map = [](uint32_t p) {
-        if (p == 0) return 0U;
-        if (p == 1 || p == 2) return 1U;
-        if (p == 3 || p == 4) return 2U;
-        return 3U;
-      };
-      p0 = map(p0);
-      p1 = map(p1);
-      p2 = map(p2);
-      p3 = map(p3);
-      p4 = map(p4);
-      p5 = map(p5);
-      p6 = map(p6);
-      p7 = map(p7);
-      break;
-    }
-    default: {
-      auto map = [](uint32_t p) {
-        if (p == 0) return 0U;
-        if (p == 1 || p == 2 || p == 3 || p == 4 || p == 5) return 1U;
-        if (p == 6 || p == 7 || p == 8 || p == 9 || p == 10) return 2U;
-        return 3U;
-      };
-      p0 = map(p0);
-      p1 = map(p1);
-      p2 = map(p2);
-      p3 = map(p3);
-      p4 = map(p4);
-      p5 = map(p5);
-      p6 = map(p6);
-      p7 = map(p7);
-      break;
-    }
+// mapping nur für die 2 Typen
+template <DmdType T>
+static constexpr uint8_t map_nibble(uint8_t p) {
+  if constexpr (T == DMD_CAPCOM) {
+    return (p > 3) ? 3 : p;
+  } else {  // DMD_GOTTLIEB
+    if (p == 0) return 0;
+    if (p == 1 || p == 2) return 1;
+    if (p == 3 || p == 4) return 2;
+    return 3;
   }
+}
 
-  // pack as 16 bit
-  return static_cast<uint16_t>((p0 << 0) | (p1 << 2) | (p2 << 4) | (p3 << 6) |
-                               (p4 << 8) | (p5 << 10) | (p6 << 12) |
-                               (p7 << 14));
+template <DmdType T>
+struct ByteLut {
+  static constexpr uint8_t make(uint16_t b) {
+    uint8_t lo = map_nibble<T>(uint8_t(b & 0x0F));
+    uint8_t hi = map_nibble<T>(uint8_t((b >> 4) & 0x0F));
+    return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
+  }
+  static constexpr std::array<uint8_t, 256> build() {
+    std::array<uint8_t, 256> a{};
+    for (uint16_t i = 0; i < 256; ++i) a[i] = make(i);
+    return a;
+  }
+  static constexpr std::array<uint8_t, 256> lut = build();
+};
+
+template <DmdType T>
+constexpr std::array<uint8_t, 256> ByteLut<T>::lut;
+
+template <DmdType T>
+static inline __attribute__((always_inline)) uint16_t
+convert_4bit_to_2bit_fast_lut(uint32_t input) {
+  uint32_t b0 = (input >> 0) & 0xFF;
+  uint32_t b1 = (input >> 8) & 0xFF;
+  uint32_t b2 = (input >> 16) & 0xFF;
+  uint32_t b3 = (input >> 24) & 0xFF;
+
+  uint16_t r0 = ByteLut<T>::lut[b0];
+  uint16_t r1 = ByteLut<T>::lut[b1];
+  uint16_t r2 = ByteLut<T>::lut[b2];
+  uint16_t r3 = ByteLut<T>::lut[b3];
+
+  return uint16_t((r0 << 0) | (r1 << 4) | (r2 << 8) | (r3 << 12));
+}
+
+using ConvFn = uint16_t (*)(uint32_t);
+static ConvFn g_conv_4to2 = nullptr;
+
+static inline uint16_t conv_capcom(uint32_t x) {
+  return convert_4bit_to_2bit_fast_lut<DMD_CAPCOM>(x);
+}
+static inline uint16_t conv_gottlieb(uint32_t x) {
+  return convert_4bit_to_2bit_fast_lut<DMD_GOTTLIEB>(x);
+}
+
+static inline void set_4to2_converter() {
+  if (dmd_type == DMD_CAPCOM) {
+    g_conv_4to2 = conv_capcom;
+  } else if (dmd_type == DMD_GOTTLIEB) {
+    g_conv_4to2 = conv_gottlieb;
+  } else {
+    g_conv_4to2 = nullptr;
+  }
+}
+
+// Hot path
+static inline __attribute__((always_inline)) uint16_t
+convert_4bit_to_2bit_fast(uint32_t input) {
+  return g_conv_4to2(input);
 }
 
 void switch_buffers() {
@@ -608,6 +620,7 @@ void dmd_dma_handler() {
 void dmdreader_init(PIO pio) {
   dmd_pio = pio;
 
+  dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   while (dmd_type == DMD_UNKNOWN) {
@@ -807,6 +820,7 @@ void dmdreader_init(PIO pio) {
       source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
+      set_4to2_converter();
       break;
     }
 
@@ -835,6 +849,7 @@ void dmdreader_init(PIO pio) {
       source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
+      set_4to2_converter();
       break;
     }
   }
@@ -940,7 +955,7 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2) {
 }
 
 bool dmdreader_loopback_render() {
-  uint64_t* frame4bit = (uint64_t*) framebuf3;
+  uint64_t *frame4bit = (uint64_t *)framebuf3;
 
   if (frame_received) {
     frame_received = false;
@@ -951,15 +966,17 @@ bool dmdreader_loopback_render() {
         currentFrameBuffer = renderbuf1;
       }
 
-      auto func = get_optimized_converter(source_width, source_height, Color::GREEN);
+      auto func =
+          get_optimized_converter(source_width, source_height, Color::GREEN);
       if (func) {
         if (2 == source_bitsperpixel) {
-          for(uint16_t i = 0; i < source_dwords; i++) {
-            frame4bit[i] = convert_2bit_to_4bit_fast(((uint32_t*)frameBufferToSend)[i]);
+          for (uint16_t i = 0; i < source_dwords; i++) {
+            frame4bit[i] =
+                convert_2bit_to_4bit_fast(((uint32_t *)frameBufferToSend)[i]);
           }
-          func((uint32_t*) frame4bit, currentRenderBuffer);
+          func((uint32_t *)frame4bit, currentRenderBuffer);
         } else {
-          func((uint32_t*) frameBufferToSend, currentRenderBuffer);
+          func((uint32_t *)frameBufferToSend, currentRenderBuffer);
         }
       }
 
