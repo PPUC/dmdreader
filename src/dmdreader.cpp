@@ -8,6 +8,7 @@
 #include "dmdreader_pins.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
+#include "loopback_renderer.h"
 #include "spi_slave_sender.pio.h"
 
 // should CRC32 checksum be caculated and sent with each frame
@@ -122,9 +123,11 @@ uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
 uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(8)));
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(4)));
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(8)));
+uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
+                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(8)));
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 
@@ -363,96 +366,27 @@ void spi_dma_handler() {
   spi_dma_running = false;
 }
 
-void convert_to_8bit_fast(uint8_t *output, uint32_t input) {
-  uint8_t p;
+uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
+  static const uint64_t lut[4] = {0x0, 0x5, 0xA, 0xF};
+  uint64_t result = 0;
+  result |= lut[(input >> 0) & 0x3] << (0 * 4);
+  result |= lut[(input >> 2) & 0x3] << (1 * 4);
+  result |= lut[(input >> 4) & 0x3] << (2 * 4);
+  result |= lut[(input >> 6) & 0x3] << (3 * 4);
+  result |= lut[(input >> 8) & 0x3] << (4 * 4);
+  result |= lut[(input >> 10) & 0x3] << (5 * 4);
+  result |= lut[(input >> 12) & 0x3] << (6 * 4);
+  result |= lut[(input >> 14) & 0x3] << (7 * 4);
+  result |= lut[(input >> 16) & 0x3] << (8 * 4);
+  result |= lut[(input >> 18) & 0x3] << (9 * 4);
+  result |= lut[(input >> 20) & 0x3] << (10 * 4);
+  result |= lut[(input >> 22) & 0x3] << (11 * 4);
+  result |= lut[(input >> 24) & 0x3] << (12 * 4);
+  result |= lut[(input >> 26) & 0x3] << (13 * 4);
+  result |= lut[(input >> 28) & 0x3] << (14 * 4);
+  result |= lut[(input >> 30) & 0x3] << (15 * 4);
 
-  for (uint8_t i = 0; i < source_pixelsperdword; i++) {
-    p = (input >> (i * source_bitsperpixel)) & 0xF;
-
-    switch (dmd_type) {
-      case DMD_CAPCOM: {
-        if (p == 0) {
-          output[i] = 0U;
-        } else if (p == 1) {
-          output[i] = 64U;
-        } else if (p == 2) {
-          output[i] = 128U;
-        } else if (p == 3) {
-          output[i] = 196U;
-        } else {
-          output[i] = 255U;
-        }
-        break;
-      }
-      case DMD_GOTTLIEB: {
-        if (p == 0) {
-          output[i] = 0U;
-        } else if (p == 1) {
-          output[i] = 42U;
-        } else if (p == 2) {
-          output[i] = 84U;
-        } else if (p == 3) {
-          output[i] = 126U;
-        } else if (p == 4) {
-          output[i] = 168U;
-        } else if (p == 5) {
-          output[i] = 210U;
-        } else {
-          output[i] = 255U;
-        }
-        break;
-      }
-      case DMD_SAM:
-      case DMD_SPIKE1: {
-        if (p == 0) {
-          output[i] = 0U;
-        } else if (p == 1) {
-          output[i] = 17U;
-        } else if (p == 2) {
-          output[i] = 34U;
-        } else if (p == 3) {
-          output[i] = 53U;
-        } else if (p == 4) {
-          output[i] = 68U;
-        } else if (p == 5) {
-          output[i] = 85U;
-        } else if (p == 6) {
-          output[i] = 102U;
-        } else if (p == 7) {
-          output[i] = 119U;
-        } else if (p == 8) {
-          output[i] = 136U;
-        } else if (p == 9) {
-          output[i] = 153U;
-        } else if (p == 10) {
-          output[i] = 170U;
-        } else if (p == 11) {
-          output[i] = 187U;
-        } else if (p == 12) {
-          output[i] = 204U;
-        } else if (p == 13) {
-          output[i] = 221U;
-        } else if (p == 14) {
-          output[i] = 238U;
-        } else {
-          output[i] = 255U;
-        }
-        break;
-      }
-      default: {
-        if (p == 0) {
-          output[i] = 0U;
-        } else if (p == 1) {
-          output[i] = 85U;
-        } else if (p == 2) {
-          output[i] = 170U;
-        } else {
-          output[i] = 255U;
-        }
-        break;
-      }
-    }
-  }
+  return result;
 }
 
 uint16_t convert_4bit_to_2bit_fast(uint32_t input) {
@@ -602,16 +536,16 @@ void dmd_dma_handler() {
         // We are in sync.
         locked_in = true;
       } else {
-        // We're out of sync. Skip the next frame which will contain garbage
-        // as it gets filles already in the background in this moment.
-        skip_frames = 1;
-        switch_buffers();
         // Stop the state machine that detects frames.
         pio_sm_set_enabled(dmd_pio, frame_sm, false);
         // Start state machine again. The PIO program will skip at least one
         // plane as it is waiting for RDATA at the beginning.
         pio_sm_set_enabled(dmd_pio, frame_sm, true);
-        return;
+        // We're out of sync. Skip the next frame which will contain garbage
+        // as it gets filles already in the background in this moment and would
+        // trigger the same correction.
+        skip_frames = 1;
+        // Do not switch buffers and return here. The DMD should show something.
       }
     }
 
@@ -1006,6 +940,8 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2) {
 }
 
 bool dmdreader_loopback_render() {
+  uint64_t* frame4bit = (uint64_t*) framebuf3;
+
   if (frame_received) {
     frame_received = false;
     if (frame_crc != crc_previous_frame) {
@@ -1015,14 +951,22 @@ bool dmdreader_loopback_render() {
         currentFrameBuffer = renderbuf1;
       }
 
-      for (uint16_t i = 0; i < source_dwords; i++) {
-        convert_to_8bit_fast(&currentRenderBuffer[source_pixelsperdword * i],
-                             frameBufferToSend[i]);
+      auto func = get_optimized_converter(source_width, source_height, Color::GREEN);
+      if (func) {
+        if (2 == source_bitsperpixel) {
+          for(uint16_t i = 0; i < source_dwords; i++) {
+            frame4bit[i] = convert_2bit_to_4bit_fast(((uint32_t*)frameBufferToSend)[i]);
+          }
+          func((uint32_t*) frame4bit, currentRenderBuffer);
+        } else {
+          func((uint32_t*) frameBufferToSend, currentRenderBuffer);
+        }
       }
 
       crc_previous_frame = frame_crc;
+
+      return true;
     }
-    return true;
   }
 
   return false;
