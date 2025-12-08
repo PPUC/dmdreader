@@ -138,6 +138,7 @@ uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
 uint8_t skip_frames = 0;
 bool locked_in = false;
+bool plane0_shifted = false;
 
 // SPI PIO
 PIO spi_pio;
@@ -511,6 +512,9 @@ void dmd_dma_handler() {
     return;
   }
 
+  // Required as long as CAPCOM is not locked-in:
+  plane0_shifted = false;
+
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
@@ -549,21 +553,29 @@ void dmd_dma_handler() {
     // The other three combinations that reuslt in a valus of 1 indicate that
     // the signal is out of sync. It is sufficient to check one pixel of the
     // group.
-    if (DMD_CAPCOM == dmd_type && !locked_in && 1 == (pixval & 0xF)) {
-      if (planebuf[offset[0] + px] & 0xF) {
-        // We are in sync.
-        locked_in = true;
-      } else {
-        // Stop the state machine that detects frames.
-        pio_sm_set_enabled(dmd_pio, frame_sm, false);
-        // Start state machine again. The PIO program will skip at least one
-        // plane as it is waiting for RDATA at the beginning.
-        pio_sm_set_enabled(dmd_pio, frame_sm, true);
-        // We're out of sync. Skip the next frame which will contain garbage
-        // as it gets filles already in the background in this moment and would
-        // trigger the same correction.
-        skip_frames = 1;
-        // Do not switch buffers and return here. The DMD should show something.
+    if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted) {
+      if ((pixval & 0xF) == 1) {
+        if ((planebuf[px] & 0xF) == 1) {
+          // We are in sync.
+          locked_in = true;
+        } else {
+          // Stop the state machine that detects frames.
+          pio_sm_set_enabled(dmd_pio, frame_sm, false);
+          dma_channel_abort(dmd_dma_channel);
+          // Enable DMA interrupt 0 to be triggered when the transfer is done.
+          dma_channel_set_irq0_enabled(dmd_dma_channel, true);
+          dma_channel_configure(
+              dmd_dma_channel, &dmd_dma_channel_cfg,
+              (currentPlaneBuffer == planebuf1) ? planebuf2 : planebuf1,
+              &dmd_pio->rxf[dmd_sm],  // Source pointer
+              source_dwordsperframe,  // Number of transfers
+              true                    // Start now
+          );
+          // Start state machine again. The PIO program will skip at least one
+          // plane as it is waiting for RDATA at the beginning.
+          pio_sm_set_enabled(dmd_pio, frame_sm, true);
+          plane0_shifted = true;
+        }
       }
     }
 
@@ -822,7 +834,7 @@ void dmdreader_init(PIO pio) {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
-      target_bitsperpixel = 4;
+      target_bitsperpixel = 2;
       source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
