@@ -816,7 +816,7 @@ void dmdreader_init(PIO pio) {
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
-      target_bitsperpixel = 2;
+      target_bitsperpixel = 4;
       source_planesperframe = 4;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
