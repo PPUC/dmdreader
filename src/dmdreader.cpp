@@ -94,8 +94,7 @@ DmdType dmd_type;
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
 #define MAX_PLANESPERFRAME 6
-#define MAX_MEMORY_OVERHEAD \
-  4  // reserve additional memory in framebuf for line oversampling
+#define MAX_OVERSAMPLING LINEOVERSAMPLING_4X
 
 // Use uint16_t for all of these variables to erase calculations:
 uint16_t source_width;
@@ -127,11 +126,11 @@ uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
 uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(8)));
+                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
 uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(8)));
+                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
 uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_MEMORY_OVERHEAD] __attribute__((aligned(8)));
+                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
 uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 
@@ -392,7 +391,10 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
   return result;
 }
 
-// mapping nur für die 2 Typen
+// ---------------------------------
+// convert_4bit_to_2bit_fast() BEGIN
+// ---------------------------------
+
 template <DmdType T>
 static constexpr uint8_t map_nibble(uint8_t p) {
   if constexpr (T == DMD_CAPCOM) {
@@ -465,6 +467,10 @@ convert_4bit_to_2bit_fast(uint32_t input) {
   return g_conv_4to2(input);
 }
 
+// -------------------------------
+// convert_4bit_to_2bit_fast() END
+// -------------------------------
+
 void switch_buffers() {
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
@@ -520,7 +526,7 @@ void dmd_dma_handler() {
 
   // add all planes to get the frame data
   uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
-  // calculate offsets for each plane and cache these
+  // calculate offsets for the first pixel of each plane and cache these
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
     offset[i] = i * source_dwordsperplane;
@@ -547,6 +553,7 @@ void dmd_dma_handler() {
       if (planebuf[offset[0] + px] & 0xF) {
         // We are in sync.
         locked_in = true;
+        digitalWrite(LED_BUILTIN, HIGH);
       } else {
         // Stop the state machine that detects frames.
         pio_sm_set_enabled(dmd_pio, frame_sm, false);
