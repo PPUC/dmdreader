@@ -671,7 +671,9 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
-void dmdreader_init(PIO dmd_pio) {
+void dmdreader_init(PIO pio) {
+  dmd_pio = pio;
+
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   while (dmd_type == DMD_UNKNOWN) {
@@ -948,7 +950,9 @@ void dmdreader_init(PIO dmd_pio) {
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
-void dmdreader_spi_init(PIO spi_pio) {
+void dmdreader_spi_init(PIO pio) {
+  spi_pio = pio;
+
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);

@@ -2,8 +2,8 @@
 // Set the official 200 MHz system clock
 // For RP2350, PLL parameters must be provided
 #define PLL_SYS_VCO_FREQ_HZ (1600ul * 1000ul * 1000ul)
-#define PLL_SYS_POSTDIV1    4
-#define PLL_SYS_POSTDIV2    2
+#define PLL_SYS_POSTDIV1 4
+#define PLL_SYS_POSTDIV2 2
 #endif
 
 // set to officially supported 200MHz clock
@@ -22,9 +22,6 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 
   dmdreader_init(pio0);
-}
-
-void setup1() {
   dmdreader_spi_init(pio0);
 }
 
