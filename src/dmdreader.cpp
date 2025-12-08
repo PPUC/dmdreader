@@ -164,7 +164,7 @@ volatile bool frame_received = false;
 
 uint8_t *renderbuf1;
 uint8_t *renderbuf2;
-uint8_t *currentRenderBuffer = renderbuf1;
+uint8_t *currentRenderBuffer;
 
 /**
  * @brief Send data via SPI, transfer data via DMA
@@ -283,6 +283,18 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
 }
 
 /**
+ * @brief Is being called when SPI DMA transfer has finished
+ *
+ */
+void spi_dma_handler() {
+  // Clear the interrupt request
+  dma_hw->ints1 = 1u << spi_dma_channel;
+
+  finish_spi();
+  spi_dma_running = false;
+}
+
+/**
  * @brief Count a clock using different PIO programs defined in dmd_counter.pio
  *
  * @return uint32_t Number of clocks per second
@@ -354,18 +366,6 @@ DmdType detect_dmd() {
 #endif
 
   return DMD_UNKNOWN;
-}
-
-/**
- * @brief Is being called when SPI DMA transfer has finished
- *
- */
-void spi_dma_handler() {
-  // Clear the interrupt request
-  dma_hw->ints1 = 1u << spi_dma_channel;
-
-  finish_spi();
-  spi_dma_running = false;
 }
 
 uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
@@ -960,6 +960,7 @@ bool dmdreader_spi_send() {
 void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2) {
   renderbuf1 = buffer1;
   renderbuf2 = buffer2;
+  currentRenderBuffer = renderbuf1;
 }
 
 bool dmdreader_loopback_render() {
