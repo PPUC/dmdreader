@@ -136,7 +136,6 @@ uint8_t *frameBufferToSend = framebuf2;
 
 uint32_t frame_crc;
 int32_t crc_previous_frame = 0;
-uint8_t skip_frames = 0;
 bool locked_in = false;
 bool plane0_shifted = false;
 
@@ -507,12 +506,6 @@ void dmd_set_and_enable_new_dma_target() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
-  if (skip_frames > 0) {
-    skip_frames--;
-    switch_buffers();
-    return;
-  }
-
   // Required as long as CAPCOM is not locked-in:
   plane0_shifted = false;
 
@@ -536,9 +529,6 @@ void dmd_dma_handler() {
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
   uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
-  // Prepare a 16bit pointer to the frame buffer in case a 4bit to 2pit pixel
-  // depth coversion is needed.
-  uint16_t *framebuf_4to2 = (uint16_t *)currentFrameBuffer;
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
@@ -578,7 +568,16 @@ void dmd_dma_handler() {
     if (source_bitsperpixel == target_bitsperpixel) {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
-      framebuf_4to2[px] = convert_4bit_to_2bit_fast(pixval);
+      uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
+      uint32_t out = px >> 1;  // Shifting leeds to that index steps: 0, 0, 1,
+                               // 1, 2, 2, 3, 3, 4, ...
+      if ((px & 1) == 0) {
+        // Write first 8 pixel in upper 16 Bit.
+        framebuf[out] = (uint32_t)v16 << 16;
+      } else {
+        // Write second 8 pixel in lower 16 Bit.
+        framebuf[out] |= v16;
+      }
     }
   }
 
@@ -627,7 +626,7 @@ void dmd_dma_handler() {
   }
 
 #ifdef USE_CRC
-  frame_crc = crc32(0, (const uint8_t *)framebuf, target_bytes);
+  frame_crc = crc32(0, currentFrameBuffer, target_bytes);
 #endif
 
   switch_buffers();
