@@ -527,15 +527,18 @@ void dmd_dma_handler() {
     planebuf++;
   }
 
-  // Merge multiple planes
-
-  // add all planes to get the frame data
-  uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
-  // calculate offsets for the first pixel of each plane and cache these
+  // Merge multiple planes to get the frame data.
+  // Calculate offsets for the first pixel of each plane and cache these.
   uint16_t offset[MAX_PLANESPERFRAME];
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
     offset[i] = i * source_dwordsperplane;
   }
+
+  // Get a 32bit pointer to the frame buffer to handle more pixels at once.
+  uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
+  // Prepare a 16bit pointer to the frame buffer in case a 4bit to 2pit pixel
+  // depth coversion is needed.
+  uint16_t *framebuf_4to2 = (uint16_t *)currentFrameBuffer;
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
@@ -573,52 +576,56 @@ void dmd_dma_handler() {
     if (source_bitsperpixel == target_bitsperpixel) {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
-      ((uint16_t *)framebuf)[px] = convert_4bit_to_2bit_fast(pixval);
+      framebuf_4to2[px] = convert_4bit_to_2bit_fast(pixval);
     }
   }
 
-  // deal with whitestar line oversampling directly within framebuf
-  if (source_lineoversampling == LINEOVERSAMPLING_2X) {
-    uint16_t i = 0;
-    uint32_t *dst, *src1, *src2;
-    dst = src1 = framebuf;
-    src2 = src1 + source_dwordsperline;
-    uint32_t v;
+  // The code below doesn't work if we reduced the bit depth above. But at the
+  // moment there's no system with oversampling and bit depth reduction.
+  if (source_bitsperpixel == target_bitsperpixel) {
+    // deal with whitestar line oversampling directly within framebuf
+    if (source_lineoversampling == LINEOVERSAMPLING_2X) {
+      uint16_t i = 0;
+      uint32_t *dst, *src1, *src2;
+      dst = src1 = framebuf;
+      src2 = src1 + source_dwordsperline;
+      uint32_t v;
 
-    for (int l = 0; l < source_height; l++) {
-      for (int w = 0; w < source_dwordsperline; w++) {
-        v = src1[w] * 2 + src2[w];
-        dst[w] = v;
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          v = src1[w] * 2 + src2[w];
+          dst[w] = v;
+        }
+        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
+        src2 += source_dwordsperline * 2;
+        dst += source_dwordsperline;  // destination skips only one line
       }
-      src1 += source_dwordsperline * 2;  // source skips 2 lines forward
-      src2 += source_dwordsperline * 2;
-      dst += source_dwordsperline;  // destination skips only one line
-    }
-  } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
-    uint16_t i = 0;
-    uint32_t *dst, *src1, *src2, *src3, *src4;
-    dst = src1 = framebuf;
-    src2 = src1 + source_dwordsperline;
-    src3 = src2 + source_dwordsperline;
-    src4 = src3 + source_dwordsperline;
-    uint32_t v;
+    } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
+      uint16_t i = 0;
+      uint32_t *dst, *src1, *src2, *src3, *src4;
+      dst = src1 = framebuf;
+      src2 = src1 + source_dwordsperline;
+      src3 = src2 + source_dwordsperline;
+      src4 = src3 + source_dwordsperline;
+      uint32_t v;
 
-    for (int l = 0; l < source_height; l++) {
-      for (int w = 0; w < source_dwordsperline; w++) {
-        // On SAM line order is really messed up :-(
-        v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
-        dst[w] = v;
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          // On SAM line order is really messed up :-(
+          v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
+          dst[w] = v;
+        }
+        src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+        src2 += source_dwordsperline * 4;
+        src3 += source_dwordsperline * 4;
+        src4 += source_dwordsperline * 4;
+        dst += source_dwordsperline;  // destination skips only one line
       }
-      src1 += source_dwordsperline * 4;  // source skips 4 lines forward
-      src2 += source_dwordsperline * 4;
-      src3 += source_dwordsperline * 4;
-      src4 += source_dwordsperline * 4;
-      dst += source_dwordsperline;  // destination skips only one line
     }
   }
 
 #ifdef USE_CRC
-  frame_crc = crc32(0, (const uint8_t *)framebuf, source_bytes);
+  frame_crc = crc32(0, (const uint8_t *)framebuf, target_bytes);
 #endif
 
   switch_buffers();
@@ -967,7 +974,7 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   monochromeColor = color;
 }
 
-uint8_t* dmdreader_loopback_render() {
+uint8_t *dmdreader_loopback_render() {
   uint64_t *frame4bit = (uint64_t *)framebuf3;
 
   if (frame_received) {
