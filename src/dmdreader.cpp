@@ -135,7 +135,8 @@ uint8_t *currentFrameBuffer = framebuf1;
 uint8_t *frameBufferToSend = framebuf2;
 
 uint32_t frame_crc;
-int32_t crc_previous_frame = 0;
+uint32_t crc_previous_frame = 0;
+uint32_t frame_counter = 0;
 bool locked_in = false;
 bool plane0_shifted = false;
 
@@ -508,6 +509,7 @@ void dmd_dma_handler() {
 
   // Required as long as CAPCOM is not locked-in:
   plane0_shifted = false;
+  frame_counter++;
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
@@ -546,10 +548,10 @@ void dmd_dma_handler() {
     }
 
     // Search vor 1/0/0/0 pattern for CAPCOM.
-    // The other three combinations that reuslt in a valus of 1 indicate that
+    // The other three combinations that result in a value of 1 indicate that
     // the signal is out of sync. It is sufficient to check one pixel of the
     // group.
-    if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted) {
+    if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted && frame_counter > 4000) {
       if ((pixval & 0xF) == 1) {
         if ((planebuf[px] & 0xF) == 1) {
           // We are in sync.
