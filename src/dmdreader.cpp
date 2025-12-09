@@ -398,76 +398,33 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
 // convert_4bit_to_2bit_fast() BEGIN
 // ---------------------------------
 
-template <DmdType T>
-static constexpr uint8_t map_nibble(uint8_t p) {
-  if constexpr (T == DMD_CAPCOM) {
-    return (p > 3) ? 3 : p;
-  } else {  // DMD_GOTTLIEB
-    if (p == 0) return 0;
-    if (p == 1) return 1;
-    if (p == 2 || p == 3) return 2;
-    return 3;
-  }
+static constexpr uint8_t map_nibble(uint8_t p) { return (p > 3) ? 3 : p; }
+
+static constexpr uint8_t make_lut_entry(uint16_t b) {
+  uint8_t lo = map_nibble(uint8_t(b & 0x0F));
+  uint8_t hi = map_nibble(uint8_t((b >> 4) & 0x0F));
+  return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
 }
 
-template <DmdType T>
-struct ByteLut {
-  static constexpr uint8_t make(uint16_t b) {
-    uint8_t lo = map_nibble<T>(uint8_t(b & 0x0F));
-    uint8_t hi = map_nibble<T>(uint8_t((b >> 4) & 0x0F));
-    return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
-  }
-  static constexpr std::array<uint8_t, 256> build() {
-    std::array<uint8_t, 256> a{};
-    for (uint16_t i = 0; i < 256; ++i) a[i] = make(i);
-    return a;
-  }
-  static constexpr std::array<uint8_t, 256> lut = build();
-};
+static constexpr std::array<uint8_t, 256> kByteLut = [] {
+  std::array<uint8_t, 256> a{};
+  for (uint16_t i = 0; i < 256; ++i) a[i] = make_lut_entry(i);
+  return a;
+}();
 
-template <DmdType T>
-constexpr std::array<uint8_t, 256> ByteLut<T>::lut;
-
-template <DmdType T>
 static inline __attribute__((always_inline)) uint16_t
-convert_4bit_to_2bit_fast_lut(uint32_t input) {
+convert_4bit_to_2bit_fast(uint32_t input) {
   uint32_t b0 = (input >> 0) & 0xFF;
   uint32_t b1 = (input >> 8) & 0xFF;
   uint32_t b2 = (input >> 16) & 0xFF;
   uint32_t b3 = (input >> 24) & 0xFF;
 
-  uint16_t r0 = ByteLut<T>::lut[b0];
-  uint16_t r1 = ByteLut<T>::lut[b1];
-  uint16_t r2 = ByteLut<T>::lut[b2];
-  uint16_t r3 = ByteLut<T>::lut[b3];
+  uint16_t r0 = kByteLut[b0];
+  uint16_t r1 = kByteLut[b1];
+  uint16_t r2 = kByteLut[b2];
+  uint16_t r3 = kByteLut[b3];
 
   return uint16_t((r0 << 0) | (r1 << 4) | (r2 << 8) | (r3 << 12));
-}
-
-using ConvFn = uint16_t (*)(uint32_t);
-static ConvFn g_conv_4to2 = nullptr;
-
-static inline uint16_t conv_capcom(uint32_t x) {
-  return convert_4bit_to_2bit_fast_lut<DMD_CAPCOM>(x);
-}
-static inline uint16_t conv_gottlieb(uint32_t x) {
-  return convert_4bit_to_2bit_fast_lut<DMD_GOTTLIEB>(x);
-}
-
-static inline void set_4to2_converter() {
-  if (dmd_type == DMD_CAPCOM) {
-    g_conv_4to2 = conv_capcom;
-  } else if (dmd_type == DMD_GOTTLIEB) {
-    g_conv_4to2 = conv_gottlieb;
-  } else {
-    g_conv_4to2 = nullptr;
-  }
-}
-
-// Hot path
-static inline __attribute__((always_inline)) uint16_t
-convert_4bit_to_2bit_fast(uint32_t input) {
-  return g_conv_4to2(input);
 }
 
 // -------------------------------
@@ -567,7 +524,13 @@ void dmd_dma_handler() {
     // required for this frame.
     if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted) {
       for (uint8_t p = 0; p < 32; p += 4) {
-        uint8_t value = (pixval >> p) & 0xF;
+        uint8_t value = (pixval >> p) & 0x0F;
+        if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
+            (planebuf[offset[2] + px] & 0x0F) != 1) {
+          detected_0_1_0_1 = true;
+        } else if (value == 1 && (planebuf[px] & 0x0F) == 1) {
+          detected_1_0_0_0 = true;
+        }
         // Check for illegal patterns that can happen when not in sync:
         //   1/1/1/0
         //   0/1/1/1
@@ -579,9 +542,10 @@ void dmd_dma_handler() {
         //   0/1/0/0
         //
         //   1/0/1/0
-        if (value == 3 || value > 4 ||
-            (value == 1 && (planebuf[px] & 0xF) != 1) ||
-            (value == 2 && (planebuf[px] & 0xF) == 1)) {
+        else if (value == 3 || value > 4 ||
+                 (value == 1 && (planebuf[px] & 0x0F) != 1) ||
+                 (value == 2 && ((planebuf[px] & 0x0F) == 1 ||
+                                 planebuf[offset[2] + px] & 0x0F) == 1)) {
           // Stop the state machine that detects frames.
           pio_sm_set_enabled(dmd_pio, frame_sm, false);
           // Start state machine again. The PIO program will skip at least one
@@ -589,10 +553,6 @@ void dmd_dma_handler() {
           pio_sm_set_enabled(dmd_pio, frame_sm, true);
           plane0_shifted = true;
           break;
-        } else if (value == 2 && (planebuf[px] & 0xF) != 1) {
-          detected_0_1_0_1 = true;
-        } else if (value == 1 && (planebuf[px] & 0xF) == 1) {
-          detected_1_0_0_0 = true;
         }
       }
     }
@@ -923,10 +883,6 @@ void dmdreader_init(PIO pio) {
   source_dwordsperframe = source_dwordsperplane * source_planesperframe;
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_dwordsperline = source_width * source_bitsperpixel / 32;
-
-  if (source_bitsperpixel == 4 && target_bitsperpixel == 2) {
-    set_4to2_converter();
-  }
 
   // DMA for DMD reader
   dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
