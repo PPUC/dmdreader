@@ -404,8 +404,8 @@ static constexpr uint8_t map_nibble(uint8_t p) {
     return (p > 3) ? 3 : p;
   } else {  // DMD_GOTTLIEB
     if (p == 0) return 0;
-    if (p == 1 || p == 2) return 1;
-    if (p == 3 || p == 4) return 2;
+    if (p == 1) return 1;
+    if (p == 2 || p == 3) return 2;
     return 3;
   }
 }
@@ -561,8 +561,8 @@ void dmd_dma_handler() {
     // 1/1/1/1 0/0/0/0
     //       1/0/0/0
     //
-    // We can be sure to be in sync no illegal pattern occurs and 0/1/0/1 and
-    // 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
+    // We can be sure to be in sync if no illegal pattern occurs and if 0/1/0/1
+    // and 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
     // planes are out of sync and need to be shifted and no further check is
     // required for this frame.
     if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted) {
