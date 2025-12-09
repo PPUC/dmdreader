@@ -561,16 +561,6 @@ void dmd_dma_handler() {
         } else {
           // Stop the state machine that detects frames.
           pio_sm_set_enabled(dmd_pio, frame_sm, false);
-          dma_channel_abort(dmd_dma_channel);
-          // Enable DMA interrupt 0 to be triggered when the transfer is done.
-          dma_channel_set_irq0_enabled(dmd_dma_channel, true);
-          dma_channel_configure(
-              dmd_dma_channel, &dmd_dma_channel_cfg,
-              (currentPlaneBuffer == planebuf1) ? planebuf2 : planebuf1,
-              &dmd_pio->rxf[dmd_sm],  // Source pointer
-              source_dwordsperframe,  // Number of transfers
-              true                    // Start now
-          );
           // Start state machine again. The PIO program will skip at least one
           // plane as it is waiting for RDATA at the beginning.
           pio_sm_set_enabled(dmd_pio, frame_sm, true);
