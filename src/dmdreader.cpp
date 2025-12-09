@@ -136,7 +136,8 @@ uint8_t *frameBufferToSend = framebuf2;
 
 uint32_t frame_crc;
 uint32_t crc_previous_frame = 0;
-uint32_t frame_counter = 0;
+bool detected_0_1_0_1 = false;
+bool detected_1_0_0_0 = false;
 bool locked_in = false;
 bool plane0_shifted = false;
 
@@ -509,7 +510,8 @@ void dmd_dma_handler() {
 
   // Required as long as CAPCOM is not locked-in:
   plane0_shifted = false;
-  frame_counter++;
+  detected_0_1_0_1 = false;
+  detected_1_0_0_0 = false;
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
@@ -547,22 +549,50 @@ void dmd_dma_handler() {
       pixval += v;
     }
 
-    // Search vor 1/0/0/0 pattern for CAPCOM.
-    // The other three combinations that result in a value of 1 indicate that
-    // the signal is out of sync. It is sufficient to check one pixel of the
-    // group.
-    if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted && frame_counter > 4000) {
-      if ((pixval & 0xF) == 1) {
-        if ((planebuf[px] & 0xF) == 1) {
-          // We are in sync.
-          locked_in = true;
-        } else {
+    // CAPCOM is only using these patterns for four planes:
+    //       0/0/0/0
+    //       1/0/0/0
+    //       0/1/0/1
+    //       1/1/1/1
+    //
+    // Just two examples for false positives when searching for 1/0/0/0:
+    // 0/1/0/1 0/0/0/0
+    //       1/0/0/0
+    // 1/1/1/1 0/0/0/0
+    //       1/0/0/0
+    //
+    // We can be sure to be in sync no illegal pattern occurs and 0/1/0/1 and
+    // 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
+    // planes are out of sync and need to be shifted and no further check is
+    // required for this frame.
+    if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted) {
+      for (uint8_t p = 0; p < 32; p += 4) {
+        uint8_t value = (pixval >> p) & 0xF;
+        // Check for illegal patterns that can happen when not in sync:
+        //   1/1/1/0
+        //   0/1/1/1
+        //   1/0/1/1
+        //   1/1/0/1
+        //
+        //   0/0/0/1
+        //   0/0/1/0
+        //   0/1/0/0
+        //
+        //   1/0/1/0
+        if (value == 3 || value > 4 ||
+            (value == 1 && (planebuf[px] & 0xF) != 1) ||
+            (value == 2 && (planebuf[px] & 0xF) == 1)) {
           // Stop the state machine that detects frames.
           pio_sm_set_enabled(dmd_pio, frame_sm, false);
           // Start state machine again. The PIO program will skip at least one
           // plane as it is waiting for RDATA at the beginning.
           pio_sm_set_enabled(dmd_pio, frame_sm, true);
           plane0_shifted = true;
+          break;
+        } else if (value == 2 && (planebuf[px] & 0xF) != 1) {
+          detected_0_1_0_1 = true;
+        } else if (value == 1 && (planebuf[px] & 0xF) == 1) {
+          detected_1_0_0_0 = true;
         }
       }
     }
@@ -581,6 +611,11 @@ void dmd_dma_handler() {
         framebuf[out] |= v16;
       }
     }
+  }
+
+  if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted &&
+      detected_0_1_0_1 && detected_1_0_0_0) {
+    locked_in = true;
   }
 
   // The code below doesn't work if we reduced the bit depth above. But at the
