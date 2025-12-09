@@ -543,6 +543,8 @@ void dmd_dma_handler() {
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
   planebuf = (uint32_t *)currentPlaneBuffer;
+  // px represents a group of pixels stored in a double word. 8 pixels of 4bit
+  // or 16 pixels of 2bit depth.
   for (int px = 0; px < source_dwordsperplane; px++) {
     uint32_t pixval = 0;
     for (int plane = 0; plane < source_planesperframe; plane++) {
