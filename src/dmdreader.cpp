@@ -166,6 +166,7 @@ volatile bool frame_received = false;
 uint8_t *renderbuf1;
 uint8_t *renderbuf2;
 uint8_t *currentRenderBuffer;
+Color monochromeColor;
 
 /**
  * @brief Send data via SPI, transfer data via DMA
@@ -959,10 +960,11 @@ bool dmdreader_spi_send() {
   return false;
 }
 
-void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2) {
+void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   renderbuf1 = buffer1;
   renderbuf2 = buffer2;
   currentRenderBuffer = renderbuf1;
+  monochromeColor = color;
 }
 
 bool dmdreader_loopback_render() {
@@ -978,7 +980,7 @@ bool dmdreader_loopback_render() {
       }
 
       auto func =
-          get_optimized_converter(source_width, source_height, Color::GREEN);
+          get_optimized_converter(source_width, source_height, monochromeColor);
       if (func) {
         if (2 == source_bitsperpixel) {
           for (uint16_t i = 0; i < source_dwords; i++) {

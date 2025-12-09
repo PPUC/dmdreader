@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 
+enum class Color : uint8_t;
+
 // RGB888 type definition
 struct RGB888 {
   uint8_t r, g, b;
@@ -312,8 +314,6 @@ constexpr Resolution get_resolution_from_dimensions(uint16_t width,
   if (width == 256 && height == 64) return Resolution::RES_256x64;
   return Resolution::RES_128x32;
 }
-
-enum class Color { ORANGE, RED, YELLOW, GREEN, BLUE, VIOLET, PINK, WHITE };
 
 // Type definition for conversion functions
 using ConvertFunction = void (*)(const uint32_t*, uint8_t*);
