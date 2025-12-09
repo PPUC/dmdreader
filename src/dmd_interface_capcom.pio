@@ -14,7 +14,7 @@
     mov osr, isr       ; copy 127 to OSR
 
 .wrap_target
-    mov y, osr         ; copy 127 to y, so we read 4 planes of 32 rows
+    set y, 31          ; number of rows
     mov isr, null      ; clear ISR and reset shift counter
 
     irq clear PLANE_START_IRQ
@@ -39,17 +39,11 @@ dot_read_loop:
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_capcom
-    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
-    in x, 5            ; shift in 5 bits, isr is 31 now
-    set x, 3           ; load 3
-    in x, 2            ; shift in 2 bits, isr is 127 now
-    mov y, isr         ; copy 127 to OSR
-
     wait 0 gpio RDATA
     wait 1 gpio RDATA
-
+; When RDATA got HIGH, we already missed the start of the first row, so we skip 32 end of rows before sending the first IRQ.
 .wrap_target
-    mov x, y           ; 128 rows need to be skipped as we are working with 4 planes per frame
+    set x, 31          ; 32 rows
 
 rclk_loop:
     wait 1 gpio RCLK
