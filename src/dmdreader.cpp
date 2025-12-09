@@ -967,7 +967,7 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   monochromeColor = color;
 }
 
-bool dmdreader_loopback_render() {
+uint8_t* dmdreader_loopback_render() {
   uint64_t *frame4bit = (uint64_t *)framebuf3;
 
   if (frame_received) {
@@ -995,9 +995,9 @@ bool dmdreader_loopback_render() {
 
       crc_previous_frame = frame_crc;
 
-      return true;
+      return currentFrameBuffer;
     }
   }
 
-  return false;
+  return nullptr;
 }
