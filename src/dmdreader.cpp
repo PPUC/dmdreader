@@ -74,9 +74,10 @@ enum DmdType {
   DMD_SAM,
   DMD_DESEGA,
   DMD_SEGA_HD,
+  DMD_GOTTLIEB,
+  // CAPCOM need to be the last entries:
   DMD_CAPCOM,
   DMD_CAPCOM_HD,
-  DMD_GOTTLIEB,
 };
 
 DmdType dmd_type;
@@ -534,8 +535,7 @@ void dmd_dma_handler() {
     // and 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
     // planes are out of sync and need to be shifted and no further check is
     // required for this frame.
-    if ((DMD_CAPCOM == dmd_type || DMD_CAPCOM_HD == dmd_type) &&
-        !locked_in && !plane0_shifted) {
+    if (DMD_CAPCOM >= dmd_type && !locked_in && !plane0_shifted) {
       for (uint8_t p = 0; p < 32; p += 4) {
         uint8_t value = (pixval >> p) & 0x0F;
         if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
@@ -588,8 +588,8 @@ void dmd_dma_handler() {
     }
   }
 
-  if ((DMD_CAPCOM == dmd_type || DMD_CAPCOM_HD == dmd_type) && !locked_in &&
-      !plane0_shifted && detected_0_1_0_1 && detected_1_0_0_0) {
+  if (DMD_CAPCOM >= dmd_type && !locked_in && !plane0_shifted &&
+      detected_0_1_0_1 && detected_1_0_0_0) {
     locked_in = true;
   }
 
@@ -855,6 +855,34 @@ void dmdreader_init(PIO pio) {
       break;
     }
 
+    case DMD_GOTTLIEB: {
+      offset = pio_add_program(dmd_pio, &dmd_reader_gottlieb_program);
+      dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config dmd_config =
+          dmd_reader_gottlieb_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
+
+      // The framedetect program just runs and detects the beginning of a new
+      // frame
+      uint input_pins[] = {RDATA};
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_gottlieb_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config frame_config =
+          dmd_framedetect_gottlieb_program_get_default_config(offset);
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1, 0);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 2;
+      source_planesperframe = 6;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }
+
     case DMD_CAPCOM: {
       offset = pio_add_program(dmd_pio, &dmd_reader_capcom_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
@@ -906,34 +934,6 @@ void dmdreader_init(PIO pio) {
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
       source_planesperframe = 4;
-      source_lineoversampling = LINEOVERSAMPLING_NONE;
-      source_mergeplanes = MERGEPLANES_ADD;
-      break;
-    }
-
-    case DMD_GOTTLIEB: {
-      offset = pio_add_program(dmd_pio, &dmd_reader_gottlieb_program);
-      dmd_sm = pio_claim_unused_sm(dmd_pio, true);
-      pio_sm_config dmd_config =
-          dmd_reader_gottlieb_program_get_default_config(offset);
-      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
-
-      // The framedetect program just runs and detects the beginning of a new
-      // frame
-      uint input_pins[] = {RDATA};
-      offset = pio_add_program(dmd_pio, &dmd_framedetect_gottlieb_program);
-      frame_sm = pio_claim_unused_sm(dmd_pio, true);
-      pio_sm_config frame_config =
-          dmd_framedetect_gottlieb_program_get_default_config(offset);
-      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
-                                   input_pins, 1, 0);
-      pio_sm_set_enabled(dmd_pio, frame_sm, true);
-
-      source_width = 128;
-      source_height = 32;
-      source_bitsperpixel = 4;
-      target_bitsperpixel = 2;
-      source_planesperframe = 6;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;

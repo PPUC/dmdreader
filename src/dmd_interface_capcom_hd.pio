@@ -25,8 +25,8 @@
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
-    wait 1 gpio DOTCLK  ; raising edge
     in null 3           ; left padding 3x zero
+    wait 1 gpio DOTCLK  ; raising edge
     in pins 1           ; read pin data
     jmp x-- dotloop
 .wrap
