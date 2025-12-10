@@ -534,7 +534,8 @@ void dmd_dma_handler() {
     // and 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
     // planes are out of sync and need to be shifted and no further check is
     // required for this frame.
-    if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted) {
+    if ((DMD_CAPCOM == dmd_type || DMD_CAPCOM_HD == dmd_type) &&
+        !locked_in && !plane0_shifted) {
       for (uint8_t p = 0; p < 32; p += 4) {
         uint8_t value = (pixval >> p) & 0x0F;
         if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
@@ -587,8 +588,8 @@ void dmd_dma_handler() {
     }
   }
 
-  if (DMD_CAPCOM == dmd_type && !locked_in && !plane0_shifted &&
-      detected_0_1_0_1 && detected_1_0_0_0) {
+  if ((DMD_CAPCOM == dmd_type || DMD_CAPCOM_HD == dmd_type) && !locked_in &&
+      !plane0_shifted && detected_0_1_0_1 && detected_1_0_0_0) {
     locked_in = true;
   }
 
