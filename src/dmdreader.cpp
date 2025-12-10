@@ -73,7 +73,9 @@ enum DmdType {
   DMD_SPIKE1,
   DMD_SAM,
   DMD_DESEGA,
+  DMD_SEGA_HD,
   DMD_CAPCOM,
+  DMD_CAPCOM_HD,
   DMD_GOTTLIEB,
 };
 
@@ -351,6 +353,11 @@ DmdType detect_dmd() {
              (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
     return DMD_DESEGA;
 
+    // SEGA HD: DOTCLK: 1836000 | DE: 7170 | RDATA: 75
+  } else if ((dotclk > 1750000) && (dotclk < 1900000) && (de > 7100) &&
+             (de < 7300) && (rdata > 2530) && (rdata < 2630)) {
+    return DMD_SEGA_HD;
+
     // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
   } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
              (de < 5200) && (rdata > 75) && (rdata < 85)) {
@@ -365,6 +372,11 @@ DmdType detect_dmd() {
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
              (de < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
+
+    // Capcom HD -> DOTCLK: 4168000 | DE: 16280 | RDATA: 255
+  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
+             (de < 16500) && (rdata > 240) && (rdata < 270)) {
+    return DMD_CAPCOM_HD;
   }
 #endif
 
