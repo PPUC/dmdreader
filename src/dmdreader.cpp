@@ -355,7 +355,7 @@ DmdType detect_dmd() {
 
     // SEGA HD: DOTCLK: 1836000 | DE: 7170 | RDATA: 75
   } else if ((dotclk > 1750000) && (dotclk < 1900000) && (de > 7100) &&
-             (de < 7300) && (rdata > 2530) && (rdata < 2630)) {
+             (de < 7300) && (rdata > 70) && (rdata < 80)) {
     return DMD_SEGA_HD;
 
     // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
