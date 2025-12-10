@@ -1,0 +1,57 @@
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
+.define FRAME_START_IRQ 4
+
+.program dmd_reader_sega_hd
+    ; initialize y with 8191, number of pixels ((128 x LSB + 128 x MSB) x 32) - 1  because counting starts at 0.
+    set x, 31          ; x = 31 (max 5-bit value)
+    in x, 5            ; shift in 5 bits, isr = 31
+    set x, 31          ; x = 31
+    in x, 5            ; shift in 5 bits, isr = 1023
+    set x, 15          ; x = 15
+    in x, 3            ; shift in 3 bits, isr = 8191
+    mov y, isr         ; y = 8191
+
+.wrap_target
+    mov x, y           ; load number of pixels
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ
+
+dotloop:
+    wait 0 gpio DOTCLK  ; falling edge
+    in null 1           ; left padding
+    wait 1 gpio DOTCLK  ; raising edge
+    in pins 1           ; read pin data
+    jmp x-- dotloop
+.wrap
+
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
+.program dmd_framedetect_sega_hd
+.wrap_target
+
+; Data East/Sega frame start detection
+; ~7.86µs is the longest state in which DE can be low without it being a new frame
+; We go with 10 µs to be safe and confirm the start of a new frame, which is 256ns * 39 = 9.98 µs
+
+wait_low:
+    wait 0 gpio DE      ; Wait for DE to go low
+    set x, 20           ; Use x as storage for 20 iterations
+
+delay_loop:
+    nop [31]
+    nop [31]
+    jmp x-- delay_loop  ; Decrement x and repeat until zero
+
+    ; After ~10 µs, check if still low
+    jmp pin, wait_low   ; If pin went high early → back to wait_low
+    irq FRAME_START_IRQ ; Pin remained low long enough → frame started
+
+    wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
+    jmp wait_low        ; went high, time to go back to wait_low
+.wrap

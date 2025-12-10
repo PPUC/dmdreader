@@ -823,6 +823,37 @@ void dmdreader_init(PIO pio) {
       break;
     }
 
+    case DMD_SEGA_HD: {
+      offset = pio_add_program(dmd_pio, &dmd_reader_sega_hd_program);
+      dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config dmd_config =
+          dmd_reader_sega_hd_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
+
+      // The framedetect program just runs and detects the beginning of a new
+      // frame
+      uint input_pins[] = {DE};
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_sega_hd_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config frame_config =
+          dmd_framedetect_sega_hd_program_get_default_config(offset);
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
+                                   input_pins, 1, DE);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
+
+      source_width = 192;
+      source_height = 64;
+      source_bitsperpixel = 2;  // Data East and Sega are 2bpp
+      target_bitsperpixel = 2;
+      // in DE-Sega, there's only one plane,
+      // containg one LSB row followed by one MSB row and so on
+      source_planesperframe = 1;
+      // in DE-Sega each line is sent twice
+      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
     case DMD_CAPCOM: {
       offset = pio_add_program(dmd_pio, &dmd_reader_capcom_program);
       dmd_sm = pio_claim_unused_sm(dmd_pio, true);
@@ -843,6 +874,34 @@ void dmdreader_init(PIO pio) {
 
       source_width = 128;
       source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 2;
+      source_planesperframe = 4;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }
+
+    case DMD_CAPCOM_HD: {
+      offset = pio_add_program(dmd_pio, &dmd_reader_capcom_hd_program);
+      dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config dmd_config =
+          dmd_reader_capcom_hd_program_get_default_config(offset);
+      dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
+
+      // The framedetect program just runs and detects the beginning of a new
+      // frame
+      uint input_pins[] = {RDATA, RCLK};
+      offset = pio_add_program(dmd_pio, &dmd_framedetect_capcom_hd_program);
+      frame_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_sm_config frame_config =
+          dmd_framedetect_capcom_hd_program_get_default_config(offset);
+      dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
+                                   input_pins, 2, 0);
+      pio_sm_set_enabled(dmd_pio, frame_sm, true);
+
+      source_width = 256;
+      source_height = 64;
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
       source_planesperframe = 4;
