@@ -8,17 +8,17 @@
 
 .program dmd_reader_capcom_hd
     ; initialize y with 16383, number of pixels (256x64) - 1 because counting starts at 0.
-    set x, 31          ; x = 31 (max 5-bit value)
-    in x, 5            ; shift in 5 bits, isr = 31
-    set x, 31          ; x = 31
-    in x, 5            ; shift in 5 bits, isr = 1023
-    set x, 31          ; x = 31
-    in x, 4            ; shift in 4 bits, isr = 16383
-    mov y, isr         ; y = 16383
+    set x, 31           ; x = 31 (max 5-bit value)
+    in x, 5             ; shift in 5 bits, isr = 31
+    set x, 31           ; x = 31
+    in x, 5             ; shift in 5 bits, isr = 1023
+    set x, 31           ; x = 31
+    in x, 4             ; shift in 4 bits, isr = 16383
+    mov y, isr          ; y = 16383
 
 .wrap_target
-    mov x, y           ; load number of pixels
-    mov isr, null      ; clear ISR and reset shift counter
+    mov x, y            ; load number of pixels
+    mov isr, null       ; clear ISR and reset shift counter
 
     irq clear PLANE_START_IRQ
     wait irq PLANE_START_IRQ
@@ -33,16 +33,16 @@ dotloop:
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_capcom_hd
-    set x, 31      ; x = 31 (max 5-bit value)
-    in x, 5        ; shift in 5 bits, isr = 31
-    set x, 1       ; x = 1
-    in x, 1        ; shift 1 bit, isr = 63
+    set x, 31           ; x = 31 (max 5-bit value)
+    in x, 5             ; shift in 5 bits, isr = 31
+    set x, 1            ; x = 1
+    in x, 1             ; shift 1 bit, isr = 63
 
     wait 0 gpio RDATA
     wait 1 gpio RDATA
 ; When RDATA turns HIGH, we already missed the start of the first row, so we skip 32 end of rows before sending the first IRQ.
 .wrap_target
-    mov x, isr           ; load number of pixels
+    mov x, isr          ; 64 rows
 
 rclk_loop:
     wait 1 gpio RCLK
