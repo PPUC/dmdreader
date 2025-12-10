@@ -1,12 +1,12 @@
 # Read and display pinball DMD data
 
-This project allows to read the contents of a pinball DMD using the Raspberry Pi Pico (RP2040).
+This project allows to read the contents of a pinball DMD using the Raspberry Pi Pico.
 
 ## Hardware
 
 The Pi Pico is directly connected to the 6 DMD data lines. Communication between the Pi Pico and the consumer is implemented via SPI with an additional IRQ line.
 On this IRQ line, the Pico signals that new data is available and consumer must start the data transfer.
-Since not any consumer (especially the Raspverry Pi) can act as an SPI slave this method is used.
+Since not any consumer (especially the Raspberry Pi) can act as an SPI slave this method is used.
 
 ## Currently supported hardware systems
 

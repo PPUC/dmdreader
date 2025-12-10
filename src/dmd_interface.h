@@ -9,9 +9,11 @@
 #include "dmd_interface_spike.pio.h"
 #endif
 #include "dmd_interface_desega.pio.h"
+#include "dmd_interface_sega_hd.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
 #include "dmd_interface_capcom.pio.h"
+#include "dmd_interface_capcom_hd.pio.h"
 #include "dmd_interface_gottlieb.pio.h"
 #include "dmdreader_pins.h"
 #include "hardware/gpio.h"
