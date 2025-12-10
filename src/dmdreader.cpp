@@ -832,13 +832,13 @@ void dmdreader_init(PIO pio) {
 
       // The framedetect program just runs and detects the beginning of a new
       // frame
-      uint input_pins[] = {DE};
+      uint input_pins[] = {RDATA};
       offset = pio_add_program(dmd_pio, &dmd_framedetect_sega_hd_program);
       frame_sm = pio_claim_unused_sm(dmd_pio, true);
       pio_sm_config frame_config =
           dmd_framedetect_sega_hd_program_get_default_config(offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, offset, frame_config,
-                                   input_pins, 1, DE);
+                                   input_pins, 1, 0);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 192;
