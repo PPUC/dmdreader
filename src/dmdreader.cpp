@@ -90,7 +90,7 @@ DmdType dmd_type;
 #define MERGEPLANES_ADDSHIFT 1
 
 // data buffer
-#define MAX_WIDTH 192
+#define MAX_WIDTH 256
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
 #define MAX_PLANESPERFRAME 6
