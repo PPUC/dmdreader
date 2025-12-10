@@ -267,22 +267,47 @@ bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
   block_pix_header_t ph = {};
 #endif
 
-  // round length to 4-byte blocks
-  h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
-  ph.columns = source_width;
-  ph.rows = source_height;
-  ph.bitsperpixel = target_bitsperpixel;
+  if (source_width > 128) {
+    static uint8_t temp[128 * 32 * 2 / 8];
+    // round length to 4-byte blocks
+    h.len = ((((128 * 32 * 2 / 8) + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
+    ph.columns = 128;
+    ph.rows = 32;
+    ph.bitsperpixel = target_bitsperpixel;
 #ifdef USE_CRC
-  ph.crc32 = crc32;
+    ph.crc32 = crc32;
 #endif
 
-  if (skip_when_busy) {
-    if (spi_busy()) return false;
+    if (skip_when_busy) {
+      if (spi_busy()) return false;
+    }
+
+    for (uint8_t i = 0; i < 32; i++) {
+      memcpy(&temp[i * 128], &pixbuf[i * 128], 128);
+    }
+
+    spi_send_blocking((uint32_t *)&h, sizeof(h));
+    spi_send_blocking((uint32_t *)&ph, sizeof(ph));
+    spi_send_dma((uint32_t *)temp, (128 * 32 * 2 / 8));
+  } else {
+    // round length to 4-byte blocks
+    h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
+    ph.columns = source_width;
+    ph.rows = source_height;
+    ph.bitsperpixel = target_bitsperpixel;
+#ifdef USE_CRC
+    ph.crc32 = crc32;
+#endif
+
+    if (skip_when_busy) {
+      if (spi_busy()) return false;
+    }
+
+    spi_send_blocking((uint32_t *)&h, sizeof(h));
+    spi_send_blocking((uint32_t *)&ph, sizeof(ph));
+    spi_send_dma((uint32_t *)pixbuf, target_bytes);
   }
 
-  spi_send_blocking((uint32_t *)&h, sizeof(h));
-  spi_send_blocking((uint32_t *)&ph, sizeof(ph));
-  spi_send_dma((uint32_t *)pixbuf, target_bytes);
   start_spi();
 
   return true;
