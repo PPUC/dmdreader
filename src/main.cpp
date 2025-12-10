@@ -27,10 +27,10 @@ void setup() {
 
 void loop() {
   // Everything is triggered by interrupts, so nothing to do here
-  delay(1000);
-  // digitalWrite(LED_BUILTIN, HIGH);
-  // delay(1000);
-  // digitalWrite(LED_BUILTIN, LOW);
+  delay(5000);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(5000);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop1() {
