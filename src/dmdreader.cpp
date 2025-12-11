@@ -169,7 +169,7 @@ volatile bool frame_received = false;
 
 uint8_t *renderbuf1;
 uint8_t *renderbuf2;
-uint8_t *currentRenderBuffer;
+uint8_t *current_renderbuf;
 Color monochromeColor;
 
 /**
@@ -1040,7 +1040,7 @@ bool dmdreader_spi_send() {
 void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   renderbuf1 = buffer1;
   renderbuf2 = buffer2;
-  currentRenderBuffer = renderbuf1;
+  current_renderbuf = renderbuf1;
   monochromeColor = color;
 }
 
@@ -1051,7 +1051,7 @@ uint8_t *dmdreader_loopback_render() {
     frame_received = false;
     if (frame_crc != crc_previous_frame) {
       if (currentFrameBuffer == renderbuf1) {
-        currentRenderBuffer = renderbuf2;
+        current_renderbuf = renderbuf2;
       } else {
         currentFrameBuffer = renderbuf1;
       }
@@ -1064,9 +1064,9 @@ uint8_t *dmdreader_loopback_render() {
             frame4bit[i] =
                 convert_2bit_to_4bit_fast(((uint32_t *)frameBufferToSend)[i]);
           }
-          func((uint32_t *)frame4bit, currentRenderBuffer);
+          func((uint32_t *)frame4bit, current_renderbuf);
         } else {
-          func((uint32_t *)frameBufferToSend, currentRenderBuffer);
+          func((uint32_t *)frameBufferToSend, current_renderbuf);
         }
       }
 
