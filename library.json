@@ -6,10 +6,9 @@
   "frameworks": "arduino",
   "platforms": "raspberrypi",
   "build": {
-    "srcFilter": "-<main.cpp>"
+    "srcDir": "src",
+    "srcFilter": "+<*> -<main.cpp>"
   },
-  "headers": [
-    "dmdreader.h"
-  ],
+  "headers": "dmdreader.h",
   "license": "GPL-3.0"
 }
