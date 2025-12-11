@@ -154,8 +154,8 @@ uint dmd_sm;
 uint frame_sm;
 
 // DMA
-uint dmd_dma_channel = 0;
-uint spi_dma_channel = 1;
+uint dmd_dma_channel;
+uint spi_dma_channel;
 
 dma_channel_config dmd_dma_channel_cfg;
 dma_channel_config spi_dma_channel_cfg;
@@ -984,6 +984,7 @@ void dmdreader_init(PIO pio) {
   source_dwordsperline = source_width * source_bitsperpixel / 32;
 
   // DMA for DMD reader
+  dmd_dma_channel = dma_claim_unused_channel(true);
   dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
   channel_config_set_read_increment(&dmd_dma_channel_cfg, false);
   channel_config_set_write_increment(&dmd_dma_channel_cfg, true);
@@ -1023,6 +1024,7 @@ void dmdreader_spi_init(PIO pio) {
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
 
   // DMA for SPI
+  spi_dma_channel = dma_claim_unused_channel(true);
   spi_dma_channel_cfg = dma_channel_get_default_config(spi_dma_channel);
   channel_config_set_read_increment(&spi_dma_channel_cfg, true);
   channel_config_set_write_increment(&spi_dma_channel_cfg, false);
