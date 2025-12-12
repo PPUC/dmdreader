@@ -143,6 +143,7 @@ bool detected_0_1_0_1 = false;
 bool detected_1_0_0_0 = false;
 bool locked_in = false;
 bool plane0_shifted = false;
+bool loopback = false;
 
 // SPI PIO
 PIO spi_pio;
@@ -576,7 +577,7 @@ void dmd_dma_handler() {
       }
     }
 
-    if (source_bitsperpixel == target_bitsperpixel) {
+    if (source_bitsperpixel == target_bitsperpixel || loopback) {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
@@ -1052,6 +1053,7 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   renderbuf2 = buffer2;
   current_renderbuf = renderbuf1;
   monochromeColor = color;
+  loopback = true;
 }
 
 uint8_t *dmdreader_loopback_render() {
