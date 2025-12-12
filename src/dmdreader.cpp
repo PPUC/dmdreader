@@ -468,7 +468,11 @@ void dmd_set_and_enable_new_dma_target() {
       (currentPlaneBuffer == planebuf1) ? planebuf2 : planebuf1, true);
 
   // Clear the interrupt request, enable a new transfer
-  dma_hw->ints0 = 1u << dmd_dma_channel;
+#ifdef RP2350
+  dma_irqn_acknowledge_channel(3, dmd_dma_channel);
+#else
+  dma_channel_acknowledge_irq0(dmd_dma_channel);
+#endif
 }
 
 /**
@@ -976,8 +980,9 @@ void dmdreader_init(PIO pio) {
                         false                   // Do not yet start
   );
 
-  #ifdef RP2350
-  dma_channel_set_irq3_enabled(dmd_dma_channel, true);
+  // Enable DMA interrupt to be triggered when the transfer is done.
+#ifdef RP2350
+  dma_irqn_set_channel_enabled(3, dmd_dma_channel, true);
   irq_set_exclusive_handler(DMA_IRQ_3, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_3, true);
 #else
