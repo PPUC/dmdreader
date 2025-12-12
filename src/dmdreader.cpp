@@ -975,11 +975,16 @@ void dmdreader_init(PIO pio) {
                         source_dwordsperframe,  // Number of transfers
                         false                   // Do not yet start
   );
-  // Enable DMA interrupt 0 to be triggered when the transfer is done.
+
+  #ifdef RP2350
+  dma_channel_set_irq3_enabled(dmd_dma_channel, true);
+  irq_set_exclusive_handler(DMA_IRQ_3, dmd_dma_handler);
+  irq_set_enabled(DMA_IRQ_3, true);
+#else
   dma_channel_set_irq0_enabled(dmd_dma_channel, true);
-  // Set the IRQ handler function.
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
+#endif
 
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();

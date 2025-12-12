@@ -4,7 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-.define PLANE_START_IRQ 4
+.define PLANE_START_IRQ 5
 
 .program dmd_reader_wpc
     set x, 31          ; load 31, 5 bits is max allowed (0b11111)

@@ -4,7 +4,7 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-.define FRAME_START_IRQ 4
+.define FRAME_START_IRQ 5
 
 .program dmd_reader_sam
     ; initialize y with 16383, number of pixels (128x32x4) - 1 because counting starts at 0.
