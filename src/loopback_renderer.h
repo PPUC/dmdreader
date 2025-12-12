@@ -59,7 +59,7 @@ void convert_color_template(const uint32_t* src, uint8_t* dst,
     for (int i = 0; i < 8; ++i) {
       if (word_idx * 8 + i >= pixel_count) break;
 
-      uint8_t brightness = (packed >> (i * 4)) & 0x0F;
+      uint8_t brightness = (packed >> (28 - i * 4)) & 0x0F;
       color_func(brightness, dst);
       dst += 3;  // Next RGB position
     }
@@ -227,14 +227,14 @@ void convert_to_white(const uint32_t* src, uint8_t* dst,
     }();                                                               \
     for (std::size_t word_idx = 0; word_idx < WORDS; ++word_idx) {     \
       uint32_t packed = src[word_idx];                                 \
-      const RGB888& c0 = (*lut)[(packed >> 0) & 0x0F];                 \
-      const RGB888& c1 = (*lut)[(packed >> 4) & 0x0F];                 \
-      const RGB888& c2 = (*lut)[(packed >> 8) & 0x0F];                 \
-      const RGB888& c3 = (*lut)[(packed >> 12) & 0x0F];                \
-      const RGB888& c4 = (*lut)[(packed >> 16) & 0x0F];                \
-      const RGB888& c5 = (*lut)[(packed >> 20) & 0x0F];                \
-      const RGB888& c6 = (*lut)[(packed >> 24) & 0x0F];                \
-      const RGB888& c7 = (*lut)[(packed >> 28) & 0x0F];                \
+      const RGB888& c0 = (*lut)[(packed >> 28) & 0x0F];                \
+      const RGB888& c1 = (*lut)[(packed >> 24) & 0x0F];                \
+      const RGB888& c2 = (*lut)[(packed >> 20) & 0x0F];                \
+      const RGB888& c3 = (*lut)[(packed >> 16) & 0x0F];                \
+      const RGB888& c4 = (*lut)[(packed >> 12) & 0x0F];                \
+      const RGB888& c5 = (*lut)[(packed >> 8) & 0x0F];                 \
+      const RGB888& c6 = (*lut)[(packed >> 4) & 0x0F];                 \
+      const RGB888& c7 = (*lut)[(packed >> 0) & 0x0F];                 \
       dst[0] = c0.r;                                                   \
       dst[1] = c0.g;                                                   \
       dst[2] = c0.b;                                                   \
