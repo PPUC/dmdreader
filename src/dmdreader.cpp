@@ -388,22 +388,18 @@ DmdType detect_dmd() {
 uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
   static const uint64_t lut[4] = {0x0, 0x5, 0xA, 0xF};
   uint64_t result = 0;
-  result |= lut[(input >> 0) & 0x3] << (0 * 4);
-  result |= lut[(input >> 2) & 0x3] << (1 * 4);
-  result |= lut[(input >> 4) & 0x3] << (2 * 4);
-  result |= lut[(input >> 6) & 0x3] << (3 * 4);
-  result |= lut[(input >> 8) & 0x3] << (4 * 4);
-  result |= lut[(input >> 10) & 0x3] << (5 * 4);
-  result |= lut[(input >> 12) & 0x3] << (6 * 4);
-  result |= lut[(input >> 14) & 0x3] << (7 * 4);
-  result |= lut[(input >> 16) & 0x3] << (8 * 4);
-  result |= lut[(input >> 18) & 0x3] << (9 * 4);
-  result |= lut[(input >> 20) & 0x3] << (10 * 4);
-  result |= lut[(input >> 22) & 0x3] << (11 * 4);
-  result |= lut[(input >> 24) & 0x3] << (12 * 4);
-  result |= lut[(input >> 26) & 0x3] << (13 * 4);
-  result |= lut[(input >> 28) & 0x3] << (14 * 4);
-  result |= lut[(input >> 30) & 0x3] << (15 * 4);
+  // Map pixel 0 to the most significant nibble of the first 32-bit word
+  // so the nibble order matches the MSB-first converters.
+  for (uint8_t i = 0; i < 8; ++i) {
+    uint64_t val = lut[(input >> (30 - i * 2)) & 0x3];
+    result |= val << (28 - i * 4);
+  }
+
+  // Pixels 8-15 go into the upper 32 bits, again MSB-first.
+  for (uint8_t i = 8; i < 16; ++i) {
+    uint64_t val = lut[(input >> (30 - i * 2)) & 0x3];
+    result |= val << (60 - (i - 8) * 4);
+  }
 
   return result;
 }
