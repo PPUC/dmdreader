@@ -134,8 +134,8 @@ uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_OVERSAMPLING] __attribute__((aligned(8)));
 uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
                   MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t *currentFrameBuffer = framebuf1;
-uint8_t *frameBufferToSend = framebuf2;
+uint8_t *current_framebuf = framebuf1;
+uint8_t *framebuf_to_send = framebuf2;
 
 uint32_t frame_crc;
 uint32_t crc_previous_frame = 0;
@@ -445,12 +445,12 @@ void switch_buffers() {
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
     currentPlaneBuffer = planebuf2;
-    currentFrameBuffer = framebuf2;
-    frameBufferToSend = framebuf1;
+    current_framebuf = framebuf2;
+    framebuf_to_send = framebuf1;
   } else {
     currentPlaneBuffer = planebuf1;
-    currentFrameBuffer = framebuf1;
-    frameBufferToSend = framebuf2;
+    current_framebuf = framebuf1;
+    framebuf_to_send = framebuf2;
   }
 }
 
@@ -503,7 +503,7 @@ void dmd_dma_handler() {
   }
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
-  uint32_t *framebuf = (uint32_t *)currentFrameBuffer;
+  uint32_t *framebuf = (uint32_t *)current_framebuf;
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
@@ -639,7 +639,7 @@ void dmd_dma_handler() {
   }
 
 #ifdef USE_CRC
-  frame_crc = crc32(0, currentFrameBuffer, target_bytes);
+  frame_crc = crc32(0, current_framebuf, target_bytes);
 #endif
 
   switch_buffers();
@@ -1031,11 +1031,11 @@ bool dmdreader_spi_send() {
 
 #ifdef SUPRESS_DUPLICATES
     if (frame_crc != crc_previous_frame) {
-      spi_send_pix(frameBufferToSend, frame_crc, true);
+      spi_send_pix(framebuf_to_send, frame_crc, true);
       crc_previous_frame = frame_crc;
     }
 #else
-    spi_send_pix(frameBufferToSend, frame_crc, true);
+    spi_send_pix(framebuf_to_send, frame_crc, true);
 #endif
 
     return true;
@@ -1058,10 +1058,10 @@ uint8_t *dmdreader_loopback_render() {
   if (frame_received) {
     frame_received = false;
     if (frame_crc != crc_previous_frame) {
-      if (currentFrameBuffer == renderbuf1) {
+      if (current_renderbuf == renderbuf1) {
         current_renderbuf = renderbuf2;
       } else {
-        currentFrameBuffer = renderbuf1;
+        current_framebuf = renderbuf1;
       }
 
       auto func =
@@ -1070,17 +1070,17 @@ uint8_t *dmdreader_loopback_render() {
         if (2 == source_bitsperpixel) {
           for (uint16_t i = 0; i < source_dwords; i++) {
             frame4bit[i] =
-                convert_2bit_to_4bit_fast(((uint32_t *)frameBufferToSend)[i]);
+                convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
           }
           func((uint32_t *)frame4bit, current_renderbuf);
         } else {
-          func((uint32_t *)frameBufferToSend, current_renderbuf);
+          func((uint32_t *)framebuf_to_send, current_renderbuf);
         }
       }
 
       crc_previous_frame = frame_crc;
 
-      return currentFrameBuffer;
+      return current_renderbuf;
     }
   }
 
