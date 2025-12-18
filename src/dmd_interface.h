@@ -8,13 +8,13 @@
 #include "dmd_interface_sam.pio.h"
 #include "dmd_interface_spike.pio.h"
 #endif
+#include "dmd_interface_capcom.pio.h"
+#include "dmd_interface_capcom_hd.pio.h"
 #include "dmd_interface_desega.pio.h"
+#include "dmd_interface_gottlieb.pio.h"
 #include "dmd_interface_sega_hd.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
-#include "dmd_interface_capcom.pio.h"
-#include "dmd_interface_capcom_hd.pio.h"
-#include "dmd_interface_gottlieb.pio.h"
 #include "dmdreader_pins.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
@@ -28,7 +28,8 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
   pio_gpio_init(pio, DOTCLK);
   pio_gpio_init(pio, SDATA);
 
-  // Set the pin direction at the PIO, handle pins seprately to support alphaDMD as well
+  // Set the pin direction at the PIO, handle pins seprately to support alphaDMD
+  // as well
   pio_sm_set_consecutive_pindirs(pio, sm, SDATA, 1, false);
   pio_sm_set_consecutive_pindirs(pio, sm, DOTCLK, 1, false);
 
@@ -67,8 +68,11 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                          false,  // no autopush
                          0);
 
-  // For the 200MHz clock, the code has been written for 125MHz
-  sm_config_set_clkdiv(&c, 1.6f);
+  // Derive divider from current clock so PIO runs at ~125 MHz reference
+  uint32_t sys_hz = clock_get_hz(clk_sys);    // e.g. 125/200/266 MHz
+  float target_hz = 125000000.0f;             // PIO code designed for 125 MHz
+  float divider = (float)sys_hz / target_hz;  // scales automatically
+  sm_config_set_clkdiv(&c, divider);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
