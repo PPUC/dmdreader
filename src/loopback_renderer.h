@@ -29,7 +29,7 @@ void convert_to_green(const uint32_t* src, uint8_t* dst,
                       std::size_t pixel_count);
 void convert_to_blue(const uint32_t* src, uint8_t* dst,
                      std::size_t pixel_count);
-void convert_to_violet(const uint32_t* src, uint8_t* dst,
+void convert_to_purple(const uint32_t* src, uint8_t* dst,
                        std::size_t pixel_count);
 void convert_to_pink(const uint32_t* src, uint8_t* dst,
                      std::size_t pixel_count);
@@ -42,7 +42,7 @@ constexpr RGB888 red_base(uint8_t brightness);
 constexpr RGB888 yellow_base(uint8_t brightness);
 constexpr RGB888 green_base(uint8_t brightness);
 constexpr RGB888 blue_base(uint8_t brightness);
-constexpr RGB888 violet_base(uint8_t brightness);
+constexpr RGB888 purple_base(uint8_t brightness);
 constexpr RGB888 pink_base(uint8_t brightness);
 constexpr RGB888 white_base(uint8_t brightness);
 
@@ -114,7 +114,7 @@ template <>
 std::array<RGB888, 16>* LUTManager<blue_base>::lut = nullptr;
 
 template <>
-std::array<RGB888, 16>* LUTManager<violet_base>::lut = nullptr;
+std::array<RGB888, 16>* LUTManager<purple_base>::lut = nullptr;
 
 template <>
 std::array<RGB888, 16>* LUTManager<pink_base>::lut = nullptr;
@@ -150,8 +150,8 @@ constexpr RGB888 blue_base(uint8_t brightness) {
   return RGB888(0, 0, static_cast<uint8_t>(scale));
 }
 
-constexpr RGB888 violet_base(uint8_t brightness) {
-  // Violet: R=128, G=0, B=128
+constexpr RGB888 purple_base(uint8_t brightness) {
+  // Purple: R=128, G=0, B=128
   const uint16_t scale = brightness * 17;
   return RGB888(static_cast<uint8_t>(scale * 128 / 255), 0,
                 static_cast<uint8_t>(scale * 128 / 255));
@@ -197,9 +197,9 @@ void convert_to_blue(const uint32_t* src, uint8_t* dst,
   LUTManager<blue_base>::convert(src, dst, pixel_count);
 }
 
-void convert_to_violet(const uint32_t* src, uint8_t* dst,
+void convert_to_purple(const uint32_t* src, uint8_t* dst,
                        std::size_t pixel_count) {
-  LUTManager<violet_base>::convert(src, dst, pixel_count);
+  LUTManager<purple_base>::convert(src, dst, pixel_count);
 }
 
 void convert_to_pink(const uint32_t* src, uint8_t* dst,
@@ -289,10 +289,10 @@ DEFINE_OPTIMIZED_CONVERTER(blue, blue_base, 128x32, 128 * 32)
 DEFINE_OPTIMIZED_CONVERTER(blue, blue_base, 192x64, 192 * 64)
 DEFINE_OPTIMIZED_CONVERTER(blue, blue_base, 256x64, 256 * 64)
 
-DEFINE_OPTIMIZED_CONVERTER(violet, violet_base, 128x16, 128 * 16)
-DEFINE_OPTIMIZED_CONVERTER(violet, violet_base, 128x32, 128 * 32)
-DEFINE_OPTIMIZED_CONVERTER(violet, violet_base, 192x64, 192 * 64)
-DEFINE_OPTIMIZED_CONVERTER(violet, violet_base, 256x64, 256 * 64)
+DEFINE_OPTIMIZED_CONVERTER(purple, purple_base, 128x16, 128 * 16)
+DEFINE_OPTIMIZED_CONVERTER(purple, purple_base, 128x32, 128 * 32)
+DEFINE_OPTIMIZED_CONVERTER(purple, purple_base, 192x64, 192 * 64)
+DEFINE_OPTIMIZED_CONVERTER(purple, purple_base, 256x64, 256 * 64)
 
 DEFINE_OPTIMIZED_CONVERTER(pink, pink_base, 128x16, 128 * 16)
 DEFINE_OPTIMIZED_CONVERTER(pink, pink_base, 128x32, 128 * 32)
@@ -334,8 +334,8 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
           return convert_to_green_128x16;
         case Color::BLUE:
           return convert_to_blue_128x16;
-        case Color::VIOLET:
-          return convert_to_violet_128x16;
+        case Color::PURPLE:
+          return convert_to_purple_128x16;
         case Color::PINK:
           return convert_to_pink_128x16;
         case Color::WHITE:
@@ -355,8 +355,8 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
           return convert_to_green_128x32;
         case Color::BLUE:
           return convert_to_blue_128x32;
-        case Color::VIOLET:
-          return convert_to_violet_128x32;
+        case Color::PURPLE:
+          return convert_to_purple_128x32;
         case Color::PINK:
           return convert_to_pink_128x32;
         case Color::WHITE:
@@ -376,8 +376,8 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
           return convert_to_green_192x64;
         case Color::BLUE:
           return convert_to_blue_192x64;
-        case Color::VIOLET:
-          return convert_to_violet_192x64;
+        case Color::PURPLE:
+          return convert_to_purple_192x64;
         case Color::PINK:
           return convert_to_pink_192x64;
         case Color::WHITE:
@@ -397,8 +397,8 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
           return convert_to_green_256x64;
         case Color::BLUE:
           return convert_to_blue_256x64;
-        case Color::VIOLET:
-          return convert_to_violet_256x64;
+        case Color::PURPLE:
+          return convert_to_purple_256x64;
         case Color::PINK:
           return convert_to_pink_256x64;
         case Color::WHITE:

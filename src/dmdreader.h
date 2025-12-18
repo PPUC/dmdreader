@@ -12,7 +12,7 @@ enum class Color : uint8_t {
   YELLOW,
   GREEN,
   BLUE,
-  VIOLET,
+  PURPLE,
   PINK,
   WHITE
 };
