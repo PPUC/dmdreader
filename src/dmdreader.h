@@ -4,8 +4,6 @@
 
 #include <Arduino.h>
 
-#include "hardware/pio.h"
-
 enum class Color : uint8_t {
   ORANGE,
   RED,
@@ -17,9 +15,9 @@ enum class Color : uint8_t {
   WHITE
 };
 
-void dmdreader_init(PIO pio);
+void dmdreader_init();
 
-void dmdreader_spi_init(PIO pio);
+void dmdreader_spi_init();
 bool dmdreader_spi_send();
 
 void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color);

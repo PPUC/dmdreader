@@ -8,6 +8,7 @@
 #include "dmdreader_pins.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
+#include "hardware/pio.h"
 #include "loopback_renderer.h"
 #include "spi_slave_sender.pio.h"
 
@@ -307,8 +308,9 @@ void spi_dma_handler() {
  * @return uint32_t Number of clocks per second
  */
 uint32_t count_clock(uint pin) {
-  uint offset = pio_add_program(dmd_pio, &dmd_count_signal_program);
-  dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+  uint offset;
+  pio_claim_free_sm_and_add_program(&dmd_count_signal_program, &dmd_pio,
+                                    &dmd_sm, &offset);
   dmd_counter_program_init(dmd_pio, dmd_sm, offset, pin);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
   delay(500);
@@ -647,9 +649,7 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
-void dmdreader_init(PIO pio) {
-  dmd_pio = pio;
-
+void dmdreader_init() {
   dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
@@ -679,8 +679,8 @@ void dmdreader_init(PIO pio) {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      offset = pio_add_program(dmd_pio, &dmd_reader_wpc_program);
-      dmd_sm = pio_claim_unused_sm(dmd_pio, true);
+      pio_claim_free_sm_and_add_program(&dmd_reader_wpc_program, &dmd_pio,
+                                        &dmd_sm, &offset);
       pio_sm_config dmd_config =
           dmd_reader_wpc_program_get_default_config(offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, offset, dmd_config);
@@ -993,16 +993,15 @@ void dmdreader_init(PIO pio) {
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 }
 
-void dmdreader_spi_init(PIO pio) {
-  spi_pio = pio;
-
+void dmdreader_spi_init() {
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
 
   // initialize SPI slave PIO
-  uint offset = pio_add_program(spi_pio, &clocked_output_program);
-  spi_sm = pio_claim_unused_sm(spi_pio, true);
+  uint offset;
+  pio_claim_free_sm_and_add_program(&clocked_output_program, &spi_pio, &spi_sm,
+                                    &offset);
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
 
   // DMA for SPI
