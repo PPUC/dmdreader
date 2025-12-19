@@ -24,4 +24,6 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color);
 void dmdreader_loopback_stop();
 uint8_t *dmdreader_loopback_render();
 
+void dmdreader_error_blink(bool no_error);
+
 #endif
