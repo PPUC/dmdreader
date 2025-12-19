@@ -994,6 +994,7 @@ void dmdreader_init() {
 }
 
 void dmdreader_spi_init() {
+  loopback = false;
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
@@ -1054,7 +1055,7 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
 uint8_t *dmdreader_loopback_render() {
   uint64_t *frame4bit = (uint64_t *)framebuf3;
 
-  if (frame_received) {
+  if (loopback && frame_received) {
     frame_received = false;
     if (frame_crc != crc_previous_frame) {
       if (current_renderbuf == renderbuf1) {
