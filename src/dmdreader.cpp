@@ -650,6 +650,15 @@ void dmd_dma_handler() {
   frame_received = true;
 }
 
+void dmdreader_error_blink(bool no_error) {
+  while (!no_error) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(100);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(100);
+  }
+}
+
 void dmdreader_init() {
   dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
@@ -681,9 +690,9 @@ void dmdreader_init() {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_wpc_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_wpc_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -691,14 +700,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA, DE, DOTCLK};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_wpc_program, &frame_pio, &frame_sm, &frame_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_wpc_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   0);
+                                   frame_config, input_pins, 3, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
 
       source_width = 128;
@@ -712,9 +720,9 @@ void dmdreader_init() {
     }
 
     case DMD_WHITESTAR: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_whitestar_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_whitestar_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -722,14 +730,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_whitestar_program, &frame_pio, &frame_sm,
-          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true);
+          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_whitestar_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(frame_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   0);
+                                   frame_config, input_pins, 1, 0);
       pio_sm_set_enabled(frame_pio, frame_sm, true);
 
       source_width = 128;
@@ -746,9 +753,9 @@ void dmdreader_init() {
     }
 
     case DMD_SPIKE1: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_spike_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_spike_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -756,14 +763,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RCLK, RDATA};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_spike_program, &frame_pio, &frame_sm, &frame_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_spike_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   RDATA);
+                                   frame_config, input_pins, 2, RDATA);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
@@ -777,9 +783,9 @@ void dmdreader_init() {
     }
 
     case DMD_SAM: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_sam_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_sam_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -787,14 +793,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_sam_program, &frame_pio, &frame_sm, &frame_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_sam_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   0);
+                                   frame_config, input_pins, 1, 0);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
@@ -809,9 +814,9 @@ void dmdreader_init() {
     }
 
     case DMD_DESEGA: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_desega_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_desega_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -819,14 +824,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {DE};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_desega_program, &frame_pio, &frame_sm, &frame_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_desega_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   DE);
+                                   frame_config, input_pins, 1, DE);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
@@ -843,9 +847,9 @@ void dmdreader_init() {
     }
 
     case DMD_SEGA_HD: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_sega_hd_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_sega_hd_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -853,14 +857,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_sega_hd_program, &frame_pio, &frame_sm,
-          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true);
+          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_sega_hd_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   0);
+                                   frame_config, input_pins, 1, 0);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 192;
@@ -877,9 +880,9 @@ void dmdreader_init() {
     }
 
     case DMD_GOTTLIEB: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_gottlieb_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_gottlieb_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -887,14 +890,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_gottlieb_program, &frame_pio, &frame_sm,
-          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true);
+          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_gottlieb_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   0);
+                                   frame_config, input_pins, 1, 0);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
@@ -908,9 +910,9 @@ void dmdreader_init() {
     }
 
     case DMD_CAPCOM: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_capcom_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_capcom_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -918,14 +920,13 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA, RCLK};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_capcom_program, &frame_pio, &frame_sm, &frame_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_capcom_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
-                                   frame_config, input_pins, sizeof(input_pins),
-                                   0);
+                                   frame_config, input_pins, 2, 0);
       pio_sm_set_enabled(dmd_pio, frame_sm, true);
 
       source_width = 128;
@@ -939,9 +940,9 @@ void dmdreader_init() {
     }
 
     case DMD_CAPCOM_HD: {
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_reader_capcom_hd_program, &dmd_pio, &dmd_sm, &dmd_offset,
-          (DE < SDATA) ? DE : SDATA, 5, true);
+          (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config dmd_config =
           dmd_reader_capcom_hd_program_get_default_config(dmd_offset);
       dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
@@ -949,9 +950,9 @@ void dmdreader_init() {
       // The framedetect program just runs and detects the beginning of a new
       // frame
       uint input_pins[] = {RDATA, RCLK};
-      pio_claim_free_sm_and_add_program_for_gpio_range(
+      dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
           &dmd_framedetect_capcom_hd_program, &frame_pio, &frame_sm,
-          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true);
+          &frame_offset, (DE < SDATA) ? DE : SDATA, 5, true));
       pio_sm_config frame_config =
           dmd_framedetect_capcom_hd_program_get_default_config(frame_offset);
       dmd_framedetect_program_init(dmd_pio, frame_sm, frame_offset,
@@ -1029,8 +1030,8 @@ void dmdreader_spi_init() {
 
   // initialize SPI slave PIO
   uint offset;
-  pio_claim_free_sm_and_add_program_for_gpio_range(
-      &clocked_output_program, &spi_pio, &spi_sm, &offset, SPI_BASE, 4, true);
+  dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
+      &clocked_output_program, &spi_pio, &spi_sm, &offset, SPI_BASE, 4, true));
   clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
 
   // DMA for SPI
