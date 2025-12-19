@@ -940,7 +940,6 @@ void dmdreader_init() {
 }
 
 void dmdreader_spi_init() {
-  loopback = false;
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
@@ -974,17 +973,18 @@ void dmdreader_spi_init() {
 bool dmdreader_spi_send() {
   if (frame_received) {
     frame_received = false;
-
+    if (!loopback) {
 #ifdef SUPRESS_DUPLICATES
-    if (frame_crc != crc_previous_frame) {
-      spi_send_pix(framebuf_to_send, frame_crc, true);
-      crc_previous_frame = frame_crc;
-    }
+      if (frame_crc != crc_previous_frame) {
+        spi_send_pix(framebuf_to_send, frame_crc, true);
+        crc_previous_frame = frame_crc;
+      }
 #else
-    spi_send_pix(framebuf_to_send, frame_crc, true);
+      spi_send_pix(framebuf_to_send, frame_crc, true);
 #endif
 
-    return true;
+      return true;
+    }
   }
 
   return false;
@@ -996,6 +996,10 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   current_renderbuf = renderbuf1;
   monochromeColor = color;
   loopback = true;
+}
+
+void dmdreader_loopback_stop() {
+  loopback = false;
 }
 
 uint8_t *dmdreader_loopback_render() {
