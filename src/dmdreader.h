@@ -26,4 +26,7 @@ uint8_t *dmdreader_loopback_render();
 
 void dmdreader_error_blink(bool no_error);
 
+uint16_t dmdreader_get_source_width();
+uint16_t dmdreader_get_source_height();
+
 #endif

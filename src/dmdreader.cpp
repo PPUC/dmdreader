@@ -1032,3 +1032,6 @@ uint8_t *dmdreader_loopback_render() {
 
   return nullptr;
 }
+
+uint16_t dmdreader_get_source_width() { return source_width; }
+uint16_t dmdreader_get_source_height() { return source_height; }
