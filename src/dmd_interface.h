@@ -8,6 +8,7 @@
 #include "dmd_interface_sam.pio.h"
 #include "dmd_interface_spike.pio.h"
 #endif
+#include "dmd_interface_alving.pio.h"
 #include "dmd_interface_capcom.pio.h"
 #include "dmd_interface_capcom_hd.pio.h"
 #include "dmd_interface_desega.pio.h"
