@@ -634,17 +634,32 @@ void dmd_dma_handler() {
       src4 = src3 + source_dwordsperline;
       uint32_t v;
 
-      for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < source_dwordsperline; w++) {
-          // On SAM line order is really messed up :-(
-          v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
-          dst[w] = v;
+      if (dmd_type == DMD_SAM) {
+        for (int l = 0; l < source_height; l++) {
+          for (int w = 0; w < source_dwordsperline; w++) {
+            // On SAM line order is really messed up :-(
+            v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
+            dst[w] = v;
+          }
+          src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+          src2 += source_dwordsperline * 4;
+          src3 += source_dwordsperline * 4;
+          src4 += source_dwordsperline * 4;
+          dst += source_dwordsperline;  // destination skips only one line
         }
-        src1 += source_dwordsperline * 4;  // source skips 4 lines forward
-        src2 += source_dwordsperline * 4;
-        src3 += source_dwordsperline * 4;
-        src4 += source_dwordsperline * 4;
-        dst += source_dwordsperline;  // destination skips only one line
+      } else { // Alvin G
+        for (int l = 0; l < source_height; l++) {
+          for (int w = 0; w < source_dwordsperline; w++) {
+            // On SAM line order is really messed up :-(
+            v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
+            dst[w] = v;
+          }
+          src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+          src2 += source_dwordsperline * 4;
+          src3 += source_dwordsperline * 4;
+          src4 += source_dwordsperline * 4;
+          dst += source_dwordsperline;  // destination skips only one line
+        }
       }
     }
   }
