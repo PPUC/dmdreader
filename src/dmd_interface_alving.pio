@@ -37,7 +37,7 @@ dotloop:
     wait 1 gpio RDATA
 ; When RDATA turned HIGH, we already missed the start of the first row, so we skip 32 end of rows before sending the first IRQ.
 .wrap_target
-    set x, 30          ; 32 rows
+    set x, 31          ; 32 rows
 
 rclk_loop:
     wait 1 gpio RCLK
