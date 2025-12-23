@@ -376,9 +376,9 @@ DmdType detect_dmd() {
              (de < 13100) && (rdata > 370) && (rdata < 410)) {
     return DMD_GOTTLIEB;
 
-    // Alvin G -> DOTCLK: 1117000 | DE: 8775 | RDATA: 68
-  } else if ((dotclk > 1050000) && (dotclk < 1180000) && (de > 8550) &&
-             (de < 9000) && (rdata > 60) && (rdata < 75)) {
+    // Alvin G -> DOTCLK: 1192000 | DE: 9400 | RDATA: 73
+  } else if ((dotclk > 1150000) && (dotclk < 1250000) && (de > 9200) &&
+             (de < 9600) && (rdata > 65) && (rdata < 80)) {
     return DMD_ALVING;
 
     // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
