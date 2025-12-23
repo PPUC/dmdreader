@@ -858,16 +858,17 @@ void dmdreader_init() {
     case DMD_ALVING: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_sam_program, dmd_reader_sam_program_get_default_config,
-          &dmd_framedetect_sam_program,
-          dmd_framedetect_sam_program_get_default_config, input_pins, 1, 0);
+          &dmd_reader_alving_program,
+          dmd_reader_alving_program_get_default_config,
+          &dmd_framedetect_alving_program,
+          dmd_framedetect_alving_program_get_default_config, input_pins, 1, 0);
       // the SAM reader can be used to process alvin g frames due to a very
       // similar way of collecting pixel data
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
-      source_planesperframe = 1;  // in SAM there is one plane
+      source_planesperframe = 1;  // in Alvin G there is one plane
       // with 4x line oversampling
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
