@@ -44,5 +44,5 @@ rclk_loop:
     wait 0 gpio RCLK
     jmp x-- rclk_loop
     nop [3]
-    irq PLANE_START_IRQ
+    irq FRAME_START_IRQ
 .wrap
