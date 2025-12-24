@@ -650,8 +650,8 @@ void dmd_dma_handler() {
       } else { // Alvin G
         for (int l = 0; l < source_height; l++) {
           for (int w = 0; w < source_dwordsperline; w++) {
-            // First row/plane captured counts as intensity level 3 <--
-            v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
+            // First row captured counts as intensity level 3 <--
+            v = src4[w] * 2 + src3[w] * 2 + src2[w] * 2 + src1[w] * 2;
             dst[w] = v;
           }
           src1 += source_dwordsperline * 4;  // source skips 4 lines forward
@@ -877,8 +877,7 @@ void dmdreader_init() {
           dmd_reader_alving_program_get_default_config,
           &dmd_framedetect_alving_program,
           dmd_framedetect_alving_program_get_default_config, input_pins, 2, 0);
-      // the SAM reader can be used to process alvin g frames due to a very
-      // similar way of collecting pixel data
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
