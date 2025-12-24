@@ -18,7 +18,7 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 * Stern SPIKE 1 -> 128x32
 * Capcom -> 128x32
 * Gottlieb/Premier -> 128x32
-* Alvin G. & Co-> 128x32
+* Alvin G. & Co -> 128x32
 
 ## Reading data
 
