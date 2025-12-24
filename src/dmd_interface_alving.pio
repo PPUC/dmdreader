@@ -43,7 +43,7 @@ rclk_loop:
     wait 0 gpio RCLK
     wait 1 gpio RCLK
     jmp x-- rclk_loop
-    nop [3]
+
     irq FRAME_START_IRQ
 .wrap
 
