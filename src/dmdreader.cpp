@@ -650,7 +650,7 @@ void dmd_dma_handler() {
       } else { // Alvin G
         for (int l = 0; l < source_height; l++) {
           for (int w = 0; w < source_dwordsperline; w++) {
-            // On SAM line order is really messed up :-(
+            // First row/plane captured counts as intensity level 3 <--
             v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
             dst[w] = v;
           }
