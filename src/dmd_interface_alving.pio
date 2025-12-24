@@ -36,20 +36,20 @@ dotloop:
     wait 0 gpio RDATA
     wait 1 gpio RDATA
 ; When RDATA turned HIGH, we already missed the start of the first row, so we skip 32 end of rows before sending the first IRQ.
+; Alvin G needs to skip 3 COLLAT edges right after for a correct starting point.
 .wrap_target
     set x, 31          ; 32 rows
+    set y, 2           ; 3 COLLAT edges
 
 rclk_loop:
     wait 0 gpio RCLK
     wait 1 gpio RCLK
     jmp x-- rclk_loop
 
+collat_loop:
     wait 0 gpio COLLAT
     wait 1 gpio COLLAT
-    wait 0 gpio COLLAT
-    wait 1 gpio COLLAT
-    wait 0 gpio COLLAT
-    wait 1 gpio COLLAT
+    jmp y-- collat_loop
 
     irq FRAME_START_IRQ
 .wrap
