@@ -711,17 +711,20 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
   pio_sm_set_enabled(frame_pio, frame_sm, true);
 }
 
-void dmdreader_init() {
+bool dmdreader_init(bool return_on_no_detection) {
   dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
-  while (dmd_type == DMD_UNKNOWN) {
+  do {
     dmd_type = detect_dmd();
+    if (dmd_type == DMD_UNKNOWN && return_on_no_detection) {
+      return false;
+    }
     digitalWrite(LED_BUILTIN, HIGH);
     delay(500);
     digitalWrite(LED_BUILTIN, LOW);
     delay(500);
-  }
+  } while (dmd_type == DMD_UNKNOWN);
 
   // Delay is still needed when blink gets removed above.
   // delay(1000);
@@ -992,6 +995,8 @@ void dmdreader_init() {
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+
+  return true;
 }
 
 void dmdreader_spi_init() {

@@ -15,7 +15,7 @@ enum class Color : uint8_t {
   WHITE
 };
 
-void dmdreader_init();
+bool dmdreader_init(bool return_on_no_detection = false);
 
 void dmdreader_spi_init();
 bool dmdreader_spi_send();

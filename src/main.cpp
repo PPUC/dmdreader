@@ -21,7 +21,7 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);
 
-  dmdreader_init();
+  dmdreader_init(false);
   dmdreader_spi_init();
 }
 
