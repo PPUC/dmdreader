@@ -76,6 +76,7 @@ enum DmdType {
   DMD_DESEGA,
   DMD_SEGA_HD,
   DMD_GOTTLIEB,
+  DMD_ALVING,
   // CAPCOM need to be the last entries:
   DMD_CAPCOM,
   DMD_CAPCOM_HD,
@@ -375,6 +376,11 @@ DmdType detect_dmd() {
              (de < 13100) && (rdata > 370) && (rdata < 410)) {
     return DMD_GOTTLIEB;
 
+    // Alvin G -> DOTCLK: 1192000 | DE: 9400 | RDATA: 73
+  } else if ((dotclk > 1150000) && (dotclk < 1250000) && (de > 9200) &&
+             (de < 9600) && (rdata > 65) && (rdata < 80)) {
+    return DMD_ALVING;
+
     // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
              (de < 16500) && (rdata > 490) && (rdata < 530)) {
@@ -628,17 +634,32 @@ void dmd_dma_handler() {
       src4 = src3 + source_dwordsperline;
       uint32_t v;
 
-      for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < source_dwordsperline; w++) {
-          // On SAM line order is really messed up :-(
-          v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
-          dst[w] = v;
+      if (dmd_type == DMD_SAM) {
+        for (int l = 0; l < source_height; l++) {
+          for (int w = 0; w < source_dwordsperline; w++) {
+            // On SAM line order is really messed up :-(
+            v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
+            dst[w] = v;
+          }
+          src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+          src2 += source_dwordsperline * 4;
+          src3 += source_dwordsperline * 4;
+          src4 += source_dwordsperline * 4;
+          dst += source_dwordsperline;  // destination skips only one line
         }
-        src1 += source_dwordsperline * 4;  // source skips 4 lines forward
-        src2 += source_dwordsperline * 4;
-        src3 += source_dwordsperline * 4;
-        src4 += source_dwordsperline * 4;
-        dst += source_dwordsperline;  // destination skips only one line
+      } else { // Alvin G
+        for (int l = 0; l < source_height; l++) {
+          for (int w = 0; w < source_dwordsperline; w++) {
+            // First row captured counts as intensity level 3 <--
+            v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
+            dst[w] = v;
+          }
+          src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+          src2 += source_dwordsperline * 4;
+          src3 += source_dwordsperline * 4;
+          src4 += source_dwordsperline * 4;
+          dst += source_dwordsperline;  // destination skips only one line
+        }
       }
     }
   }
@@ -849,13 +870,32 @@ void dmdreader_init() {
       break;
     }
 
+    case DMD_ALVING: {
+      uint input_pins[] = {RDATA, RCLK, COLLAT};
+      dmdreader_programs_init(
+          &dmd_reader_alving_program,
+          dmd_reader_alving_program_get_default_config,
+          &dmd_framedetect_alving_program,
+          dmd_framedetect_alving_program_get_default_config, input_pins, 2, 0);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
+      source_planesperframe = 1;  // in Alvin G there is one plane
+      // with 4x line oversampling
+      source_lineoversampling = LINEOVERSAMPLING_4X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
     case DMD_CAPCOM: {
       uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(&dmd_reader_capcom_program,
                               dmd_reader_capcom_program_get_default_config,
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
-                              input_pins, 2, 0);
+                              input_pins, 3, 0);
 
       source_width = 128;
       source_height = 32;
