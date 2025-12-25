@@ -115,6 +115,7 @@ uint16_t source_pixelsperframe;
 uint16_t source_dwordsperplane;
 uint16_t source_bytesperplane;
 uint16_t source_planesperframe;
+uint16_t source_planehistoryperframe;
 uint16_t source_dwordsperframe;
 uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
@@ -124,9 +125,9 @@ uint16_t source_mergeplanes;
 // the buffers need to be aligned to 4 byte because we work with uint32_t
 // pointers later. raw data read from DMD
 uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4))) = {0};
 uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4)));
+                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4))) = {0};
 uint8_t *currentPlaneBuffer = planebuf2;
 
 // processed frame (merged planes)
@@ -453,6 +454,7 @@ convert_4bit_to_2bit_fast(uint32_t input) {
 // -------------------------------
 
 void switch_buffers() {
+  uint8_t *previousPlaneBuffer = currentPlaneBuffer;
   // Switch to next plane and frame buffers
   if (currentPlaneBuffer == planebuf1) {
     currentPlaneBuffer = planebuf2;
@@ -462,6 +464,13 @@ void switch_buffers() {
     currentPlaneBuffer = planebuf1;
     current_framebuf = framebuf1;
     framebuf_to_send = framebuf2;
+  }
+  if (source_planehistoryperframe > 0) {
+    memcpy(&currentPlaneBuffer[source_bytesperplane *
+                               (source_planesperframe -
+                                source_planehistoryperframe)],
+           previousPlaneBuffer,
+           source_bytesperplane * source_planehistoryperframe);
   }
 }
 
@@ -741,6 +750,7 @@ void dmdreader_init() {
       source_bitsperpixel = 2;
       target_bitsperpixel = 2;
       source_planesperframe = 3;
+      source_planehistoryperframe = 2;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
@@ -762,6 +772,7 @@ void dmdreader_init() {
       // in Whitestar, there's only one plane, containg
       // one LSB row followed by one MSB row and so on
       source_planesperframe = 1;
+      source_planehistoryperframe = 0;
       // in Whitestar each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
@@ -781,6 +792,7 @@ void dmdreader_init() {
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
       source_planesperframe = 4;  // in Spike there are 4 planes
+      source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;  // no line oversampling
       source_mergeplanes = MERGEPLANES_ADDSHIFT;
       break;
@@ -798,6 +810,7 @@ void dmdreader_init() {
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
       source_planesperframe = 1;  // in SAM there is one plane
+      source_planehistoryperframe = 0;
       // with 4x line oversampling
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
@@ -819,6 +832,7 @@ void dmdreader_init() {
       // in DE-Sega, there's only one plane,
       // containg one LSB row followed by one MSB row and so on
       source_planesperframe = 1;
+      source_planehistoryperframe = 0;
       // in DE-Sega each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
@@ -840,6 +854,7 @@ void dmdreader_init() {
       // in DE-Sega, there's only one plane,
       // containg one LSB row followed by one MSB row and so on
       source_planesperframe = 1;
+      source_planehistoryperframe = 0;
       // in DE-Sega each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
@@ -860,6 +875,7 @@ void dmdreader_init() {
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
       source_planesperframe = 6;
+      source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
@@ -878,6 +894,7 @@ void dmdreader_init() {
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
       source_planesperframe = 1;  // in Alvin G there is one plane
+      source_planehistoryperframe = 0;
       // with 4x line oversampling
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
@@ -897,6 +914,7 @@ void dmdreader_init() {
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
       source_planesperframe = 4;
+      source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
@@ -916,6 +934,7 @@ void dmdreader_init() {
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
       source_planesperframe = 4;
+      source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
@@ -936,7 +955,8 @@ void dmdreader_init() {
     source_dwordsperplane *= 4;
   }
   source_bytesperplane = source_bytes;
-  source_dwordsperframe = source_dwordsperplane * source_planesperframe;
+  source_dwordsperframe = source_dwordsperplane *
+                          (source_planesperframe - source_planehistoryperframe);
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_dwordsperline = source_width * source_bitsperpixel / 32;
 
