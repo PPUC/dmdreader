@@ -634,32 +634,27 @@ void dmd_dma_handler() {
       src4 = src3 + source_dwordsperline;
       uint32_t v;
 
-      if (dmd_type == DMD_SAM) {
-        for (int l = 0; l < source_height; l++) {
-          for (int w = 0; w < source_dwordsperline; w++) {
-            // On SAM line order is really messed up :-(
-            v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
-            dst[w] = v;
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          switch (dmd_type) {
+            case DMD_SAM:
+              // On SAM line order is really messed up :-(
+              v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
+              break;
+            case DMD_ALVING:
+              // First row captured counts as intensity level 3 <--
+              v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
+              break;
+            default:
+              v = src4[w] * 8 + src3[w] * 4 + src2[w] * 2 + src1[w];
           }
-          src1 += source_dwordsperline * 4;  // source skips 4 lines forward
-          src2 += source_dwordsperline * 4;
-          src3 += source_dwordsperline * 4;
-          src4 += source_dwordsperline * 4;
-          dst += source_dwordsperline;  // destination skips only one line
+          dst[w] = v;
         }
-      } else { // Alvin G
-        for (int l = 0; l < source_height; l++) {
-          for (int w = 0; w < source_dwordsperline; w++) {
-            // First row captured counts as intensity level 3 <--
-            v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
-            dst[w] = v;
-          }
-          src1 += source_dwordsperline * 4;  // source skips 4 lines forward
-          src2 += source_dwordsperline * 4;
-          src3 += source_dwordsperline * 4;
-          src4 += source_dwordsperline * 4;
-          dst += source_dwordsperline;  // destination skips only one line
-        }
+        src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+        src2 += source_dwordsperline * 4;
+        src3 += source_dwordsperline * 4;
+        src4 += source_dwordsperline * 4;
+        dst += source_dwordsperline;  // destination skips only one line
       }
     }
   }
@@ -872,11 +867,11 @@ void dmdreader_init() {
 
     case DMD_ALVING: {
       uint input_pins[] = {RDATA, RCLK, COLLAT};
-      dmdreader_programs_init(
-          &dmd_reader_alving_program,
-          dmd_reader_alving_program_get_default_config,
-          &dmd_framedetect_alving_program,
-          dmd_framedetect_alving_program_get_default_config, input_pins, 2, 0);
+      dmdreader_programs_init(&dmd_reader_alving_program,
+                              dmd_reader_alving_program_get_default_config,
+                              &dmd_framedetect_alving_program,
+                              dmd_framedetect_alving_program_get_default_config,
+                              input_pins, 2, 0);
 
       source_width = 128;
       source_height = 32;
