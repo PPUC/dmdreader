@@ -890,7 +890,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_alving_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
-                              input_pins, 2, 0);
+                              input_pins, 3, 0);
 
       source_width = 128;
       source_height = 32;
@@ -910,7 +910,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_capcom_program_get_default_config,
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
-                              input_pins, 3, 0);
+                              input_pins, 2, 0);
 
       source_width = 128;
       source_height = 32;
