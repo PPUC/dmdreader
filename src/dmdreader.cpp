@@ -77,6 +77,7 @@ enum DmdType {
   DMD_SEGA_HD,
   DMD_GOTTLIEB,
   DMD_ALVING,
+  DMD_ISLAND,
   // CAPCOM need to be the last entries:
   DMD_CAPCOM,
   DMD_CAPCOM_HD,
@@ -381,6 +382,11 @@ DmdType detect_dmd() {
   } else if ((dotclk > 1150000) && (dotclk < 1250000) && (de > 9200) &&
              (de < 9600) && (rdata > 65) && (rdata < 80)) {
     return DMD_ALVING;
+
+    // Island/SPinball(?) -> DOTCLK: 2323000 | DE: 18150 | RDATA: 565
+  } else if ((dotclk > 2200000) && (dotclk < 2450000) && (de > 17650) &&
+             (de < 18500) && (rdata > 540) && (rdata < 590)) {
+    return DMD_ISLAND;
 
     // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
@@ -901,6 +907,26 @@ bool dmdreader_init(bool return_on_no_detection) {
       // with 4x line oversampling
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
+    case DMD_ISLAND: {
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(
+          &dmd_reader_gottlieb_program,
+          dmd_reader_gottlieb_program_get_default_config,
+          &dmd_framedetect_gottlieb_program,
+          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1,
+          0);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
+      source_planesperframe = 4;
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
 
