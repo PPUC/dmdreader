@@ -1073,6 +1073,8 @@ uint8_t *dmdreader_loopback_render() {
       auto func =
           get_optimized_converter(source_width, source_height, monochromeColor);
       if (func) {
+        func((uint32_t *)framebuf_to_send, current_renderbuf);
+        /*
         if (2 == source_bitsperpixel) {
           for (uint16_t i = 0; i < source_dwords; i++) {
             frame4bit[i] =
@@ -1082,6 +1084,7 @@ uint8_t *dmdreader_loopback_render() {
         } else {
           func((uint32_t *)framebuf_to_send, current_renderbuf);
         }
+        */
       }
 
       crc_previous_frame = frame_crc;
