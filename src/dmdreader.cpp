@@ -1,6 +1,8 @@
 #include "dmdreader.h"
 
 #include <array>
+#include <cstdint>
+#include <cstdlib>
 
 #include "crc32.h"
 #include "dmd_counter.h"
@@ -99,23 +101,35 @@ uint16_t source_lineoversampling;
 uint16_t source_dwordsperline;
 uint16_t source_mergeplanes;
 
+static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
+                                     void **base_out) {
+  size_t effective_alignment =
+      (alignment < alignof(void *)) ? alignof(void *) : alignment;
+  void *base = malloc(size + effective_alignment - 1);
+  if (!base) {
+    return nullptr;
+  }
+  uintptr_t raw = reinterpret_cast<uintptr_t>(base);
+  uintptr_t aligned = (raw + effective_alignment - 1) &
+                      ~(static_cast<uintptr_t>(effective_alignment) - 1);
+  if (base_out) {
+    *base_out = base;
+  }
+  return reinterpret_cast<uint8_t *>(aligned);
+}
+
 // the buffers need to be aligned to 4 byte because we work with uint32_t
 // pointers later. raw data read from DMD
-uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4))) = {0};
-uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4))) = {0};
-uint8_t *currentPlaneBuffer = planebuf2;
+uint8_t *planebuf1;
+uint8_t *planebuf2;
+uint8_t *currentPlaneBuffer;
 
 // processed frame (merged planes)
-uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t *current_framebuf = framebuf1;
-uint8_t *framebuf_to_send = framebuf2;
+uint8_t *framebuf1;
+uint8_t *framebuf2;
+uint8_t *framebuf3;
+uint8_t *current_framebuf;
+uint8_t *framebuf_to_send;
 
 uint32_t frame_crc;
 uint32_t crc_previous_frame = 0;
@@ -640,7 +654,8 @@ void dmd_dma_handler() {
     }
   }
 
-  frame_crc = crc32(0, current_framebuf, loopback ? source_bytes : target_bytes);
+  frame_crc =
+      crc32(0, current_framebuf, loopback ? source_bytes : target_bytes);
 
   switch_buffers();
 
@@ -932,6 +947,35 @@ bool dmdreader_init(bool return_on_no_detection) {
                           (source_planesperframe - source_planehistoryperframe);
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_dwordsperline = source_width * source_bitsperpixel / 32;
+
+  if (!planebuf1) {
+    size_t plane_bytes = source_bytesperplane * source_planesperframe;
+    size_t dma_bytes = source_dwordsperframe * sizeof(uint32_t);
+    if (dma_bytes > plane_bytes) {
+      plane_bytes = dma_bytes;
+    }
+
+    size_t frame_bytes = source_bytes * source_lineoversampling;
+
+    planebuf1 = alloc_aligned_buffer(plane_bytes, 4, nullptr);
+    planebuf2 = alloc_aligned_buffer(plane_bytes, 4, nullptr);
+    framebuf1 = alloc_aligned_buffer(frame_bytes, 8, nullptr);
+    framebuf2 = alloc_aligned_buffer(frame_bytes, 8, nullptr);
+    framebuf3 = alloc_aligned_buffer(target_bytes, 8, nullptr);
+
+    dmdreader_error_blink(planebuf1 && planebuf2 && framebuf1 && framebuf2 &&
+                          framebuf3);
+
+    memset(planebuf1, 0, plane_bytes);
+    memset(planebuf2, 0, plane_bytes);
+    memset(framebuf1, 0, frame_bytes);
+    memset(framebuf1, 0, frame_bytes);
+    memset(framebuf3, 0, target_bytes);
+  }
+
+  currentPlaneBuffer = planebuf2;
+  current_framebuf = framebuf1;
+  framebuf_to_send = framebuf2;
 
   // DMA for DMD reader
   dmd_dma_channel = dma_claim_unused_channel(true);
