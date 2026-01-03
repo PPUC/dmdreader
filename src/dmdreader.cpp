@@ -100,6 +100,7 @@ uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
 uint16_t source_dwordsperline;
 uint16_t source_mergeplanes;
+uint16_t offset[MAX_PLANESPERFRAME];
 
 static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
                                      void **base_out) {
@@ -297,17 +298,17 @@ void spi_dma_handler() {
  * @return uint32_t Number of clocks per second
  */
 uint32_t count_clock(uint pin) {
-  uint offset;
+  uint pio_offset;
   pio_claim_free_sm_and_add_program_for_gpio_range(
-      &dmd_count_signal_program, &dmd_pio, &dmd_sm, &offset, pin, 1, true);
-  dmd_counter_program_init(dmd_pio, dmd_sm, offset, pin);
+      &dmd_count_signal_program, &dmd_pio, &dmd_sm, &pio_offset, pin, 1, true);
+  dmd_counter_program_init(dmd_pio, dmd_sm, pio_offset, pin);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
   delay(500);
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
   uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
   pio_sm_set_enabled(dmd_pio, dmd_sm, false);
   pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, dmd_sm,
-                                    offset);
+                                    pio_offset);
 
   return count * 2;
 }
@@ -497,13 +498,6 @@ void dmd_dma_handler() {
     res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
     *planebuf = res;
     planebuf++;
-  }
-
-  // Merge multiple planes to get the frame data.
-  // Calculate offsets for the first pixel of each plane and cache these.
-  uint16_t offset[MAX_PLANESPERFRAME];
-  for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
-    offset[i] = i * source_dwordsperplane;
   }
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
@@ -977,6 +971,12 @@ bool dmdreader_init(bool return_on_no_detection) {
   current_framebuf = framebuf1;
   framebuf_to_send = framebuf2;
 
+  // Merge multiple planes to get the frame data.
+  // Calculate offsets for the first pixel of each plane and cache these.
+  for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
+    offset[i] = i * source_dwordsperplane;
+  }
+
   // DMA for DMD reader
   dmd_dma_channel = dma_claim_unused_channel(true);
   dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
@@ -1019,10 +1019,11 @@ void dmdreader_spi_init() {
   digitalWrite(SPI0_CS, LOW);
 
   // initialize SPI slave PIO
-  uint offset;
+  uint pio_offset;
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      &clocked_output_program, &spi_pio, &spi_sm, &offset, SPI_BASE, 4, true));
-  clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
+      &clocked_output_program, &spi_pio, &spi_sm, &pio_offset, SPI_BASE, 4,
+      true));
+  clocked_output_program_init(spi_pio, spi_sm, pio_offset, SPI_BASE);
 
   // DMA for SPI
   spi_dma_channel = dma_claim_unused_channel(true);
