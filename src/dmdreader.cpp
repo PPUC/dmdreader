@@ -125,6 +125,9 @@ uint8_t *planebuf1;
 uint8_t *planebuf2;
 uint8_t *currentPlaneBuffer;
 
+// tmp buffer for oversampling etc.
+uint8_t *processingbuf;
+
 // processed frame (merged planes)
 uint8_t *framebuf1;
 uint8_t *framebuf2;
@@ -132,7 +135,7 @@ uint8_t *framebuf3;
 uint8_t *current_framebuf;
 uint8_t *framebuf_to_send;
 
-uint32_t frame_crc;
+uint32_t frame_crc = 0;
 uint32_t crc_previous_frame = 0;
 bool detected_0_1_0_1 = false;
 bool detected_1_0_0_0 = false;
@@ -493,6 +496,8 @@ void dmd_dma_handler() {
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
   uint32_t res;
+  // source_dwordsperframe is not the entire frame buffer if plane history is
+  // used. So only the new plane data is fixed here.
   for (int i = 0; i < source_dwordsperframe; i++) {
     v = (buf32_t *)planebuf;
     res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
@@ -501,7 +506,7 @@ void dmd_dma_handler() {
   }
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
-  uint32_t *framebuf = (uint32_t *)current_framebuf;
+  uint32_t *framebuf = (uint32_t *)processingbuf;
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
@@ -648,12 +653,17 @@ void dmd_dma_handler() {
     }
   }
 
+  memcpy(current_framebuf, processingbuf, loopback ? source_bytes : target_bytes);
+
   frame_crc =
       crc32(0, current_framebuf, loopback ? source_bytes : target_bytes);
 
   switch_buffers();
 
-  frame_received = true;
+  if (frame_crc != crc_previous_frame) {
+    crc_previous_frame = frame_crc;
+    frame_received = true;
+  }
 }
 
 void dmdreader_error_blink(bool no_error) {
@@ -949,21 +959,23 @@ bool dmdreader_init(bool return_on_no_detection) {
       plane_bytes = dma_bytes;
     }
 
-    size_t frame_bytes = source_bytes * source_lineoversampling;
+    size_t processing_bytes = source_bytes * source_lineoversampling;
 
     planebuf1 = alloc_aligned_buffer(plane_bytes, 4, nullptr);
     planebuf2 = alloc_aligned_buffer(plane_bytes, 4, nullptr);
-    framebuf1 = alloc_aligned_buffer(frame_bytes, 8, nullptr);
-    framebuf2 = alloc_aligned_buffer(frame_bytes, 8, nullptr);
+    processingbuf = alloc_aligned_buffer(processing_bytes, 8, nullptr);
+    framebuf1 = alloc_aligned_buffer(source_bytes, 8, nullptr);
+    framebuf2 = alloc_aligned_buffer(source_bytes, 8, nullptr);
     framebuf3 = alloc_aligned_buffer(target_bytes, 8, nullptr);
 
-    dmdreader_error_blink(planebuf1 && planebuf2 && framebuf1 && framebuf2 &&
-                          framebuf3);
+    dmdreader_error_blink(planebuf1 && planebuf2 && processingbuf &&
+                          framebuf1 && framebuf2 && framebuf3);
 
     memset(planebuf1, 0, plane_bytes);
     memset(planebuf2, 0, plane_bytes);
-    memset(framebuf1, 0, frame_bytes);
-    memset(framebuf1, 0, frame_bytes);
+    memset(processingbuf, 0, processing_bytes);
+    memset(framebuf1, 0, source_bytes);
+    memset(framebuf2, 0, source_bytes);
     memset(framebuf3, 0, target_bytes);
   }
 
@@ -1048,10 +1060,7 @@ void dmdreader_spi_init() {
 bool dmdreader_spi_send() {
   if (!loopback && frame_received) {
     frame_received = false;
-    if (frame_crc != crc_previous_frame) {
-      spi_send_pix(framebuf_to_send, frame_crc, true);
-      crc_previous_frame = frame_crc;
-    }
+    spi_send_pix(framebuf_to_send, frame_crc, true);
 
     return true;
   }
@@ -1067,38 +1076,38 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   loopback = true;
 }
 
-void dmdreader_loopback_stop() { loopback = false; }
+void dmdreader_loopback_stop() {
+  free(framebuf3);
+  loopback = false;
+}
 
 uint8_t *dmdreader_loopback_render() {
   uint64_t *frame4bit = (uint64_t *)framebuf3;
 
   if (loopback && frame_received) {
     frame_received = false;
-    if (frame_crc != crc_previous_frame) {
-      crc_previous_frame = frame_crc;
-      if (current_renderbuf == renderbuf1) {
-        current_renderbuf = renderbuf2;
-      } else {
-        current_framebuf = renderbuf1;
-      }
-
-      auto func =
-          get_optimized_converter(source_width, source_height, monochromeColor);
-      if (func) {
-        func((uint32_t *)framebuf_to_send, current_renderbuf);
-        if (2 == source_bitsperpixel) {
-          for (uint16_t i = 0; i < source_dwords; i++) {
-            frame4bit[i] =
-                convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
-          }
-          func((uint32_t *)frame4bit, current_renderbuf);
-        } else {
-          func((uint32_t *)framebuf_to_send, current_renderbuf);
-        }
-      }
-
-      return current_renderbuf;
+    if (current_renderbuf == renderbuf1) {
+      current_renderbuf = renderbuf2;
+    } else {
+      current_framebuf = renderbuf1;
     }
+
+    auto func =
+        get_optimized_converter(source_width, source_height, monochromeColor);
+    if (func) {
+      func((uint32_t *)framebuf_to_send, current_renderbuf);
+      if (2 == source_bitsperpixel) {
+        for (uint16_t i = 0; i < source_dwords; i++) {
+          frame4bit[i] =
+              convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
+        }
+        func((uint32_t *)frame4bit, current_renderbuf);
+      } else {
+        func((uint32_t *)framebuf_to_send, current_renderbuf);
+      }
+    }
+
+    return current_renderbuf;
   }
 
   return nullptr;
