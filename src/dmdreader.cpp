@@ -11,29 +11,6 @@
 #include "hardware/pio.h"
 #include "loopback_renderer.h"
 #include "spi_slave_sender.pio.h"
-
-// should CRC32 checksum be caculated and sent with each frame
-#define USE_CRC
-
-// supress duplicate frames (implies USE_CRC)
-#define SUPRESS_DUPLICATES
-
-/**
- * Glossary
- *
- * Plane
- *  image with one bit data per pixel. This doesn't NOT mean it is stored with
- * 1bit/pixel
- *
- * Frame
- *  image with potentially more than one bit per pixel
- *
- */
-
-#ifdef SUPRESS_DUPLICATES
-#define USE_CRC
-#endif
-
 typedef struct buf32_t {
   uint8_t byte0;
   uint8_t byte1;
@@ -266,22 +243,15 @@ void finish_spi() { digitalWrite(SPI0_CS, LOW); }
  * @param pixbuf a frame to send
  */
 bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
-#ifdef USE_CRC
   block_header_t h = {.block_type = SPI_BLOCK_PIX_CRC};
   block_pix_crc_header_t ph = {};
-#else
-  block_header_t h = {.block_type = SPI_BLOCK_PIX};
-  block_pix_header_t ph = {};
-#endif
 
   // round length to 4-byte blocks
   h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
   ph.columns = source_width;
   ph.rows = source_height;
   ph.bitsperpixel = target_bitsperpixel;
-#ifdef USE_CRC
   ph.crc32 = crc32;
-#endif
 
   if (skip_when_busy) {
     if (spi_busy()) return false;
@@ -606,6 +576,8 @@ void dmd_dma_handler() {
         // Write second 8 pixel in lower 16 Bit.
         framebuf[out] |= v16;
       }
+    } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
+      // There's no syetem using this conversion yet, but let's have it ready
     }
   }
 
@@ -668,9 +640,7 @@ void dmd_dma_handler() {
     }
   }
 
-#ifdef USE_CRC
-  frame_crc = crc32(0, current_framebuf, target_bytes);
-#endif
+  frame_crc = crc32(0, current_framebuf, loopback ? source_bytes : target_bytes);
 
   switch_buffers();
 
@@ -1033,14 +1003,10 @@ void dmdreader_spi_init() {
 bool dmdreader_spi_send() {
   if (!loopback && frame_received) {
     frame_received = false;
-#ifdef SUPRESS_DUPLICATES
     if (frame_crc != crc_previous_frame) {
       spi_send_pix(framebuf_to_send, frame_crc, true);
       crc_previous_frame = frame_crc;
     }
-#else
-    spi_send_pix(framebuf_to_send, frame_crc, true);
-#endif
 
     return true;
   }
@@ -1064,6 +1030,7 @@ uint8_t *dmdreader_loopback_render() {
   if (loopback && frame_received) {
     frame_received = false;
     if (frame_crc != crc_previous_frame) {
+      crc_previous_frame = frame_crc;
       if (current_renderbuf == renderbuf1) {
         current_renderbuf = renderbuf2;
       } else {
@@ -1074,7 +1041,6 @@ uint8_t *dmdreader_loopback_render() {
           get_optimized_converter(source_width, source_height, monochromeColor);
       if (func) {
         func((uint32_t *)framebuf_to_send, current_renderbuf);
-        /*
         if (2 == source_bitsperpixel) {
           for (uint16_t i = 0; i < source_dwords; i++) {
             frame4bit[i] =
@@ -1084,10 +1050,7 @@ uint8_t *dmdreader_loopback_render() {
         } else {
           func((uint32_t *)framebuf_to_send, current_renderbuf);
         }
-        */
       }
-
-      crc_previous_frame = frame_crc;
 
       return current_renderbuf;
     }
