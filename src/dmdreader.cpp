@@ -966,7 +966,13 @@ bool dmdreader_init(bool return_on_no_detection) {
     processingbuf = alloc_aligned_buffer(processing_bytes, 8, nullptr);
     framebuf1 = alloc_aligned_buffer(source_bytes, 8, nullptr);
     framebuf2 = alloc_aligned_buffer(source_bytes, 8, nullptr);
-    framebuf3 = alloc_aligned_buffer(target_bytes, 8, nullptr);
+    size_t framebuf3_bytes = target_bytes;
+    size_t loopback_render_bytes =
+        source_width * source_height * 4 / 8;  // 4bpp render buffer
+    if (loopback_render_bytes > framebuf3_bytes) {
+      framebuf3_bytes = loopback_render_bytes;
+    }
+    framebuf3 = alloc_aligned_buffer(framebuf3_bytes, 8, nullptr);
 
     dmdreader_error_blink(planebuf1 && planebuf2 && processingbuf &&
                           framebuf1 && framebuf2 && framebuf3);
@@ -976,7 +982,7 @@ bool dmdreader_init(bool return_on_no_detection) {
     memset(processingbuf, 0, processing_bytes);
     memset(framebuf1, 0, source_bytes);
     memset(framebuf2, 0, source_bytes);
-    memset(framebuf3, 0, target_bytes);
+    memset(framebuf3, 0, framebuf3_bytes);
   }
 
   currentPlaneBuffer = planebuf2;
@@ -1089,13 +1095,12 @@ uint8_t *dmdreader_loopback_render() {
     if (current_renderbuf == renderbuf1) {
       current_renderbuf = renderbuf2;
     } else {
-      current_framebuf = renderbuf1;
+      current_renderbuf = renderbuf1;
     }
 
     auto func =
         get_optimized_converter(source_width, source_height, monochromeColor);
     if (func) {
-      func((uint32_t *)framebuf_to_send, current_renderbuf);
       if (2 == source_bitsperpixel) {
         for (uint16_t i = 0; i < source_dwords; i++) {
           frame4bit[i] =
