@@ -45,22 +45,6 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint32_t crc32;  // crc32 of the pixel data
 } block_pix_crc_header_t __attribute__((aligned(4)));
 
-// DMD types
-enum DmdType {
-  DMD_UNKNOWN,
-  DMD_WPC,
-  DMD_WHITESTAR,
-  DMD_SPIKE1,
-  DMD_SAM,
-  DMD_DESEGA,
-  DMD_SEGA_HD,
-  DMD_GOTTLIEB,
-  DMD_ALVING,
-  // CAPCOM need to be the last entries:
-  DMD_CAPCOM,
-  DMD_CAPCOM_HD,
-};
-
 DmdType dmd_type;
 
 // Line oversampling
@@ -1098,8 +1082,8 @@ uint8_t *dmdreader_loopback_render() {
       current_renderbuf = renderbuf1;
     }
 
-    auto func =
-        get_optimized_converter(source_width, source_height, monochromeColor);
+    auto func = get_optimized_converter(source_width, source_height,
+                                        monochromeColor, dmd_type);
     if (func) {
       if (2 == source_bitsperpixel) {
         for (uint16_t i = 0; i < source_dwords; i++) {

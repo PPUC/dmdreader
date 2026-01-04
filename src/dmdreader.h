@@ -15,6 +15,22 @@ enum class Color : uint8_t {
   WHITE
 };
 
+// DMD types
+enum DmdType : uint8_t {
+  DMD_UNKNOWN,
+  DMD_WPC,
+  DMD_WHITESTAR,
+  DMD_SPIKE1,
+  DMD_SAM,
+  DMD_DESEGA,
+  DMD_SEGA_HD,
+  DMD_GOTTLIEB,
+  DMD_ALVING,
+  // CAPCOM need to be the last entries:
+  DMD_CAPCOM,
+  DMD_CAPCOM_HD,
+};
+
 bool dmdreader_init(bool return_on_no_detection = false);
 
 void dmdreader_spi_init();
