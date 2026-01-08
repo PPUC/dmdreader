@@ -553,37 +553,37 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
   switch (get_resolution_from_dimensions(width, height)) {
     case Resolution::RES_128x16:
       switch (color) {
-        case Color::ORANGE:
+        case Color::DMD_ORANGE:
           return select_converter(convert_to_orange_128x16,
                                   convert_to_orange_128x16_capcom,
                                   convert_to_orange_128x16_gottlieb, dmd_type);
-        case Color::RED:
+        case Color::DMD_RED:
           return select_converter(convert_to_red_128x16,
                                   convert_to_red_128x16_capcom,
                                   convert_to_red_128x16_gottlieb, dmd_type);
-        case Color::YELLOW:
+        case Color::DMD_YELLOW:
           return select_converter(convert_to_yellow_128x16,
                                   convert_to_yellow_128x16_capcom,
                                   convert_to_yellow_128x16_gottlieb,
                                   dmd_type);
-        case Color::GREEN:
+        case Color::DMD_GREEN:
           return select_converter(convert_to_green_128x16,
                                   convert_to_green_128x16_capcom,
                                   convert_to_green_128x16_gottlieb, dmd_type);
-        case Color::BLUE:
+        case Color::DMD_BLUE:
           return select_converter(convert_to_blue_128x16,
                                   convert_to_blue_128x16_capcom,
                                   convert_to_blue_128x16_gottlieb, dmd_type);
-        case Color::PURPLE:
+        case Color::DMD_PURPLE:
           return select_converter(convert_to_purple_128x16,
                                   convert_to_purple_128x16_capcom,
                                   convert_to_purple_128x16_gottlieb,
                                   dmd_type);
-        case Color::PINK:
+        case Color::DMD_PINK:
           return select_converter(convert_to_pink_128x16,
                                   convert_to_pink_128x16_capcom,
                                   convert_to_pink_128x16_gottlieb, dmd_type);
-        case Color::WHITE:
+        case Color::DMD_WHITE:
           return select_converter(convert_to_white_128x16,
                                   convert_to_white_128x16_capcom,
                                   convert_to_white_128x16_gottlieb, dmd_type);
@@ -592,37 +592,37 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
 
     case Resolution::RES_128x32:
       switch (color) {
-        case Color::ORANGE:
+        case Color::DMD_ORANGE:
           return select_converter(convert_to_orange_128x32,
                                   convert_to_orange_128x32_capcom,
                                   convert_to_orange_128x32_gottlieb, dmd_type);
-        case Color::RED:
+        case Color::DMD_RED:
           return select_converter(convert_to_red_128x32,
                                   convert_to_red_128x32_capcom,
                                   convert_to_red_128x32_gottlieb, dmd_type);
-        case Color::YELLOW:
+        case Color::DMD_YELLOW:
           return select_converter(convert_to_yellow_128x32,
                                   convert_to_yellow_128x32_capcom,
                                   convert_to_yellow_128x32_gottlieb,
                                   dmd_type);
-        case Color::GREEN:
+        case Color::DMD_GREEN:
           return select_converter(convert_to_green_128x32,
                                   convert_to_green_128x32_capcom,
                                   convert_to_green_128x32_gottlieb, dmd_type);
-        case Color::BLUE:
+        case Color::DMD_BLUE:
           return select_converter(convert_to_blue_128x32,
                                   convert_to_blue_128x32_capcom,
                                   convert_to_blue_128x32_gottlieb, dmd_type);
-        case Color::PURPLE:
+        case Color::DMD_PURPLE:
           return select_converter(convert_to_purple_128x32,
                                   convert_to_purple_128x32_capcom,
                                   convert_to_purple_128x32_gottlieb,
                                   dmd_type);
-        case Color::PINK:
+        case Color::DMD_PINK:
           return select_converter(convert_to_pink_128x32,
                                   convert_to_pink_128x32_capcom,
                                   convert_to_pink_128x32_gottlieb, dmd_type);
-        case Color::WHITE:
+        case Color::DMD_WHITE:
           return select_converter(convert_to_white_128x32,
                                   convert_to_white_128x32_capcom,
                                   convert_to_white_128x32_gottlieb, dmd_type);
@@ -631,37 +631,37 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
 
     case Resolution::RES_192x64:
       switch (color) {
-        case Color::ORANGE:
+        case Color::DMD_ORANGE:
           return select_converter(convert_to_orange_192x64,
                                   convert_to_orange_192x64_capcom,
                                   convert_to_orange_192x64_gottlieb, dmd_type);
-        case Color::RED:
+        case Color::DMD_RED:
           return select_converter(convert_to_red_192x64,
                                   convert_to_red_192x64_capcom,
                                   convert_to_red_192x64_gottlieb, dmd_type);
-        case Color::YELLOW:
+        case Color::DMD_YELLOW:
           return select_converter(convert_to_yellow_192x64,
                                   convert_to_yellow_192x64_capcom,
                                   convert_to_yellow_192x64_gottlieb,
                                   dmd_type);
-        case Color::GREEN:
+        case Color::DMD_GREEN:
           return select_converter(convert_to_green_192x64,
                                   convert_to_green_192x64_capcom,
                                   convert_to_green_192x64_gottlieb, dmd_type);
-        case Color::BLUE:
+        case Color::DMD_BLUE:
           return select_converter(convert_to_blue_192x64,
                                   convert_to_blue_192x64_capcom,
                                   convert_to_blue_192x64_gottlieb, dmd_type);
-        case Color::PURPLE:
+        case Color::DMD_PURPLE:
           return select_converter(convert_to_purple_192x64,
                                   convert_to_purple_192x64_capcom,
                                   convert_to_purple_192x64_gottlieb,
                                   dmd_type);
-        case Color::PINK:
+        case Color::DMD_PINK:
           return select_converter(convert_to_pink_192x64,
                                   convert_to_pink_192x64_capcom,
                                   convert_to_pink_192x64_gottlieb, dmd_type);
-        case Color::WHITE:
+        case Color::DMD_WHITE:
           return select_converter(convert_to_white_192x64,
                                   convert_to_white_192x64_capcom,
                                   convert_to_white_192x64_gottlieb, dmd_type);
@@ -670,37 +670,37 @@ ConvertFunction get_optimized_converter(uint16_t width, uint16_t height,
 
     case Resolution::RES_256x64:
       switch (color) {
-        case Color::ORANGE:
+        case Color::DMD_ORANGE:
           return select_converter(convert_to_orange_256x64,
                                   convert_to_orange_256x64_capcom,
                                   convert_to_orange_256x64_gottlieb, dmd_type);
-        case Color::RED:
+        case Color::DMD_RED:
           return select_converter(convert_to_red_256x64,
                                   convert_to_red_256x64_capcom,
                                   convert_to_red_256x64_gottlieb, dmd_type);
-        case Color::YELLOW:
+        case Color::DMD_YELLOW:
           return select_converter(convert_to_yellow_256x64,
                                   convert_to_yellow_256x64_capcom,
                                   convert_to_yellow_256x64_gottlieb,
                                   dmd_type);
-        case Color::GREEN:
+        case Color::DMD_GREEN:
           return select_converter(convert_to_green_256x64,
                                   convert_to_green_256x64_capcom,
                                   convert_to_green_256x64_gottlieb, dmd_type);
-        case Color::BLUE:
+        case Color::DMD_BLUE:
           return select_converter(convert_to_blue_256x64,
                                   convert_to_blue_256x64_capcom,
                                   convert_to_blue_256x64_gottlieb, dmd_type);
-        case Color::PURPLE:
+        case Color::DMD_PURPLE:
           return select_converter(convert_to_purple_256x64,
                                   convert_to_purple_256x64_capcom,
                                   convert_to_purple_256x64_gottlieb,
                                   dmd_type);
-        case Color::PINK:
+        case Color::DMD_PINK:
           return select_converter(convert_to_pink_256x64,
                                   convert_to_pink_256x64_capcom,
                                   convert_to_pink_256x64_gottlieb, dmd_type);
-        case Color::WHITE:
+        case Color::DMD_WHITE:
           return select_converter(convert_to_white_256x64,
                                   convert_to_white_256x64_capcom,
                                   convert_to_white_256x64_gottlieb, dmd_type);

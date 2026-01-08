@@ -5,14 +5,14 @@
 #include <Arduino.h>
 
 enum class Color : uint8_t {
-  ORANGE,
-  RED,
-  YELLOW,
-  GREEN,
-  BLUE,
-  PURPLE,
-  PINK,
-  WHITE
+  DMD_ORANGE,
+  DMD_RED,
+  DMD_YELLOW,
+  DMD_GREEN,
+  DMD_BLUE,
+  DMD_PURPLE,
+  DMD_PINK,
+  DMD_WHITE
 };
 
 // DMD types
