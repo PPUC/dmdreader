@@ -1,6 +1,8 @@
 #include "dmdreader.h"
 
 #include <array>
+#include <cstdint>
+#include <cstdlib>
 
 #include "crc32.h"
 #include "dmd_counter.h"
@@ -11,29 +13,6 @@
 #include "hardware/pio.h"
 #include "loopback_renderer.h"
 #include "spi_slave_sender.pio.h"
-
-// should CRC32 checksum be caculated and sent with each frame
-#define USE_CRC
-
-// supress duplicate frames (implies USE_CRC)
-#define SUPRESS_DUPLICATES
-
-/**
- * Glossary
- *
- * Plane
- *  image with one bit data per pixel. This doesn't NOT mean it is stored with
- * 1bit/pixel
- *
- * Frame
- *  image with potentially more than one bit per pixel
- *
- */
-
-#ifdef SUPRESS_DUPLICATES
-#define USE_CRC
-#endif
-
 typedef struct buf32_t {
   uint8_t byte0;
   uint8_t byte1;
@@ -65,23 +44,6 @@ typedef struct __attribute__((__packed__)) block_pix_crc_header_t {
   uint16_t padding;
   uint32_t crc32;  // crc32 of the pixel data
 } block_pix_crc_header_t __attribute__((aligned(4)));
-
-// DMD types
-enum DmdType {
-  DMD_UNKNOWN,
-  DMD_WPC,
-  DMD_WHITESTAR,
-  DMD_SPIKE1,
-  DMD_SAM,
-  DMD_DESEGA,
-  DMD_SEGA_HD,
-  DMD_GOTTLIEB,
-  DMD_ALVING,
-  DMD_ISLAND,
-  // CAPCOM need to be the last entries:
-  DMD_CAPCOM,
-  DMD_CAPCOM_HD,
-};
 
 DmdType dmd_type;
 
@@ -122,26 +84,42 @@ uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
 uint16_t source_dwordsperline;
 uint16_t source_mergeplanes;
+uint16_t offset[MAX_PLANESPERFRAME];
+
+static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
+                                     void **base_out) {
+  size_t effective_alignment =
+      (alignment < alignof(void *)) ? alignof(void *) : alignment;
+  void *base = malloc(size + effective_alignment - 1);
+  if (!base) {
+    return nullptr;
+  }
+  uintptr_t raw = reinterpret_cast<uintptr_t>(base);
+  uintptr_t aligned = (raw + effective_alignment - 1) &
+                      ~(static_cast<uintptr_t>(effective_alignment) - 1);
+  if (base_out) {
+    *base_out = base;
+  }
+  return reinterpret_cast<uint8_t *>(aligned);
+}
 
 // the buffers need to be aligned to 4 byte because we work with uint32_t
 // pointers later. raw data read from DMD
-uint8_t planebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4))) = {0};
-uint8_t planebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL *
-                  MAX_PLANESPERFRAME / 8] __attribute__((aligned(4))) = {0};
-uint8_t *currentPlaneBuffer = planebuf2;
+uint8_t *planebuf1;
+uint8_t *planebuf2;
+uint8_t *currentPlaneBuffer;
+
+// tmp buffer for oversampling etc.
+uint8_t *processingbuf;
 
 // processed frame (merged planes)
-uint8_t framebuf1[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t framebuf2[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t framebuf3[MAX_WIDTH * MAX_HEIGHT * MAX_BITSPERPIXEL / 8 *
-                  MAX_OVERSAMPLING] __attribute__((aligned(8)));
-uint8_t *current_framebuf = framebuf1;
-uint8_t *framebuf_to_send = framebuf2;
+uint8_t *framebuf1;
+uint8_t *framebuf2;
+uint8_t *framebuf3;
+uint8_t *current_framebuf;
+uint8_t *framebuf_to_send;
 
-uint32_t frame_crc;
+uint32_t frame_crc = 0;
 uint32_t crc_previous_frame = 0;
 bool detected_0_1_0_1 = false;
 bool detected_1_0_0_0 = false;
@@ -267,22 +245,15 @@ void finish_spi() { digitalWrite(SPI0_CS, LOW); }
  * @param pixbuf a frame to send
  */
 bool spi_send_pix(uint8_t *pixbuf, uint32_t crc32, bool skip_when_busy) {
-#ifdef USE_CRC
   block_header_t h = {.block_type = SPI_BLOCK_PIX_CRC};
   block_pix_crc_header_t ph = {};
-#else
-  block_header_t h = {.block_type = SPI_BLOCK_PIX};
-  block_pix_header_t ph = {};
-#endif
 
   // round length to 4-byte blocks
   h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
   ph.columns = source_width;
   ph.rows = source_height;
   ph.bitsperpixel = target_bitsperpixel;
-#ifdef USE_CRC
   ph.crc32 = crc32;
-#endif
 
   if (skip_when_busy) {
     if (spi_busy()) return false;
@@ -314,17 +285,17 @@ void spi_dma_handler() {
  * @return uint32_t Number of clocks per second
  */
 uint32_t count_clock(uint pin) {
-  uint offset;
+  uint pio_offset;
   pio_claim_free_sm_and_add_program_for_gpio_range(
-      &dmd_count_signal_program, &dmd_pio, &dmd_sm, &offset, pin, 1, true);
-  dmd_counter_program_init(dmd_pio, dmd_sm, offset, pin);
+      &dmd_count_signal_program, &dmd_pio, &dmd_sm, &pio_offset, pin, 1, true);
+  dmd_counter_program_init(dmd_pio, dmd_sm, pio_offset, pin);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
   delay(500);
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
   uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
   pio_sm_set_enabled(dmd_pio, dmd_sm, false);
   pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, dmd_sm,
-                                    offset);
+                                    pio_offset);
 
   return count * 2;
 }
@@ -514,6 +485,8 @@ void dmd_dma_handler() {
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
   uint32_t res;
+  // source_dwordsperframe is not the entire frame buffer if plane history is
+  // used. So only the new plane data is fixed here.
   for (int i = 0; i < source_dwordsperframe; i++) {
     v = (buf32_t *)planebuf;
     res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
@@ -521,15 +494,8 @@ void dmd_dma_handler() {
     planebuf++;
   }
 
-  // Merge multiple planes to get the frame data.
-  // Calculate offsets for the first pixel of each plane and cache these.
-  uint16_t offset[MAX_PLANESPERFRAME];
-  for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
-    offset[i] = i * source_dwordsperplane;
-  }
-
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
-  uint32_t *framebuf = (uint32_t *)current_framebuf;
+  uint32_t *framebuf = (uint32_t *)processingbuf;
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
@@ -612,6 +578,8 @@ void dmd_dma_handler() {
         // Write second 8 pixel in lower 16 Bit.
         framebuf[out] |= v16;
       }
+    } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
+      // There's no syetem using this conversion yet, but let's have it ready
     }
   }
 
@@ -674,13 +642,17 @@ void dmd_dma_handler() {
     }
   }
 
-#ifdef USE_CRC
-  frame_crc = crc32(0, current_framebuf, target_bytes);
-#endif
+  memcpy(current_framebuf, processingbuf, loopback ? source_bytes : target_bytes);
+
+  frame_crc =
+      crc32(0, current_framebuf, loopback ? source_bytes : target_bytes);
 
   switch_buffers();
 
-  frame_received = true;
+  if (frame_crc != crc_previous_frame) {
+    crc_previous_frame = frame_crc;
+    frame_received = true;
+  }
 }
 
 void dmdreader_error_blink(bool no_error) {
@@ -896,7 +868,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_alving_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
-                              input_pins, 2, 0);
+                              input_pins, 3, 0);
 
       source_width = 128;
       source_height = 32;
@@ -989,6 +961,49 @@ bool dmdreader_init(bool return_on_no_detection) {
   source_bytesperframe = source_bytesperplane * source_planesperframe;
   source_dwordsperline = source_width * source_bitsperpixel / 32;
 
+  if (!planebuf1) {
+    size_t plane_bytes = source_bytesperplane * source_planesperframe;
+    size_t dma_bytes = source_dwordsperframe * sizeof(uint32_t);
+    if (dma_bytes > plane_bytes) {
+      plane_bytes = dma_bytes;
+    }
+
+    size_t processing_bytes = source_bytes * source_lineoversampling;
+
+    planebuf1 = alloc_aligned_buffer(plane_bytes, 4, nullptr);
+    planebuf2 = alloc_aligned_buffer(plane_bytes, 4, nullptr);
+    processingbuf = alloc_aligned_buffer(processing_bytes, 8, nullptr);
+    framebuf1 = alloc_aligned_buffer(source_bytes, 8, nullptr);
+    framebuf2 = alloc_aligned_buffer(source_bytes, 8, nullptr);
+    size_t framebuf3_bytes = target_bytes;
+    size_t loopback_render_bytes =
+        source_width * source_height * 4 / 8;  // 4bpp render buffer
+    if (loopback_render_bytes > framebuf3_bytes) {
+      framebuf3_bytes = loopback_render_bytes;
+    }
+    framebuf3 = alloc_aligned_buffer(framebuf3_bytes, 8, nullptr);
+
+    dmdreader_error_blink(planebuf1 && planebuf2 && processingbuf &&
+                          framebuf1 && framebuf2 && framebuf3);
+
+    memset(planebuf1, 0, plane_bytes);
+    memset(planebuf2, 0, plane_bytes);
+    memset(processingbuf, 0, processing_bytes);
+    memset(framebuf1, 0, source_bytes);
+    memset(framebuf2, 0, source_bytes);
+    memset(framebuf3, 0, framebuf3_bytes);
+  }
+
+  currentPlaneBuffer = planebuf2;
+  current_framebuf = framebuf1;
+  framebuf_to_send = framebuf2;
+
+  // Merge multiple planes to get the frame data.
+  // Calculate offsets for the first pixel of each plane and cache these.
+  for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
+    offset[i] = i * source_dwordsperplane;
+  }
+
   // DMA for DMD reader
   dmd_dma_channel = dma_claim_unused_channel(true);
   dmd_dma_channel_cfg = dma_channel_get_default_config(dmd_dma_channel);
@@ -1031,10 +1046,11 @@ void dmdreader_spi_init() {
   digitalWrite(SPI0_CS, LOW);
 
   // initialize SPI slave PIO
-  uint offset;
+  uint pio_offset;
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      &clocked_output_program, &spi_pio, &spi_sm, &offset, SPI_BASE, 4, true));
-  clocked_output_program_init(spi_pio, spi_sm, offset, SPI_BASE);
+      &clocked_output_program, &spi_pio, &spi_sm, &pio_offset, SPI_BASE, 4,
+      true));
+  clocked_output_program_init(spi_pio, spi_sm, pio_offset, SPI_BASE);
 
   // DMA for SPI
   spi_dma_channel = dma_claim_unused_channel(true);
@@ -1059,14 +1075,7 @@ void dmdreader_spi_init() {
 bool dmdreader_spi_send() {
   if (!loopback && frame_received) {
     frame_received = false;
-#ifdef SUPRESS_DUPLICATES
-    if (frame_crc != crc_previous_frame) {
-      spi_send_pix(framebuf_to_send, frame_crc, true);
-      crc_previous_frame = frame_crc;
-    }
-#else
     spi_send_pix(framebuf_to_send, frame_crc, true);
-#endif
 
     return true;
   }
@@ -1082,38 +1091,37 @@ void dmdreader_loopback_init(uint8_t *buffer1, uint8_t *buffer2, Color color) {
   loopback = true;
 }
 
-void dmdreader_loopback_stop() { loopback = false; }
+void dmdreader_loopback_stop() {
+  free(framebuf3);
+  loopback = false;
+}
 
 uint8_t *dmdreader_loopback_render() {
   uint64_t *frame4bit = (uint64_t *)framebuf3;
 
   if (loopback && frame_received) {
     frame_received = false;
-    if (frame_crc != crc_previous_frame) {
-      if (current_renderbuf == renderbuf1) {
-        current_renderbuf = renderbuf2;
-      } else {
-        current_framebuf = renderbuf1;
-      }
-
-      auto func =
-          get_optimized_converter(source_width, source_height, monochromeColor);
-      if (func) {
-        if (2 == source_bitsperpixel) {
-          for (uint16_t i = 0; i < source_dwords; i++) {
-            frame4bit[i] =
-                convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
-          }
-          func((uint32_t *)frame4bit, current_renderbuf);
-        } else {
-          func((uint32_t *)framebuf_to_send, current_renderbuf);
-        }
-      }
-
-      crc_previous_frame = frame_crc;
-
-      return current_renderbuf;
+    if (current_renderbuf == renderbuf1) {
+      current_renderbuf = renderbuf2;
+    } else {
+      current_renderbuf = renderbuf1;
     }
+
+    auto func = get_optimized_converter(source_width, source_height,
+                                        monochromeColor, dmd_type);
+    if (func) {
+      if (2 == source_bitsperpixel) {
+        for (uint16_t i = 0; i < source_dwords; i++) {
+          frame4bit[i] =
+              convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
+        }
+        func((uint32_t *)frame4bit, current_renderbuf);
+      } else {
+        func((uint32_t *)framebuf_to_send, current_renderbuf);
+      }
+    }
+
+    return current_renderbuf;
   }
 
   return nullptr;
