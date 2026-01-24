@@ -856,7 +856,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_bitsperpixel = 4;
       target_bitsperpixel = 2;
       source_planesperframe = 6;
-      source_planehistoryperframe = 0;
+      source_planehistoryperframe = 3;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
