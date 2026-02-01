@@ -34,7 +34,7 @@ dotloop:
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_sega_hd
 .wrap_target
-    wait 1 gpio RDATA
     wait 0 gpio RDATA
+    wait 1 gpio RDATA
     irq FRAME_START_IRQ
 .wrap

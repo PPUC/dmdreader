@@ -12,7 +12,7 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 
 * WPC95 & WPC -> 128x32
 * Data East -> 128x32
-* Sega -> 128x32
+* Sega -> 128x32 & 192x64
 * Stern Whitestar -> 128x32
 * Stern SAM -> 128x32
 * Stern SPIKE 1 -> 128x32
