@@ -365,7 +365,7 @@ DmdType detect_dmd() {
     return DMD_CAPCOM;
 
     // Capcom HD -> DOTCLK: 4168000 | DE: 16280 | RDATA: 255
-  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
+  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (de > 15500) &&
              (de < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
   }
