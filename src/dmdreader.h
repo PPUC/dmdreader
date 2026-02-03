@@ -22,6 +22,7 @@ enum DmdType : uint8_t {
   DMD_WHITESTAR,
   DMD_SPIKE1,
   DMD_SAM,
+  DMD_DEX16,
   DMD_DESEGA,
   DMD_SEGA_HD,
   DMD_GOTTLIEB,

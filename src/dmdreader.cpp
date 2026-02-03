@@ -798,6 +798,28 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
+    case DMD_DEX16: {
+      uint input_pins[] = {DE};
+      dmdreader_programs_init(&dmd_reader_dex16_program,
+                              dmd_reader_dex16_program_get_default_config,
+                              &dmd_framedetect_dex16_program,
+                              dmd_framedetect_dex16_program_get_default_config,
+                              input_pins, 1, DE);
+
+      source_width = 128;
+      source_height = 16;
+      source_bitsperpixel = 2;  // Data East and Sega are 2bpp
+      target_bitsperpixel = 2;
+      // in DE-Sega, there's only one plane,
+      // containg one LSB row followed by one MSB row and so on
+      source_planesperframe = 1;
+      source_planehistoryperframe = 0;
+      // in DE-Sega each line is sent twice
+      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
     case DMD_DESEGA: {
       uint input_pins[] = {DE};
       dmdreader_programs_init(&dmd_reader_desega_program,
