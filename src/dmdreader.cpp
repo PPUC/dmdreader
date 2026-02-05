@@ -430,6 +430,45 @@ convert_4bit_to_2bit_fast(uint32_t input) {
 // convert_4bit_to_2bit_fast() END
 // -------------------------------
 
+// ---------------------------------
+// upscale_4bit_0_4_to_0_15() BEGIN
+// ---------------------------------
+
+static constexpr uint8_t map_nibble_0_4_to_0_15(uint8_t p) {
+  return (p == 0) ? 0 : (p >= 4 ? 15 : uint8_t((p << 2) - 1));
+}
+
+static constexpr uint8_t make_nibble_upscale_entry(uint16_t b) {
+  uint8_t lo = map_nibble_0_4_to_0_15(uint8_t(b & 0x0F));
+  uint8_t hi = map_nibble_0_4_to_0_15(uint8_t((b >> 4) & 0x0F));
+  return uint8_t(lo | (hi << 4));  // 2 nibbles -> 2 nibbles
+}
+
+static constexpr std::array<uint8_t, 256> kNibbleUpscaleLut = [] {
+  std::array<uint8_t, 256> a{};
+  for (uint16_t i = 0; i < 256; ++i) a[i] = make_nibble_upscale_entry(i);
+  return a;
+}();
+
+static inline __attribute__((always_inline)) uint32_t
+upscale_4bit_0_4_to_0_15(uint32_t input) {
+  uint32_t b0 = (input >> 0) & 0xFF;
+  uint32_t b1 = (input >> 8) & 0xFF;
+  uint32_t b2 = (input >> 16) & 0xFF;
+  uint32_t b3 = (input >> 24) & 0xFF;
+
+  uint32_t r0 = kNibbleUpscaleLut[b0];
+  uint32_t r1 = kNibbleUpscaleLut[b1];
+  uint32_t r2 = kNibbleUpscaleLut[b2];
+  uint32_t r3 = kNibbleUpscaleLut[b3];
+
+  return uint32_t((r0 << 0) | (r1 << 8) | (r2 << 16) | (r3 << 24));
+}
+
+// -------------------------------
+// upscale_4bit_0_4_to_0_15() END
+// -------------------------------
+
 void switch_buffers() {
   uint8_t *previousPlaneBuffer = currentPlaneBuffer;
   // Switch to next plane and frame buffers
@@ -625,8 +664,7 @@ void dmd_dma_handler() {
               v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
               break;
             case DMD_ALVING:
-              // First row captured counts as intensity level 3 <--
-              v = src4[w] * 4 + src3[w] * 4 + src2[w] * 4 + src1[w] * 3;
+              v = upscale_4bit_0_4_to_0_15(src4[w] + src3[w] + src2[w] + src1[w]);
               break;
             default:
               v = src4[w] * 8 + src3[w] * 4 + src2[w] * 2 + src1[w];
