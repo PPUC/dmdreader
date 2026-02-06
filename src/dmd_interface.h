@@ -11,7 +11,7 @@
 #include "dmd_interface_alving.pio.h"
 #include "dmd_interface_capcom.pio.h"
 #include "dmd_interface_capcom_hd.pio.h"
-#include "dmd_interface_dex16.pio.h"
+#include "dmd_interface_de_x16.pio.h"
 #include "dmd_interface_desega.pio.h"
 #include "dmd_interface_gottlieb.pio.h"
 #include "dmd_interface_sega_hd.pio.h"
