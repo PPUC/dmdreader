@@ -798,12 +798,12 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
-    case DMD_DEX16: {
+    case DMD_DE_X16: {
       uint input_pins[] = {DE};
-      dmdreader_programs_init(&dmd_reader_dex16_program,
-                              dmd_reader_dex16_program_get_default_config,
-                              &dmd_framedetect_dex16_program,
-                              dmd_framedetect_dex16_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_de_x16_program,
+                              dmd_reader_de_x16_program_get_default_config,
+                              &dmd_framedetect_de_x16_program,
+                              dmd_framedetect_de_x16_program_get_default_config,
                               input_pins, 1, DE);
 
       source_width = 128;
