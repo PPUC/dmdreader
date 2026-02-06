@@ -324,7 +324,12 @@ DmdType detect_dmd() {
            (de < 4000) && (rdata > 115) && (rdata < 130)) {
     return DMD_WPC;
 
-    // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
+    // Data East X16: DOTCLK: 121000 or 60544 | DE: 1955 | RDATA: 120
+  } else if ((dotclk > 55000) && (dotclk < 125000) && (de > 1900) &&
+             (de < 2000) && (rdata > 110) && (rdata < 120)) {
+    return DMD_DE_X16;
+
+    // Data East X32: DOTCLK: 640000 | DE: 5000 | RDATA: 80
   } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
              (de < 5070) && (rdata > 75) && (rdata < 85)) {
     return DMD_DESEGA;
