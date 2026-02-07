@@ -35,22 +35,25 @@ dotloop:
 .program dmd_framedetect_de_x16
 .wrap_target
 
-; Data East 128x16 detection
+; Data East 128x16 frame detection
 ; 
 
 wait_low:
-    wait 0 gpio DE      ; Wait for DE to go low
-    set x, 20           ; Use x as storage for 20 iterations
+    wait 0 gpio RCLK       ; Wait for RCLK to go low
+    set x, 20              ; Use x as storage for 20 iterations
 
 delay_loop:
     nop [31]
     nop [31]
-    jmp x-- delay_loop  ; Decrement x and repeat until zero
+    jmp x-- delay_loop     ; Decrement x and repeat until zero
 
-    ; After ~10 µs, check if still low
-    jmp pin, wait_low   ; If pin went high early → back to wait_low
-    irq FRAME_START_IRQ ; Pin remained low long enough → frame started
+    ; After ~10 µs, check if RDATA is high
+    jmp pin, frame_start   ; If pin RDATA is high we found the start of a frame
+    jmp wait_low           ; If RDATA is low, go back to the beginning
 
-    wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
-    jmp wait_low        ; went high, time to go back to wait_low
+frame_start:
+    irq FRAME_START_IRQ    ; Pin remained low long enough → frame started
+
+    wait 0 gpio RDATA      ; Wait again for RDATA to go low before restarting cycle
+    jmp wait_low           ; went high, time to go back to wait_low
 .wrap
