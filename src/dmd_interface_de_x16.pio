@@ -36,7 +36,7 @@ dotloop:
 .wrap_target
 
 ; Data East 128x16 frame detection
-; 
+; When RCLK goes low, we check if RDATA goes high about ~10 µs later. If this is true then we found the start.
 
 wait_low:
     wait 0 gpio RCLK       ; Wait for RCLK to go low
@@ -52,8 +52,7 @@ delay_loop:
     jmp wait_low           ; If RDATA is low, go back to the beginning
 
 frame_start:
-    irq FRAME_START_IRQ    ; Pin remained low long enough → frame started
-
+    irq FRAME_START_IRQ
     wait 0 gpio RDATA      ; Wait again for RDATA to go low before restarting cycle
-    jmp wait_low           ; went high, time to go back to wait_low
+    jmp wait_low
 .wrap

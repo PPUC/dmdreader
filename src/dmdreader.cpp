@@ -804,12 +804,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_DE_X16: {
-      uint input_pins[] = {DE};
+      uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(&dmd_reader_de_x16_program,
                               dmd_reader_de_x16_program_get_default_config,
                               &dmd_framedetect_de_x16_program,
                               dmd_framedetect_de_x16_program_get_default_config,
-                              input_pins, 1, DE);
+                              input_pins, 2, RDATA);
 
       source_width = 128;
       source_height = 16;
