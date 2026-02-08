@@ -806,11 +806,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_DE_X16: {
       uint input_pins[] = {RDATA, RCLK};
       gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // Needs to be inverted
+      // because it triggers on the falling edge
       dmdreader_programs_init(&dmd_reader_de_x16_program,
                               dmd_reader_de_x16_program_get_default_config,
                               &dmd_framedetect_de_x16_program,
                               dmd_framedetect_de_x16_program_get_default_config,
-                              input_pins, 2, RDATA);
+                              input_pins, 2, DOTCLK);
 
       source_width = 128;
       source_height = 16;
