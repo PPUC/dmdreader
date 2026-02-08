@@ -15,7 +15,7 @@
 
 .wrap_target
 
-    mov isr, null      ; clear ISR and reset shift counter
+    mov isr, null      ; clear ISR and reset shift counter  /// !!! could be removed ??
     irq clear FRAME_START_IRQ
     wait irq FRAME_START_IRQ
 
@@ -26,17 +26,6 @@ dotclk_check_fill:
 dotclk_check:
     jmp pin dotloop_multicluster_start
     jmp x-- dotclk_check             ; loop for 100uS and check if DOTCLK went high
-    jmp dotloop_singlecluster
-
-dotloop_multicluster_start:
-    set x, 31
-dotloop_multicluster:
-    wait 1 gpio DOTCLK               ; rising edge
-    in null 2                        ; left padding
-    in pins 2                        ; read pin data
-    wait 0 gpio DOTCLK               ; falling edge
-    jmp x-- dotloop_multicluster
-    jmp endpoint
 
 dotloop_singlecluster_start:
     set x, 31
@@ -44,6 +33,20 @@ dotloop_singlecluster:
     wait 1 gpio DOTCLK               ; rising edge
     in pins 2                        ; left padding
     in null 2
+    wait 0 gpio DOTCLK               ; falling edge
+    jmp x-- dotloop_multicluster
+    set x, 3
+padding_loop:
+    in null 32
+    jmp x-- padding_loop
+    jmp endpoint
+
+dotloop_multicluster_start:
+    set x, 31              ; !!! needs to be loaded with 63 inversion of osr by loading osr with high val??
+dotloop_multicluster:
+    wait 1 gpio DOTCLK               ; rising edge
+    in null 2                        ; left padding
+    in pins 2                        ; read pin data
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop_multicluster
 endpoint:
@@ -60,7 +63,7 @@ endpoint:
 .wrap_target
 
 ; Data East 128x16 frame detection
-; When RCLK goes low, we check if RDATA goes high about ~10 µs later. If this is true then we found the start.
+; When RCLK goes low, we check if RDATA goes high about ~15 µs later. If this is true then we found the start.
 
 wait_low:
     wait 0 gpio RCLK       ; Wait for RCLK to go low
@@ -75,5 +78,5 @@ delay_loop:
 
 frame_start:
     irq FRAME_START_IRQ
-    wait 0 gpio RDATA      ; Wait again for RDATA to go low before restarting cycle
+    wait 0 gpio RDATA      ; Wait again for RDATA to go low before restarting cycle   /// !! could be removed
 .wrap
