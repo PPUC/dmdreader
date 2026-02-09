@@ -9,40 +9,37 @@
 
 .program dmd_reader_de_x16
 
-    set x, 31
-    in x, 5
-    set x, 1
-    in x, 1
-    mov osr, isr
+    set x, 31             ; load 31, 5 bits is max allowed (0b11111)
+    in x, 5               ; shift in 5 bits, isr is 31 now
+    set x, 1              ; load 1, 1 bit
+    in x, 1               ; shift in 1 bit, isr is 63 now
+    mov osr, isr          ; copy 63 to osr
 
 .wrap_target
 
-    set y, 31
-    mov x, osr
+    mov y, osr                    ; copy 63 to y
+    mov x, osr                    ; copy 63 to x
 
-    mov isr, null      ; clear ISR and reset shift counter  /// !!! could be removed ??
+    mov isr, null                 ; clear ISR and reset shift counter  
     irq clear FRAME_START_IRQ
     wait irq FRAME_START_IRQ
 
 lsb_msb_check:
-    nop[31]
-    nop[31]
-    nop[31]
-    jmp pin dotloop_lsb_msb          ; if COLLAT goes high within 8 µs we are still in the same row
-    jmp x-- lsb_msb_check            ; loop for 8 µs
-    in null 32
-    in null 32
-    set x, 31
-    jmp y-- dotloop_lsb_msb
+    jmp pin dotloop_lsb_msb  [31] ; if DOTCLK goes high early, it means we will have LSB + MSB
+    jmp x-- lsb_msb_check    [31] ; loop for ~30 µs
+    in null 32                    ; padding for row with only MSB
+    in null 32                    ; padding for row with only MSB
+    set x, 31                   
+    jmp y-- dotloop
 dotloop_lsb_msb:
     mov x, osr
+    jmp y-- dotloop
 dotloop:
     wait 1 gpio DOTCLK               ; rising edge
     in pins 2                        ; read value of px 1 and 2
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop
     jmp y-- lsb_msb_check
-
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
@@ -58,9 +55,9 @@ wait_low:
 
 delay_loop:
     nop[31]                
-    jmp x-- delay_loop     ; Decrement x and repeat until zero
+    jmp x-- delay_loop [31]     ; Decrement x and repeat until zero
 
-    ; After ~8 µs, check if RDATA is high
+    ; After ~15 µs, check if RDATA is high
     jmp pin, frame_start   ; If pin RDATA is high we found the start of a frame
     jmp wait_low           ; If RDATA is low, go back to the beginning
 
