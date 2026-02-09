@@ -26,13 +26,14 @@
 
 lsb_msb_check:
     nop[31]
+    nop[31]
     jmp pin dotloop_lsb_msb          ; if COLLAT goes high within 8 µs we are still in the same row
     jmp x-- lsb_msb_check            ; loop for 8 µs
     in null 32
     in null 32
     set x, 31
     jmp y-- dotloop_lsb_msb
-dotloop_LSB_MSB:
+dotloop_lsb_msb:
     mov x, osr
 dotloop:
     wait 1 gpio DOTCLK               ; rising edge
