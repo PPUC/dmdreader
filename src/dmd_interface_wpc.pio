@@ -14,13 +14,13 @@
     set x, 3           ; load 3
     in x, 2            ; shift in 2 bits, isr is 4095 now (128x32 - 1)
     mov y, isr         ; copy 4095 to y
+
+.wrap_target
+    mov x, y           ; load number of pixels per plane (128x32 - 1)
     mov isr, null      ; clear ISR and reset shift counter
 
     irq clear PLANE_START_IRQ
     wait irq PLANE_START_IRQ
-
-.wrap_target
-    mov x, y           ; load number of pixels per plane (128x32 - 1)
 
 plane_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
