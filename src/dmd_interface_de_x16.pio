@@ -14,15 +14,13 @@
     set x, 1              ; load 1, 1 bit
     in x, 1               ; shift in 1 bit, isr is 63 now
     mov osr, isr          ; copy 63 to osr
+    mov isr, null                 ; clear ISR and reset shift counter
+
+    wait irq FRAME_START_IRQ
 
 .wrap_target
 
-    mov y, osr                    ; copy 63 to y
     mov x, osr                    ; copy 63 to x
-
-    mov isr, null                 ; clear ISR and reset shift counter  
-    irq clear FRAME_START_IRQ
-    wait irq FRAME_START_IRQ
 
 lsb_msb_check:
     jmp pin dotloop_lsb_msb  [31] ; if DOTCLK goes high early, it means we will have LSB + MSB
@@ -33,13 +31,11 @@ lsb_msb_check:
     jmp y-- dotloop
 dotloop_lsb_msb:
     mov x, osr
-    jmp y-- dotloop
 dotloop:
     wait 1 gpio DOTCLK               ; rising edge
     in pins 2                        ; read value of px 1 and 2 as they're sampled on the same DOTCLK edge
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop
-    jmp y-- lsb_msb_check
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
@@ -65,3 +61,13 @@ frame_start:
     irq FRAME_START_IRQ
     wait 0 gpio RDATA      ; Wait again for RDATA to go low before restarting cycle   /// !! could be removed
 .wrap
+
+
+.wrap_target
+wait 0 de
+wait 1 de
+jmp pin, frame_start
+.wrap
+
+frame_start:
+    irq FRAME_START_IRQ
