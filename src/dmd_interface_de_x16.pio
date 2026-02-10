@@ -36,7 +36,7 @@ dotloop_lsb_msb:
     jmp y-- dotloop
 dotloop:
     wait 1 gpio DOTCLK               ; rising edge
-    in pins 2                        ; read value of px 1 and 2
+    in pins 2                        ; read value of px 1 and 2 as they're sampled on the same DOTCLK edge
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop
     jmp y-- lsb_msb_check

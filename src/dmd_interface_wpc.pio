@@ -14,20 +14,20 @@
     set x, 3           ; load 3
     in x, 2            ; shift in 2 bits, isr is 4095 now (128x32 - 1)
     mov y, isr         ; copy 4095 to y
-
-.wrap_target
-    mov x, y           ; load number of pixels per plane (128x32 - 1)
     mov isr, null      ; clear ISR and reset shift counter
 
     irq clear PLANE_START_IRQ
     wait irq PLANE_START_IRQ
+
+.wrap_target
+    ; mov x, y           ; load number of pixels per plane (128x32 - 1)
 
 plane_loop:
     wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
     in null 1          ; left padding a 0 to the output as WPC is 2bit/px
     wait 1 gpio DOTCLK ; raising edge
     in pins 1          ; read 1 bit pin data
-    jmp x-- plane_loop
+    ; jmp x-- plane_loop
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
