@@ -24,13 +24,13 @@
 
 lsb_msb_check:
     nop[31]
-    nop[22]
-    jmp x-- lsb_msb_check    [31] ; loop for ~22.25 µs
+    nop[31]
+    jmp x-- lsb_msb_check[22]     ; loop for ~22.25 µs
     jmp pin reload_y_lsb_msb      ; if DOTCLK is high, it means we will have LSB + MSB
 
-    in null 32                    ; padding for row with only MSB
-    in null 32                    ; padding for row with only MSB
-    set x, 31                   
+    ; do stuff for no MSB + LSB case.. the question is what
+    in null 32                    ; padding for row with only MSB ?
+    in null 32                    ; padding for row with only MSB ?             
 
 reload_y_lsb_msb:
     set y, 1
@@ -45,7 +45,7 @@ dotloop:
     jmp x-- dotloop
     jmp y-- dotloop_lsb_msb
 
-    wait 1 gpio COLLAT
+    wait 1 gpio COLLAT               ; sync on COLLAT so our lsb_msb_check will work
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
@@ -56,8 +56,8 @@ dotloop:
 ; When DE goes low, check for the next rising edge of DE. If RDATA is high at that point we have found the start.
 
 detect_loop:
-    wait 0 DE
-    wait 1 DE
+    wait 0 gpio DE
+    wait 1 gpio DE
     jmp pin, frame_start             ; Check if RDATA is high, otherwise back to beginning
     jmp detect_loop
 
