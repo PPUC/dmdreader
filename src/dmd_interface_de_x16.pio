@@ -15,33 +15,33 @@
 .wrap_target
 
 
-lsb_msb_check:
+msb_check:
     nop[31]
     nop[31]
-    jmp x-- lsb_msb_check[22]     ; loop for ~19.5 µs (first irq) / ~22.25 µs
-    jmp pin reload_y_lsb_msb      ; if DOTCLK is high, it means we will have LSB + MSB
+    jmp x-- msb_check[22]     ; loop for ~19.5 µs (first irq) / ~22.25 µs
+    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have LSB + MSB
 
-    ; Padding for MSB only case
+    ; Padding for no MSB row case
     set x, 5                      ; load 6 b(0b101) for 3 bits of LSB + 3 bits of MSB
     set y, 31                     ; add padding 32 times
-no_lsb_loop:
-    ; For the no LSB case we create a "fake" row with custom padding, which is always 0110 per pixel. 
-    ; Because it is LSB, it will later be LSB + (MSB * 2), always resulting in either 0110 = 0 an off pixel
-    ; Or in the case of 0110 + (0001 * 2) = 0110 + 0010 = 
+no_msb_loop:
+    ; For the no MSB case we create a "fake" MSB row with custom padding, which is always 0101 per pixel. 
+    ; Because it is MSB, it will later be processed and multiplioed by 2, always resulting in 1010 (0101 * 2)
+    ; This can then be summed up with the LSB row to create either an ON state (pixval 3) or off state (pixval 0)
     in null 1                     ; padding 0
     in x, 3                       ; padding 101
     in null 1                     ; padding 0
     in x, 3                       ; padding 101
-    jmp y-- no_lsb_loop
-    jmp reload_x_lsb_msb             
+    jmp y-- no_msb_loop
+    jmp reload_x_msb_lsb
 
-reload_y_lsb_msb:
+reload_y_msb_lsb:
     set y, 1
-reload_x_lsb_msb:
+reload_x_msb_lsb:
     set x, 31
 dotloop:
     ; Because of PIO limitations, we read px 1 as 000v and px 2 as 0v00 (px1 = 0001 / 0000 & px 2 = 0100 / 0000)
-    ; The first bit of px 2 is always a padding 0, supplied by GPIO 1 which is pulled low
+    ; The first bit of px 2 therefore always has a padding 0, which is supplied by GPIO 1 because it's pulled low permanently.
     ; in pins 3 = (px 1 -> v)0(v <- px 2). Here the zero in the middle is the padding bit (GPIO 1), and the 1s on either side are the actual pixel values
     ; This lets us create a unique combination which can now be processed by a LUT to create the correct pixel values for all X16 games
     wait 1 gpio DOTCLK               ; rising edge
@@ -50,7 +50,7 @@ dotloop:
     in null 2                        ; 00 padding for 4bpp
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop
-    jmp y-- reload_x_lsb_msb
+    jmp y-- reload_x_msb_lsb
 
     set x, 31                        ; reload x to create 22.5 µs delay for lsb_msb_check
     wait 1 gpio COLLAT               ; sync on COLLAT so our lsb_msb_check will work
