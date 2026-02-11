@@ -812,6 +812,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               &dmd_framedetect_de_x16_program,
                               dmd_framedetect_de_x16_program_get_default_config,
                               input_pins, 2, RDATA);
+      gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
 
       source_width = 128;
       source_height = 16;
