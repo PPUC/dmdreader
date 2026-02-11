@@ -815,7 +815,7 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       source_width = 128;
       source_height = 16;
-      source_bitsperpixel = 2;  // Data East and Sega are 2bpp
+      source_bitsperpixel = 4;  // Data East and Sega are 2bpp
       target_bitsperpixel = 2;
       // in DE-Sega, there's only one plane,
       // containg one LSB row followed by one MSB row and so on
