@@ -46,7 +46,7 @@ dotloop:
     ; This lets us create a unique combination which can now be processed by a LUT to create the correct pixel values for all X16 games
     wait 1 gpio DOTCLK               ; rising edge
     in null 3                        ; 000 padding for 4bpp 
-    in pins 3                        ; read value of px 1(GPIO0), padding 0 (GPIO1) and px 2 (GPIO2) as they're sampled on the same DOTCLK edge
+    in pins 3                        ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
     in null 2                        ; 00 padding for 4bpp
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop
