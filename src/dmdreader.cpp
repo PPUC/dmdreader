@@ -572,7 +572,8 @@ void dmd_dma_handler() {
 
     if (source_bitsperpixel == target_bitsperpixel || loopback) {
       framebuf[px] = pixval;
-    } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
+    } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel &&
+                dmd_type != DMD_DE_X16) {
       uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
       uint32_t out = px >> 1;  // Shifting leeds to that index steps: 0, 0, 1,
                                // 1, 2, 2, 3, 3, 4, ...
@@ -595,7 +596,7 @@ void dmd_dma_handler() {
 
   // The code below doesn't work if we reduced the bit depth above. But at the
   // moment there's no system with oversampling and bit depth reduction.
-  if (source_bitsperpixel == target_bitsperpixel) {
+  if ((source_bitsperpixel == target_bitsperpixel) || dmd_type == DMD_DE_X16) {
     // deal with whitestar line oversampling directly within framebuf
     if (source_lineoversampling == LINEOVERSAMPLING_2X) {
       uint16_t i = 0;
@@ -679,7 +680,7 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
                              uint8_t jump_pin) {
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_reader_program, &dmd_pio, &dmd_sm, &dmd_offset,
-      (DE < SDATA_X16) ? DE : SDATA_X16, 7, true));
+      (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
   dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
 
@@ -687,7 +688,7 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
   // frame
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_framedetect_program, &frame_pio, &frame_sm, &frame_offset,
-      (DE < SDATA_X16) ? DE : SDATA_X16, 7, true));
+      (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config frame_config = framedetect_get_default_config(frame_offset);
   dmd_framedetect_program_init(frame_pio, frame_sm, frame_offset, frame_config,
                                input_pins, num_input_pins, jump_pin);
@@ -704,9 +705,9 @@ bool dmdreader_init(bool return_on_no_detection) {
       return false;
     }
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
+    delay(250);
     digitalWrite(LED_BUILTIN, LOW);
-    delay(500);
+    delay(250);
   } while (dmd_type == DMD_UNKNOWN);
 
   // Delay is still needed when blink gets removed above.
