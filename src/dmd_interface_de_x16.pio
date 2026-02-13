@@ -10,17 +10,20 @@
 
 .program dmd_reader_de_x16
 
-    set x, 27               ; for the first irq based on DE, we need a delay of ~19.5 µs
-    wait irq FRAME_START_IRQ
+    set x, 1           ; load 1 bit (0b1)
+    in x, 1            ; shift in 1 bit, isr is 1 now
+    in null, 13        ; shift in 13 zeroes, making isr 8192
+    mov osr, isr       ; copy 8192 to osr
+    mov isr, null      ; reset isr because it's still filled with 8192
+    wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
 
 .wrap_target
 
+    mov x, osr         ; copy 8192 to x and start
 
 msb_check:
-    nop[31]
-    nop[31]
-    jmp x-- msb_check[22]     ; loop for ~19.5 µs (first irq) / ~22.25 µs
     jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have LSB + MSB
+    jmp x-- msb_check             ; loop for ~65.5 µs (based on 125MHz)
 
     ; Padding for no MSB row case
     set x, 5                      ; load 6 b(0b101) for 3 bits of LSB + 3 bits of MSB
@@ -41,10 +44,10 @@ reload_y_msb_lsb:
 reload_x_msb_lsb:
     set x, 31
 dotloop:
-    ; Because of PIO limitations, we read px 1 as 000v and px 2 as 0v00 (px1 = 0001 / 0000 & px 2 = 0100 / 0000)
-    ; The first bit of px 2 therefore always has a padding 0, which is supplied by GPIO 1 because it's pulled low permanently.
-    ; in pins 3 = (px 1 -> v)0(v <- px 2). Here the zero in the middle is the padding bit (GPIO 1), and the 1s on either side are the actual pixel values
-    ; This lets us create a unique combination which can now be processed by a LUT to create the correct pixel values for all X16 games
+    ; Because of PIO limitations, we read in 4 bit: px 1 as 000v and px 2 as 0v00 (where v is either 0 or 1 depending on the SDATA state)
+    ; The first bit of px 2 always contains a padding 0, thanks to GPIO 1 because it's pulled low permanently.
+    ; in pins 3 = (px 1 -> v)0(v <- px 2). Here the zero in the middle is the padding bit (GPIO 1), and the 1s on either side are the actual pixel values.
+    ; This lets us create a unique combination which can now be processed by a LUT to create the correct pixel values for all X16 type games
     wait 1 gpio DOTCLK               ; rising edge
     in null 3                        ; 000 padding for 4bpp 
     in pins 3                        ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
@@ -52,9 +55,6 @@ dotloop:
     wait 0 gpio DOTCLK               ; falling edge
     jmp x-- dotloop
     jmp y-- reload_x_msb_lsb
-
-    set x, 31                        ; reload x to create 22.5 µs delay for lsb_msb_check
-    wait 1 gpio COLLAT               ; sync on COLLAT so our lsb_msb_check will work
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
