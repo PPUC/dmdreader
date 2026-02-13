@@ -679,7 +679,7 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
                              uint8_t jump_pin) {
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_reader_program, &dmd_pio, &dmd_sm, &dmd_offset,
-      (DE < SDATA) ? DE : SDATA, 5, true));
+      (DE < SDATA_X16) ? DE : SDATA_X16, 7, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
   dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
 
@@ -687,7 +687,7 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
   // frame
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_framedetect_program, &frame_pio, &frame_sm, &frame_offset,
-      (DE < SDATA) ? DE : SDATA, 5, true));
+      (DE < SDATA_X16) ? DE : SDATA_X16, 7, true));
   pio_sm_config frame_config = framedetect_get_default_config(frame_offset);
   dmd_framedetect_program_init(frame_pio, frame_sm, frame_offset, frame_config,
                                input_pins, num_input_pins, jump_pin);

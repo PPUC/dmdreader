@@ -24,15 +24,17 @@
 // Init the DMD reader (dots) PIO program, common for all DMD types.
 void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
   // Set the IN pin, we don't use any other
-  sm_config_set_in_pins(&c, SDATA);
+  sm_config_set_in_pins(&c, SDATA_X16);
 
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, DOTCLK);
+  pio_gpio_init(pio, SDATA_X16);
+  pio_gpio_init(pio, SDATA_X16_PADDING);
   pio_gpio_init(pio, SDATA);
 
   // Set the pin direction at the PIO, handle pins seprately to support alphaDMD
   // as well
-  pio_sm_set_consecutive_pindirs(pio, sm, SDATA, 1, false);
+  pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16, 3, false);
   pio_sm_set_consecutive_pindirs(pio, sm, DOTCLK, 1, false);
 
   // Shifting to left matches the customary MSB-first ordering of SPI.

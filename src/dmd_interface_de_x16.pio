@@ -4,7 +4,8 @@
 .define COLLAT 4
 .define DOTCLK 3
 .define SDATA 2
-.define SDATAEX 1
+.define SDATA_X16_PADDING 1
+.define SDATA_X16 0
 .define FRAME_START_IRQ 5
 
 .program dmd_reader_de_x16
