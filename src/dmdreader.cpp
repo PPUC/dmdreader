@@ -750,7 +750,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_framedetect_wpc_program_get_default_config, input_pins, 3, 0, SDATA);
 
       source_width = 128;
-      source_height = 16;
+      source_height = 32;
       source_bitsperpixel = 2;
       target_bitsperpixel = 2;
       source_planesperframe = 3;
