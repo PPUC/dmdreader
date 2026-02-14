@@ -22,20 +22,20 @@
 #include "hardware/pio.h"
 
 // Init the DMD reader (dots) PIO program, common for all DMD types.
-void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c) {
+void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uint in_base_pin) {
  
-  if(dmd_type == DMD_DE_X16) {
+  if(in_base_pin == SDATA_X16) {
     // We need to set DOTCLK as jump pin + additional SDATA line as base in pin
     sm_config_set_jmp_pin(&c, DOTCLK);
-    sm_config_set_in_pins(&c, SDATA_X16);
+    sm_config_set_in_pins(&c, in_base_pin);
 
     pio_gpio_init(pio, SDATA_X16);         // Extra data line for Data East X16
-    pio_gpio_init(pio, SDATA_X16_PADDING); // used as a padding bit
+    pio_gpio_init(pio, SDATA_X16_PADDING); // used as a padding 0 bit
 
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16_PADDING, 1, false);
   } else {
-    sm_config_set_in_pins(&c, SDATA);
+    sm_config_set_in_pins(&c, in_base_pin);
   }
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, SDATA);

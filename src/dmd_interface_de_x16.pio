@@ -22,22 +22,22 @@
     mov x, osr         ; copy 8192 to x and start
 
 msb_check:
-    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have LSB + MSB
+    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have a valid LSB + MSB row
     jmp x-- msb_check             ; loop for ~65.5 µs (based on 125MHz)
 
     ; Padding for no MSB row case
-    set x, 5                      ; load 6 b(0b101) for 3 bits of LSB + 3 bits of MSB
+    set x, 5                      ; load 5 (0b101) 
     set y, 31                     ; add padding 32 times
 no_msb_loop:
-    ; For the no MSB case we create a "fake" MSB row with custom padding, which is always 0101 per pixel. 
-    ; Because it is MSB, it will later be processed and multiplioed by 2, always resulting in 1010 (0101 * 2)
-    ; This can then be summed up with the LSB row to create either an ON state (pixval 3) or off state (pixval 0)
+    ; For the no MSB case we create a fake MSB row with custom padding, which is always 0101 per pixel. 
+    ; Because it is MSB, it will later be processed and multiplied by 2, always resulting in 1010 (0101 * 2)
+    ; This can then be summed up with the LSB row in a LUT to create either an ON state (pixval 3) or off state (pixval 0)
     in null 1                     ; padding 0
     in x, 3                       ; padding 101
     in null 1                     ; padding 0
     in x, 3                       ; padding 101
     jmp y-- no_msb_loop
-    jmp reload_x_msb_lsb
+    jmp reload_x_msb_lsb          ; we only need to iterate over one row now before going back to msb_check
 
 reload_y_msb_lsb:
     set y, 1

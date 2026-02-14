@@ -694,12 +694,12 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
                              const pio_program_t *dmd_framedetect_program,
                              DmdConfigGetter framedetect_get_default_config,
                              uint *input_pins, uint8_t num_input_pins,
-                             uint8_t jump_pin) {
+                             uint8_t jump_pin, uint8_t in_base_pin) {
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_reader_program, &dmd_pio, &dmd_sm, &dmd_offset,
       (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
-  dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
+  dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config, in_base_pin);
 
   // The framedetect program just runs and detects the beginning of a new
   // frame
@@ -747,7 +747,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       dmdreader_programs_init(
           &dmd_reader_wpc_program, dmd_reader_wpc_program_get_default_config,
           &dmd_framedetect_wpc_program,
-          dmd_framedetect_wpc_program_get_default_config, input_pins, 3, 0);
+          dmd_framedetect_wpc_program_get_default_config, input_pins, 3, 0, SDATA);
 
       source_width = 128;
       source_height = 16;
@@ -767,7 +767,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_reader_whitestar_program_get_default_config,
           &dmd_framedetect_whitestar_program,
           dmd_framedetect_whitestar_program_get_default_config, input_pins, 1,
-          0);
+          0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -789,7 +789,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_spike_program_get_default_config,
                               &dmd_framedetect_spike_program,
                               dmd_framedetect_spike_program_get_default_config,
-                              input_pins, 2, RDATA);
+                              input_pins, 2, RDATA, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -807,7 +807,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       dmdreader_programs_init(
           &dmd_reader_sam_program, dmd_reader_sam_program_get_default_config,
           &dmd_framedetect_sam_program,
-          dmd_framedetect_sam_program_get_default_config, input_pins, 1, 0);
+          dmd_framedetect_sam_program_get_default_config, input_pins, 1, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -829,7 +829,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_de_x16_program_get_default_config,
                               &dmd_framedetect_de_x16_program,
                               dmd_framedetect_de_x16_program_get_default_config,
-                              input_pins, 2, RDATA);
+                              input_pins, 2, RDATA, SDATA_X16);
       gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
 
       source_width = 128;
@@ -852,7 +852,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_desega_program_get_default_config,
                               &dmd_framedetect_desega_program,
                               dmd_framedetect_desega_program_get_default_config,
-                              input_pins, 1, DE);
+                              input_pins, 1, DE, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -874,7 +874,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_reader_sega_hd_program,
           dmd_reader_sega_hd_program_get_default_config,
           &dmd_framedetect_sega_hd_program,
-          dmd_framedetect_sega_hd_program_get_default_config, input_pins, 1, 0);
+          dmd_framedetect_sega_hd_program_get_default_config, input_pins, 1, 0, SDATA);
 
       source_width = 192;
       source_height = 64;
@@ -897,7 +897,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_reader_gottlieb_program_get_default_config,
           &dmd_framedetect_gottlieb_program,
           dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1,
-          0);
+          0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -916,7 +916,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_alving_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
-                              input_pins, 3, 0);
+                              input_pins, 3, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -937,7 +937,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_reader_gottlieb_program_get_default_config,
           &dmd_framedetect_gottlieb_program,
           dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1,
-          0);
+          0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -956,7 +956,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_capcom_program_get_default_config,
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
-                              input_pins, 2, 0);
+                              input_pins, 2, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -976,7 +976,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_reader_capcom_hd_program_get_default_config,
           &dmd_framedetect_capcom_hd_program,
           dmd_framedetect_capcom_hd_program_get_default_config, input_pins, 2,
-          0);
+          0, SDATA);
 
       source_width = 256;
       source_height = 64;
