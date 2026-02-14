@@ -31,6 +31,8 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
 
     pio_gpio_init(pio, SDATA_X16);         // Extra data line for Data East X16
     pio_gpio_init(pio, SDATA_X16_PADDING); // used as a padding 0 bit
+    // pio_sm_exec(pio, sm, pio_encode_out(pio_osr, 8192));
+    // pio_encode_mov();
 
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16_PADDING, 1, false);
@@ -54,7 +56,7 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
   );
 
   // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-  sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+  // sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
