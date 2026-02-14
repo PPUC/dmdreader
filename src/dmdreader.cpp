@@ -486,6 +486,9 @@ void dmd_dma_handler() {
   detected_0_1_0_1 = false;
   detected_1_0_0_0 = false;
 
+  // Required because of Data East 128x16 split panel rendering
+  uint16_t splitpanel = 0;
+
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
@@ -586,6 +589,20 @@ void dmd_dma_handler() {
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
       // There's no syetem using this conversion yet, but let's have it ready
+    } else if (dmd_type == DMD_DE_X16) {
+      // Data East 128x16 renders one half and then the second half
+      // First the left 64x16 panel, then the right 64x16 panel
+      // Data is 4bpp, with one MSB + LSB row -> 16px for 64x16
+      // 32px would be one entire row for 128x16
+      // Every 16px we need to jump back to the start and a row below for the
+      // first 
+      if ((px % 32) < 16) {
+        // first 16 iterations of each 32
+        framebuf[px + 16] = pixval;
+      } else {
+        // next 16 iterations of each 32
+        framebuf[px + 32] = pixval;
+      }
     }
   }
 
@@ -733,7 +750,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_framedetect_wpc_program_get_default_config, input_pins, 3, 0);
 
       source_width = 128;
-      source_height = 32;
+      source_height = 16;
       source_bitsperpixel = 2;
       target_bitsperpixel = 2;
       source_planesperframe = 3;
