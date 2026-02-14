@@ -36,6 +36,9 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16_PADDING, 1, false);
   } else {
     sm_config_set_in_pins(&c, in_base_pin);
+
+    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
   }
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, SDATA);
@@ -53,11 +56,14 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
                          32      // autopush threshold
   );
 
-  // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-  sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
+
+  if (in_base_pin == SDATA_X16) {
+    sm_config_set_out_shift(&c, true,  true, 32); // auto pull 32 directly
+    pio_sm_put(pio, sm, 8192); // load 8192 directly to TX fifo
+    pio_sm_exec(pio, sm, pio_encode_out(pio_osr, 32)); // write 32 bits to osr
+  }
 }
 
 // Init the framedetect PIO program.
