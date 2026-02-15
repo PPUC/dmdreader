@@ -399,17 +399,52 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
 }
 
 // ---------------------------------
+// convert_4bit_to_2bit_de_x16() BEGIN
+// ---------------------------------
+
+static constexpr uint8_t map_nibble_de_x16(uint8_t p) { 
+  return (p == 4) ? 1 : // 0100 - subject to change
+         (p == 2) ? 3 : // 0010 - subject to change
+         (p == 8) ? 3 : // 1000 - subject to change
+          p; // 0000 and 0001 - subject to change
+}
+
+static constexpr uint8_t make_lut_entry_de_x16(uint16_t b) {
+  uint8_t lo = map_nibble_de_x16(uint8_t(b & 0x0F));
+  uint8_t hi = map_nibble_de_x16(uint8_t((b >> 4) & 0x0F));
+  return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
+}
+
+static constexpr std::array<uint8_t, 256> kByteLut_de_x16 = [] {
+  std::array<uint8_t, 256> a{};
+  for (uint16_t i = 0; i < 256; ++i) a[i] = make_lut_entry_de_x16(i);
+  return a;
+}();
+
+static inline __attribute__((always_inline)) uint16_t
+convert_4bit_to_2bit_de_x16(uint32_t input) {
+  uint32_t b0 = (input >> 0) & 0xFF;
+  uint32_t b1 = (input >> 8) & 0xFF;
+  uint32_t b2 = (input >> 16) & 0xFF;
+  uint32_t b3 = (input >> 24) & 0xFF;
+
+  uint16_t r0 = kByteLut_de_x16[b0];
+  uint16_t r1 = kByteLut_de_x16[b1];
+  uint16_t r2 = kByteLut_de_x16[b2];
+  uint16_t r3 = kByteLut_de_x16[b3];
+
+  return uint16_t((r0 << 0) | (r1 << 4) | (r2 << 8) | (r3 << 12));
+}
+
+// -------------------------------
+// convert_4bit_to_2bit_de_x16() END
+// -------------------------------
+
+// ---------------------------------
 // convert_4bit_to_2bit_fast() BEGIN
 // ---------------------------------
 
 static constexpr uint8_t map_nibble(uint8_t p) { return (p > 3) ? 3 : p; }
-
-static constexpr uint8_t map_nibble_DE_X16(uint8_t p) { 
-  return (p == 4) ? 1 : // 0100
-         (p == 2) ? 3 : // 0010
-         (p == 8) ? 3 : // 1000
-         p; // 0000 and 0001
-}
 
 static constexpr uint8_t make_lut_entry(uint16_t b) {
   uint8_t lo = map_nibble(uint8_t(b & 0x0F));
@@ -580,15 +615,26 @@ void dmd_dma_handler() {
     if (source_bitsperpixel == target_bitsperpixel || loopback) {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
-      uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
       uint32_t out = px >> 1;  // Shifting leeds to that index steps: 0, 0, 1,
-                               // 1, 2, 2, 3, 3, 4, ...
-      if ((px & 1) == 0) {
-        // Write first 8 pixel in upper 16 Bit.
-        framebuf[out] = (uint32_t)v16 << 16;
+                  // 1, 2, 2, 3, 3, 4, ...
+      if (dmd_type == DMD_DE_X16) {
+        uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
+        if ((px & 1) == 0) {
+          // Write first 8 pixel in upper 16 Bit.
+          framebuf[out] = (uint32_t)v16 << 16;
+        } else {
+          // Write second 8 pixel in lower 16 Bit.
+          framebuf[out] |= v16;
+        }
       } else {
-        // Write second 8 pixel in lower 16 Bit.
-        framebuf[out] |= v16;
+        uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
+        if ((px & 1) == 0) {
+          // Write first 8 pixel in upper 16 Bit.
+          framebuf[out] = (uint32_t)v16 << 16;
+        } else {
+          // Write second 8 pixel in lower 16 Bit.
+          framebuf[out] |= v16;
+        }
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
       // There's no syetem using this conversion yet, but let's have it ready
