@@ -615,7 +615,7 @@ void dmd_dma_handler() {
     if (source_bitsperpixel == target_bitsperpixel || loopback) {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
-      uint32_t out = px >> 1;  // Shifting leeds to that index steps: 0, 0, 1,
+      uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
                   // 1, 2, 2, 3, 3, 4, ...
       if (dmd_type == DMD_DE_X16) {
         uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
@@ -637,7 +637,7 @@ void dmd_dma_handler() {
         }
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
-      // There's no syetem using this conversion yet, but let's have it ready
+      // There's no system using this conversion yet, but let's have it ready
     }
   }
 
