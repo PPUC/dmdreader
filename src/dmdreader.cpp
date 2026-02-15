@@ -493,9 +493,6 @@ void dmd_dma_handler() {
   detected_0_1_0_1 = false;
   detected_1_0_0_0 = false;
 
-  // Required because of Data East 128x16 split panel rendering
-  uint16_t splitpanel = 0;
-
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
