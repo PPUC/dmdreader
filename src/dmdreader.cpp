@@ -617,8 +617,8 @@ void dmd_dma_handler() {
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
                   // 1, 2, 2, 3, 3, 4, ...
-      if (dmd_type == DMD_DE_X16) {
-        uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
+      if (dmd_type != DMD_DE_X16) {
+        uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
           framebuf[out] = (uint32_t)v16 << 16;
@@ -627,7 +627,7 @@ void dmd_dma_handler() {
           framebuf[out] |= v16;
         }
       } else {
-        uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
+        uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
           framebuf[out] = (uint32_t)v16 << 16;
@@ -1056,7 +1056,7 @@ bool dmdreader_init(bool return_on_no_detection) {
   source_dwordsperframe = source_dwordsperplane *
                           (source_planesperframe - source_planehistoryperframe);
   source_bytesperframe = source_bytesperplane * source_planesperframe;
-  source_dwordsperline = source_width * source_bitsperpixel / 32;
+  source_dwordsperline = source_width * target_bitsperpixel / 32;
 
   if (!planebuf1) {
     size_t plane_bytes = source_bytesperplane * source_planesperframe;
