@@ -82,8 +82,8 @@ uint16_t source_planehistoryperframe;
 uint16_t source_dwordsperframe;
 uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
-uint16_t source_dwordsperline;
 uint16_t source_mergeplanes;
+uint16_t dwordsperline;
 uint16_t offset[MAX_PLANESPERFRAME];
 
 static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
@@ -528,6 +528,9 @@ void dmd_dma_handler() {
   detected_0_1_0_1 = false;
   detected_1_0_0_0 = false;
 
+  // Used for Data East 128x16 to correctly align 64x16 + 64x16
+  int16_t diff = 0; 
+
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
@@ -628,12 +631,21 @@ void dmd_dma_handler() {
         }
       } else {
         uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
+        if (px % 8 == 0 && out != 0) {
+          diff += dwordsperline;
+        }
+        // When we have processed half of the pixels in an entire frame, 
+        // turn the diff into a -, it will start at the second half top again.
+        // Will trigger when px gets to half of the pixels in a plane.
+        if (px == (source_dwordsperplane / 2)) {
+          diff *= -1;
+        }
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
-          framebuf[out] = (uint32_t)v16 << 16;
+          framebuf[out + diff] = (uint32_t)v16 << 16;
         } else {
           // Write second 8 pixel in lower 16 Bit.
-          framebuf[out] |= v16;
+          framebuf[out + diff] |= v16;
         }
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
@@ -648,51 +660,35 @@ void dmd_dma_handler() {
 
   // The code below doesn't work if we reduced the bit depth above. But at the
   // moment there's no system with oversampling and bit depth reduction.
-  if ((source_bitsperpixel == target_bitsperpixel) || dmd_type == DMD_DE_X16) {
+  if (source_bitsperpixel == target_bitsperpixel) {
     // deal with whitestar line oversampling directly within framebuf
-    if ((source_lineoversampling == LINEOVERSAMPLING_2X) && dmd_type != DMD_DE_X16) {
+    if (source_lineoversampling == LINEOVERSAMPLING_2X) {
       uint16_t i = 0;
       uint32_t *dst, *src1, *src2;
       dst = src1 = framebuf;
-      src2 = src1 + source_dwordsperline;
+      src2 = src1 + dwordsperline;
       uint32_t v;
 
       for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < source_dwordsperline; w++) {
+        for (int w = 0; w < dwordsperline; w++) {
           v = src1[w] * 2 + src2[w];
           dst[w] = v;
         }
-        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
-        src2 += source_dwordsperline * 2;
-        dst += source_dwordsperline;  // destination skips only one line
-      }
-    } else if (dmd_type == DMD_DE_X16) {
-      uint16_t i = 0;
-      uint32_t *dst, *src1, *src2;
-      dst = src1 = framebuf;
-      src2 = src1 + source_dwordsperline;
-      uint32_t v;
-
-      for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < source_dwordsperline; w++) {
-          v = src1[w] * 2 + src2[w];
-          dst[w] = v;
-        }
-        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
-        src2 += source_dwordsperline * 2;
-        dst += source_dwordsperline;  // destination skips only one line
+        src1 += dwordsperline * 2;  // source skips 2 lines forward
+        src2 += dwordsperline * 2;
+        dst += dwordsperline;  // destination skips only one line
       }
     } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
       uint16_t i = 0;
       uint32_t *dst, *src1, *src2, *src3, *src4;
       dst = src1 = framebuf;
-      src2 = src1 + source_dwordsperline;
-      src3 = src2 + source_dwordsperline;
-      src4 = src3 + source_dwordsperline;
+      src2 = src1 + dwordsperline;
+      src3 = src2 + dwordsperline;
+      src4 = src3 + dwordsperline;
       uint32_t v;
 
       for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < source_dwordsperline; w++) {
+        for (int w = 0; w < dwordsperline; w++) {
           switch (dmd_type) {
             case DMD_SAM:
               // On SAM line order is really messed up :-(
@@ -707,11 +703,11 @@ void dmd_dma_handler() {
           }
           dst[w] = v;
         }
-        src1 += source_dwordsperline * 4;  // source skips 4 lines forward
-        src2 += source_dwordsperline * 4;
-        src3 += source_dwordsperline * 4;
-        src4 += source_dwordsperline * 4;
-        dst += source_dwordsperline;  // destination skips only one line
+        src1 += dwordsperline * 4;  // source skips 4 lines forward
+        src2 += dwordsperline * 4;
+        src3 += dwordsperline * 4;
+        src4 += dwordsperline * 4;
+        dst += dwordsperline;  // destination skips only one line
       }
     }
   }
@@ -1056,7 +1052,7 @@ bool dmdreader_init(bool return_on_no_detection) {
   source_dwordsperframe = source_dwordsperplane *
                           (source_planesperframe - source_planehistoryperframe);
   source_bytesperframe = source_bytesperplane * source_planesperframe;
-  source_dwordsperline = source_width * target_bitsperpixel / 32;
+  dwordsperline = source_width * target_bitsperpixel / 32;
 
   if (!planebuf1) {
     size_t plane_bytes = source_bytesperplane * source_planesperframe;
