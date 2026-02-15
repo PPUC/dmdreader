@@ -858,21 +858,20 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_DE_X16: {
       uint input_pins[] = {DE, RDATA};
-      gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // Needs to be inverted
-      // because it triggers on the falling edge in the original signal
       dmdreader_programs_init(&dmd_reader_de_x16_program,
                               dmd_reader_de_x16_program_get_default_config,
                               &dmd_framedetect_de_x16_program,
                               dmd_framedetect_de_x16_program_get_default_config,
                               input_pins, 2, RDATA, SDATA_X16);
       gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
+      // since it reads data on the falling edge in the original signal
 
       source_width = 128;
       source_height = 16;
-      source_bitsperpixel = 4;  // Data East and Sega are 2bpp
-      target_bitsperpixel = 2;
+      source_bitsperpixel = 4;  // recorded as 4bpp in the pio
+      target_bitsperpixel = 2; // max pixvalues are 0, 1, 2, 3
       // in DE-Sega, there's only one plane,
-      // containg one LSB row followed by one MSB row and so on
+      // containg one MSB row followed by one LSB row and so on
       source_planesperframe = 1;
       source_planehistoryperframe = 0;
       // in DE-Sega each line is sent twice
