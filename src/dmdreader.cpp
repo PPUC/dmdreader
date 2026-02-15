@@ -616,7 +616,7 @@ void dmd_dma_handler() {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
-                  // 1, 2, 2, 3, 3, 4, ...
+                  // 1, 2, 2, 3, 3, 4, 4 ...
       if (dmd_type != DMD_DE_X16) {
         uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
         if ((px & 1) == 0) {
