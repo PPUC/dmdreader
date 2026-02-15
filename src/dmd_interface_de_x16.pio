@@ -29,8 +29,8 @@ no_msb_padding:
     set x, 31                   
 lsb_only_loop:
     ; The fake row consists out of zeroes only, now we create a unique 4 bit value which is later processed
-    ; and turned into a 2bpp pixel. It's either fully lit up (pixval 3) or off (pixval 0)
-    ; possible values here are: 0000, 0010 and 1000 per px
+    ; and turned into a 2bpp value. It's either fully lit up (pixval 3) or off (pixval 0)
+    ; possible values here are: pixval 0 -> 0000 and pixval 3 -> 0010 or 1000 
     wait 1 gpio DOTCLK            ; rising edge
     in null 2                     ; 00 padding for 4bpp
     in pins 3                     ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
