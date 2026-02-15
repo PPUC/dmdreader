@@ -412,15 +412,9 @@ static constexpr uint8_t map_nibble_DE_X16(uint8_t p) {
 }
 
 static constexpr uint8_t make_lut_entry(uint16_t b) {
-  if(dmd_type == DMD_DE_X16) {
-    uint8_t lo = map_nibble_DE_X16(uint8_t(b & 0x0F));
-    uint8_t hi = map_nibble_DE_X16(uint8_t((b >> 4) & 0x0F));
-    return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
-  } else {
-    uint8_t lo = map_nibble(uint8_t(b & 0x0F));
-    uint8_t hi = map_nibble(uint8_t((b >> 4) & 0x0F));
-    return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
-  }
+  uint8_t lo = map_nibble(uint8_t(b & 0x0F));
+  uint8_t hi = map_nibble(uint8_t((b >> 4) & 0x0F));
+  return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
 }
 
 static constexpr std::array<uint8_t, 256> kByteLut = [] {
