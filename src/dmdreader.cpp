@@ -650,7 +650,23 @@ void dmd_dma_handler() {
   // moment there's no system with oversampling and bit depth reduction.
   if ((source_bitsperpixel == target_bitsperpixel) || dmd_type == DMD_DE_X16) {
     // deal with whitestar line oversampling directly within framebuf
-    if (source_lineoversampling == LINEOVERSAMPLING_2X) {
+    if ((source_lineoversampling == LINEOVERSAMPLING_2X) && dmd_type != DMD_DE_X16) {
+      uint16_t i = 0;
+      uint32_t *dst, *src1, *src2;
+      dst = src1 = framebuf;
+      src2 = src1 + source_dwordsperline;
+      uint32_t v;
+
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          v = src1[w] * 2 + src2[w];
+          dst[w] = v;
+        }
+        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
+        src2 += source_dwordsperline * 2;
+        dst += source_dwordsperline;  // destination skips only one line
+      }
+    } else if (dmd_type == DMD_DE_X16) {
       uint16_t i = 0;
       uint32_t *dst, *src1, *src2;
       dst = src1 = framebuf;
@@ -864,7 +880,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_framedetect_de_x16_program_get_default_config,
                               input_pins, 2, RDATA, SDATA_X16);
       gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
-      // since it reads data on the falling edge in the original signal
+      // since we need it to sample data on the rising edge
 
       source_width = 128;
       source_height = 16;
@@ -874,7 +890,6 @@ bool dmdreader_init(bool return_on_no_detection) {
       // containg one MSB row followed by one LSB row and so on
       source_planesperframe = 1;
       source_planehistoryperframe = 0;
-      // in DE-Sega each line is sent twice
       source_lineoversampling = LINEOVERSAMPLING_2X;
       source_mergeplanes = MERGEPLANES_NONE;
       break;
