@@ -10,34 +10,34 @@
 
 .program dmd_reader_de_x16
 
-    set x, 1           ; load 1 bit (0b1)
-    in x, 1            ; shift in 1 bit, isr is 1 now
-    in null, 13        ; shift in 13 zeroes, making isr 8192
-    mov osr, isr       ; copy 8192 to osr
-    mov isr, null      ; reset isr because it's still filled with 8192
     wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
 
 .wrap_target
 
-    mov x, osr         ; copy 8192 to x and start
+start:
+    mov x, osr         ; copy 8192 to x
 
 msb_check:
-    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have a valid LSB + MSB row
-    jmp x-- msb_check             ; loop for ~65.5 µs (based on 125MHz)
+    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have a valid MSB + LSB row
+    jmp x-- msb_check             ; loop for ~65.5 µs (based on 125MHz clkdiv)
 
-    ; Padding for no MSB row case
-    set x, 5                      ; load 5 (0b101) 
-    set y, 31                     ; add padding 32 times
-no_msb_loop:
-    ; For the no MSB case we create a fake MSB row with custom padding, which is always 0101 per pixel. 
-    ; Because it is MSB, it will later be processed and multiplied by 2, always resulting in 1010 (0101 * 2)
-    ; This can then be summed up with the LSB row in a LUT to create either an ON state (pixval 3) or off state (pixval 0)
-    in null 1                     ; padding 0
-    in x, 3                       ; padding 101
-    in null 1                     ; padding 0
-    in x, 3                       ; padding 101
-    jmp y-- no_msb_loop
-    jmp reload_x_msb_lsb          ; we only need to iterate over one row now before going back to msb_check
+    set x, 7                      ; loop 8 times
+no_msb_padding:
+    in null 32                    ; 256 in nulls of padding, simulating a 64 pixel 4bpp row
+    jmp x-- no_msb_padding
+
+    set x, 31                   
+lsb_only_loop:
+    ; The fake row consists out of zeroes only, now we create a unique 4 bit value which is later processed
+    ; and turned into a 2bpp pixel. It's either fully lit up (pixval 3) or off (pixval 0)
+    ; possible values here are: 0000, 0010 and 1000 per px
+    wait 1 gpio DOTCLK            ; rising edge
+    in null 2                     ; 00 padding for 4bpp
+    in pins 3                     ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
+    in null 3                     ; 000 padding for 4bpp 
+    wait 0 gpio DOTCLK            ; falling edge
+    jmp x-- lsb_only_loop
+    jmp start
 
 reload_y_msb_lsb:
     set y, 1
@@ -47,7 +47,8 @@ dotloop:
     ; Because of PIO limitations, we read in 4 bit: px 1 as 000v and px 2 as 0v00 (where v is either 0 or 1 depending on the SDATA state)
     ; The first bit of px 2 always contains a padding 0, thanks to GPIO 1 because it's pulled low permanently.
     ; in pins 3 = (px 1 -> v)0(v <- px 2). Here the zero in the middle is the padding bit (GPIO 1), and the 1s on either side are the actual pixel values.
-    ; This lets us create a unique combination which can now be processed by a LUT to create the correct pixel values for all X16 type games
+    ; This lets us create a unique combination which is either lit up (pixval 1) or off (pixval 0)
+    ; possible values here are 0000, 0001 and 0100
     wait 1 gpio DOTCLK               ; rising edge
     in null 3                        ; 000 padding for 4bpp 
     in pins 3                        ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
