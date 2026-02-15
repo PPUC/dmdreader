@@ -404,10 +404,23 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
 
 static constexpr uint8_t map_nibble(uint8_t p) { return (p > 3) ? 3 : p; }
 
+static constexpr uint8_t map_nibble_DE_X16(uint8_t p) { 
+  return (p == 4) ? 1 : // 0100
+         (p == 2) ? 3 : // 0010
+         (p == 8) ? 3 : // 1000
+         p; // 0000 and 0001
+}
+
 static constexpr uint8_t make_lut_entry(uint16_t b) {
-  uint8_t lo = map_nibble(uint8_t(b & 0x0F));
-  uint8_t hi = map_nibble(uint8_t((b >> 4) & 0x0F));
-  return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
+  if(dmd_type == DMD_DE_X16) {
+    uint8_t lo = map_nibble_DE_X16(uint8_t(b & 0x0F));
+    uint8_t hi = map_nibble_DE_X16(uint8_t((b >> 4) & 0x0F));
+    return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
+  } else {
+    uint8_t lo = map_nibble(uint8_t(b & 0x0F));
+    uint8_t hi = map_nibble(uint8_t((b >> 4) & 0x0F));
+    return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
+  }
 }
 
 static constexpr std::array<uint8_t, 256> kByteLut = [] {
@@ -575,8 +588,7 @@ void dmd_dma_handler() {
 
     if (source_bitsperpixel == target_bitsperpixel || loopback) {
       framebuf[px] = pixval;
-    } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel &&
-                dmd_type != DMD_DE_X16) {
+    } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
       uint32_t out = px >> 1;  // Shifting leeds to that index steps: 0, 0, 1,
                                // 1, 2, 2, 3, 3, 4, ...
@@ -589,20 +601,6 @@ void dmd_dma_handler() {
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
       // There's no syetem using this conversion yet, but let's have it ready
-    } else if (dmd_type == DMD_DE_X16) {
-      // Data East 128x16 renders one half and then the second half
-      // First the left 64x16 panel, then the right 64x16 panel
-      // Data is 4bpp, with one MSB + LSB row -> 16px for 64x16
-      // 32px would be one entire row for 128x16
-      // Every 16px we need to jump back to the start and a row below for the
-      // first 
-      if ((px % 32) < 16) {
-        // first 16 iterations of each 32
-        framebuf[px + 16] = pixval;
-      } else {
-        // next 16 iterations of each 32
-        framebuf[px + 32] = pixval;
-      }
     }
   }
 
