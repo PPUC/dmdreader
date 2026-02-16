@@ -629,27 +629,28 @@ void dmd_dma_handler() {
           // Write second 8 pixel in lower 16 Bit.
           framebuf[out] |= v16;
         }
-      } else {
+      } else { // Data East 128x16
         uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
-        // increase diff everytime we cross one MSB + LSB row (64x16)
-        // px is based on 4bpp, diff is 2bpp (we are converting)
-        // px = 16 (4bpp dwordsperplane = 512 / 16 -> 32 / 2 = 16)
-        // diff = 8 (2bpp dwordsperplane = 256 / 16 -> 16 / 2 = 8)
-        if (px % 16 == 0 && px != 0) {
-          diff += 8;
-        }
-        // When we have processed half of the pixels in an entire plane, 
-        // turn the diff into a -, it will start at the top again and
-        // works its way back to 0. This way we prepare it for oversampling 2x
-        if (px == (source_dwordsperplane / 2)) {
-          diff *= -1;
-        }
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
           framebuf[out + diff] = (uint32_t)v16 << 16;
         } else {
           // Write second 8 pixel in lower 16 Bit.
           framebuf[out + diff] |= v16;
+        }
+        // increase diff everytime we cross one MSB + LSB row (64x16)
+        // px is based on 4bpp, diff is 2bpp (we are converting)
+        // px = 16 (4bpp dwordsperplane (128x16) = 512 / 16 -> 32 / 2 = 16)
+        // diff = 8 (2bpp dwordsperplane (128x16) = 256 / 16 -> 16 / 2 = 8)
+        if (px % 16 == 15) {
+          diff += 8;
+        }
+        // When we have processed half of the pixels in an entire plane, 
+        // turn the diff into a - value, it will start at the top again and
+        // work its way back to 0. This way we prepare framebuf for oversampling
+        if (px == ((source_dwordsperplane / 2) -1)) {
+          diff -= 8; // we immediately decrement once to select the correct row
+          diff *= -1;
         }
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
