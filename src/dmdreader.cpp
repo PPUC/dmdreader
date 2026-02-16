@@ -631,12 +631,16 @@ void dmd_dma_handler() {
         }
       } else {
         uint16_t v16 = convert_4bit_to_2bit_de_x16(pixval);
-        if (px % 8 == 0 && out != 0) {
-          diff += dwordsperline;
+        // increase diff everytime we cross one MSB + LSB row (64x16)
+        // px is based on 4bpp, diff is 2bpp (we are converting)
+        // px = 16 (4bpp dwordsperplane = 512 / 16 -> 32 / 2 = 16)
+        // diff = 8 (2bpp dwordsperplane = 256 / 16 -> 16 / 2 = 8)
+        if (px % 16 == 0 && px != 0) {
+          diff += 8;
         }
-        // When we have processed half of the pixels in an entire frame, 
-        // turn the diff into a -, it will start at the second half top again.
-        // Will trigger when px gets to half of the pixels in a plane.
+        // When we have processed half of the pixels in an entire plane, 
+        // turn the diff into a -, it will start at the top again and
+        // works its way back to 0.
         if (px == (source_dwordsperplane / 2)) {
           diff *= -1;
         }
