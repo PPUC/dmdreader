@@ -640,7 +640,7 @@ void dmd_dma_handler() {
         }
         // When we have processed half of the pixels in an entire plane, 
         // turn the diff into a -, it will start at the top again and
-        // works its way back to 0.
+        // works its way back to 0. This way we prepare it for oversampling 2x
         if (px == (source_dwordsperplane / 2)) {
           diff *= -1;
         }
