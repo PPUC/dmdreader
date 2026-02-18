@@ -322,7 +322,7 @@ DmdType detect_dmd() {
   // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
   else if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) &&
            (de < 4000) && (rdata > 115) && (rdata < 130)) {
-    return DMD_WPC;
+    return DMD_DE_X16;
 
     // Data East X16: DOTCLK: 121000 or 60544 | DE: 1955 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (de > 1900) &&
