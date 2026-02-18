@@ -83,7 +83,7 @@ uint16_t source_dwordsperframe;
 uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
 uint16_t source_mergeplanes;
-uint16_t dwordsperline;
+uint16_t source_dwordsperline;
 uint16_t offset[MAX_PLANESPERFRAME];
 
 static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
@@ -620,7 +620,7 @@ void dmd_dma_handler() {
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
                   // 1, 2, 2, 3, 3, 4, 4 ...
-      if (dmd_type == DMD_DE_X16) {
+      if (dmd_type != DMD_DE_X16) {
         uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
@@ -671,29 +671,29 @@ void dmd_dma_handler() {
       uint16_t i = 0;
       uint32_t *dst, *src1, *src2;
       dst = src1 = framebuf;
-      src2 = src1 + dwordsperline;
+      src2 = src1 + source_dwordsperline;
       uint32_t v;
 
       for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < dwordsperline; w++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
           v = src1[w] * 2 + src2[w];
           dst[w] = v;
         }
-        src1 += dwordsperline * 2;  // source skips 2 lines forward
-        src2 += dwordsperline * 2;
-        dst += dwordsperline;  // destination skips only one line
+        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
+        src2 += source_dwordsperline * 2;
+        dst += source_dwordsperline;  // destination skips only one line
       }
     } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
       uint16_t i = 0;
       uint32_t *dst, *src1, *src2, *src3, *src4;
       dst = src1 = framebuf;
-      src2 = src1 + dwordsperline;
-      src3 = src2 + dwordsperline;
-      src4 = src3 + dwordsperline;
+      src2 = src1 + source_dwordsperline;
+      src3 = src2 + source_dwordsperline;
+      src4 = src3 + source_dwordsperline;
       uint32_t v;
 
       for (int l = 0; l < source_height; l++) {
-        for (int w = 0; w < dwordsperline; w++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
           switch (dmd_type) {
             case DMD_SAM:
               // On SAM line order is really messed up :-(
@@ -708,11 +708,11 @@ void dmd_dma_handler() {
           }
           dst[w] = v;
         }
-        src1 += dwordsperline * 4;  // source skips 4 lines forward
-        src2 += dwordsperline * 4;
-        src3 += dwordsperline * 4;
-        src4 += dwordsperline * 4;
-        dst += dwordsperline;  // destination skips only one line
+        src1 += source_dwordsperline * 4;  // source skips 4 lines forward
+        src2 += source_dwordsperline * 4;
+        src3 += source_dwordsperline * 4;
+        src4 += source_dwordsperline * 4;
+        dst += source_dwordsperline;  // destination skips only one line
       }
     }
   }
@@ -1057,7 +1057,7 @@ bool dmdreader_init(bool return_on_no_detection) {
   source_dwordsperframe = source_dwordsperplane *
                           (source_planesperframe - source_planehistoryperframe);
   source_bytesperframe = source_bytesperplane * source_planesperframe;
-  dwordsperline = source_width * target_bitsperpixel / 32;
+  source_dwordsperline = source_width * target_bitsperpixel / 32;
 
   if (!planebuf1) {
     size_t plane_bytes = source_bytesperplane * source_planesperframe;
