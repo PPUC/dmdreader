@@ -322,7 +322,7 @@ DmdType detect_dmd() {
   // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
   else if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) &&
            (de < 4000) && (rdata > 115) && (rdata < 130)) {
-    return DMD_WPC;
+    return DMD_DE_X16;
 
     // Data East X16: DOTCLK: 121000 or 60544 | DE: 1955 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (de > 1900) &&
@@ -620,7 +620,7 @@ void dmd_dma_handler() {
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
                   // 1, 2, 2, 3, 3, 4, 4 ...
-      if (dmd_type != DMD_DE_X16) {
+      if (dmd_type == DMD_DE_X16) {
         uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
@@ -665,7 +665,7 @@ void dmd_dma_handler() {
 
   // The code below doesn't work if we reduced the bit depth above. But at the
   // moment there's no system with oversampling and bit depth reduction.
-  if (source_bitsperpixel == target_bitsperpixel || dmd_type == DMD_DE_X16) {
+  if (source_bitsperpixel == target_bitsperpixel) {
     // deal with whitestar line oversampling directly within framebuf
     if (source_lineoversampling == LINEOVERSAMPLING_2X) {
       uint16_t i = 0;
