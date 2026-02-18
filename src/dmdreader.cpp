@@ -665,7 +665,7 @@ void dmd_dma_handler() {
 
   // The code below doesn't work if we reduced the bit depth above. But at the
   // moment there's no system with oversampling and bit depth reduction.
-  if (source_bitsperpixel == target_bitsperpixel) {
+  if (source_bitsperpixel == target_bitsperpixel || dmd_type == DMD_DE_X16) {
     // deal with whitestar line oversampling directly within framebuf
     if (source_lineoversampling == LINEOVERSAMPLING_2X) {
       uint16_t i = 0;
