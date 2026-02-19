@@ -21,11 +21,23 @@
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 
+// Derive divider from current clock so PIO runs at ~125 MHz reference
+uint32_t sys_hz = clock_get_hz(clk_sys);    // e.g. 125/200/266 MHz
+float target_hz = 125000000.0f;             // PIO code designed for 125 MHz
+float divider = (float)sys_hz / target_hz;  // scales automatically
+
 // Init the DMD reader (dots) PIO program, common for all DMD types.
 void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uint in_base_pin) {
  
-  if(in_base_pin == SDATA_X16) {
-    // We need to set DOTCLK as jump pin + additional SDATA line as base in pin
+  if(in_base_pin != SDATA_X16) {
+    sm_config_set_in_pins(&c, in_base_pin);
+
+    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
+    // Not possible with data east x16
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+  } else {
+    // Data East 128x16
+    // We need to set DOTCLK as jump pin + the extra SDATA line as base in pin
     sm_config_set_jmp_pin(&c, DOTCLK);
     sm_config_set_in_pins(&c, in_base_pin);
 
@@ -34,11 +46,6 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
 
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16_PADDING, 1, false);
-  } else {
-    sm_config_set_in_pins(&c, in_base_pin);
-
-    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
   }
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, SDATA);
@@ -56,14 +63,11 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
                          32      // autopush threshold
   );
 
+  // Make sure we run this sm with a 125MHz clk
+  sm_config_set_clkdiv(&c, divider);
+
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
-
-  if (in_base_pin == SDATA_X16) {
-    sm_config_set_out_shift(&c, true,  true, 32); // auto pull 32 directly
-    pio_sm_put(pio, sm, 8192); // load 8192 directly to TX fifo
-    pio_sm_exec(pio, sm, pio_encode_out(pio_osr, 32)); // write 32 bits to osr
-  }
 }
 
 // Init the framedetect PIO program.
@@ -87,10 +91,7 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                          false,  // no autopush
                          0);
 
-  // Derive divider from current clock so PIO runs at ~125 MHz reference
-  uint32_t sys_hz = clock_get_hz(clk_sys);    // e.g. 125/200/266 MHz
-  float target_hz = 125000000.0f;             // PIO code designed for 125 MHz
-  float divider = (float)sys_hz / target_hz;  // scales automatically
+  // Make sure we run this sm with a 125MHz clk
   sm_config_set_clkdiv(&c, divider);
 
   // Load our configuration, do not yet start the program

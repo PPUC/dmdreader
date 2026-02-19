@@ -919,7 +919,12 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_framedetect_de_x16_program_get_default_config,
                               input_pins, 2, RDATA, SDATA_X16);
       gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
-      // since we need it to sample data on the rising edge
+      // we need it to sample data on the rising edge
+
+      // load 8192 directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 8192);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 16;
