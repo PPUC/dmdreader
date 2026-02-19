@@ -36,6 +36,6 @@ dotloop:
 .wrap_target
     wait 0 gpio RDATA
     wait 1 gpio RDATA
-    wait 1 gpio COLLAT
+    wait 0 gpio RDATA
     irq FRAME_START_IRQ
 .wrap

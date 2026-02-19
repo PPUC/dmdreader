@@ -672,7 +672,7 @@ void dmd_dma_handler() {
               v = upscale_4bit_0_4_to_0_15(src4[w] + src3[w] + src2[w] + src1[w]);
               break;
             case DMD_HOMEPIN:
-              v = src4[w] * 9 + src3[w] * 3 + src2[w] * 2 + src1[w];
+              v = src4[w] + src3[w] * 8 + src2[w] * 4 + src1[w] * 2;
               break;
             default:
               v = src4[w] * 8 + src3[w] * 4 + src2[w] * 2 + src1[w];
@@ -949,11 +949,11 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_HOMEPIN: {
-      uint input_pins[] = {RDATA, COLLAT};
+      uint input_pins[] = {RDATA};
       dmdreader_programs_init(
           &dmd_reader_homepin_program, dmd_reader_homepin_program_get_default_config,
           &dmd_framedetect_homepin_program,
-          dmd_framedetect_homepin_program_get_default_config, input_pins, 2, 0);
+          dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0);
 
       source_width = 128;
       source_height = 32;
