@@ -1,0 +1,76 @@
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
+.define SDATA_X16_PADDING 1
+.define SDATA_X16 0
+.define FRAME_START_IRQ 5
+
+.program dmd_reader_de_x16_v1
+
+    wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
+
+.wrap_target
+
+start:
+    mov x, osr         ; copy 8192 to x
+
+msb_check:
+    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have a valid MSB + LSB row
+    jmp x-- msb_check             ; loop for ~65.5 µs (based on 125MHz clkdiv)
+
+    set x, 7                      ; loop 8 times
+no_msb_padding:
+    in null 32                    ; 256 in nulls of padding, simulating a 64 pixel MSB 4bpp row
+    jmp x-- no_msb_padding
+
+    set x, 31                   
+lsb_only_loop:
+    ; The fake row consists out of zeroes only, now we create a unique 4 bit value which is later processed
+    ; and turned into a 2bpp value. It's either fully lit up (pixval 3) or off (pixval 0)
+    ; possible values here are: pixval 0 -> 0000 and pixval 3 -> 0010 or 1000 
+    wait 1 gpio DOTCLK            ; rising edge
+    in null 2                     ; 00 padding for 4bpp
+    in pins 3                     ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
+    in null 3                     ; 000 padding for 4bpp 
+    wait 0 gpio DOTCLK            ; falling edge
+    jmp x-- lsb_only_loop
+    jmp start
+
+reload_y_msb_lsb:
+    set y, 1
+reload_x_msb_lsb:
+    set x, 31
+dotloop:
+    ; Because of PIO limitations, we read in 4 bit: px 1 as 000v and px 2 as 0v00 (where v is either 0 or 1 depending on the SDATA state)
+    ; The first bit of px 2 always contains a padding 0, thanks to GPIO 1 because it's pulled low permanently.
+    ; in pins 3 = (px 1 -> v)0(v <- px 2). Here the zero in the middle is the padding bit (GPIO 1), and the 1s on either side are the actual pixel values.
+    ; This lets us create a unique combination which is either lit up (pixval 1) or off (pixval 0)
+    ; possible values here are 0000, 0001 and 0100
+    wait 1 gpio DOTCLK               ; rising edge
+    in null 3                        ; 000 padding for 4bpp 
+    in pins 3                        ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
+    in null 2                        ; 00 padding for 4bpp
+    wait 0 gpio DOTCLK               ; falling edge
+    jmp x-- dotloop
+    jmp y-- reload_x_msb_lsb
+.wrap
+
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
+.program dmd_framedetect_de_x16_v1
+.wrap_target
+
+; Data East 128x16 frame detection
+; When DE goes low, check for the next rising edge of DE. If RDATA is high at that point we have found the start.
+
+detect_loop:
+    wait 0 gpio DE
+    wait 1 gpio DE
+    jmp pin, frame_start             ; Check if RDATA is high, otherwise back to beginning
+    jmp detect_loop
+
+frame_start:
+    irq FRAME_START_IRQ
+.wrap

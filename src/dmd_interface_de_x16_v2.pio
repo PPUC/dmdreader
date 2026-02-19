@@ -8,7 +8,7 @@
 .define SDATA_X16 0
 .define FRAME_START_IRQ 5
 
-.program dmd_reader_de_x16
+.program dmd_reader_de_x16_v2
 
     wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
 
@@ -59,7 +59,7 @@ dotloop:
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
-.program dmd_framedetect_de_x16
+.program dmd_framedetect_de_x16_v2
 .wrap_target
 
 ; Data East 128x16 frame detection

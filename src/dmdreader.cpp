@@ -917,12 +917,33 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
-    case DMD_DE_X16: {
+    case DMD_DE_X16_V1: {
       uint input_pins[] = {DE, RDATA};
-      dmdreader_programs_init(&dmd_reader_de_x16_program,
-                              dmd_reader_de_x16_program_get_default_config,
-                              &dmd_framedetect_de_x16_program,
-                              dmd_framedetect_de_x16_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_de_x16_v1_program,
+                              dmd_reader_de_x16_v1_program_get_default_config,
+                              &dmd_framedetect_de_x16_v1_program,
+                              dmd_framedetect_de_x16_v1_program_get_default_config,
+                              input_pins, 2, RDATA, SDATA_X16);
+
+      source_width = 128;
+      source_height = 16;
+      source_bitsperpixel = 4;  // recorded as 4bpp in the pio
+      target_bitsperpixel = 2; // max pixvalues are 0, 1, 2, 3
+      // in DE-Sega, there's only one plane,
+      // containg one MSB row followed by one LSB row and so on
+      source_planesperframe = 1;
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
+    case DMD_DE_X16_V2: {
+      uint input_pins[] = {DE, RDATA};
+      dmdreader_programs_init(&dmd_reader_de_x16_v2_program,
+                              dmd_reader_de_x16_v2_program_get_default_config,
+                              &dmd_framedetect_de_x16_v2_program,
+                              dmd_framedetect_de_x16_v2_program_get_default_config,
                               input_pins, 2, RDATA, SDATA_X16);
       gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
       // we need it to sample data on the rising edge
