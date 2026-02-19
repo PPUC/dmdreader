@@ -19,6 +19,7 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 * Capcom -> 128x32 & 256x64
 * Gottlieb/Premier -> 128x32
 * Alvin G. & Co -> 128x32
+* Homepin -> 128x32
 
 ## Reading data
 

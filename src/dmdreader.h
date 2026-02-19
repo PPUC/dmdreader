@@ -28,6 +28,7 @@ enum DmdType : uint8_t {
   DMD_GOTTLIEB,
   DMD_ALVING,
   DMD_ISLAND,
+  DMD_HOMEPIN,
   // CAPCOM need to be the last entries:
   DMD_CAPCOM,
   DMD_CAPCOM_HD,

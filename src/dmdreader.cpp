@@ -364,6 +364,11 @@ DmdType detect_dmd() {
              (de < 18500) && (rdata > 540) && (rdata < 590)) {
     return DMD_ISLAND;
 
+    // Homepin -> DOTCLK: 837400 | DE: 6540 | RDATA: 50
+  } else if ((dotclk > 800000) && (dotclk < 870000) && (de > 6450) &&
+             (de < 6650) && (rdata > 45) && (rdata < 55)) {
+    return DMD_HOMEPIN;
+
     // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
              (de < 16500) && (rdata > 490) && (rdata < 530)) {
@@ -741,6 +746,7 @@ void dmd_dma_handler() {
             case DMD_ALVING:
               v = upscale_4bit_0_4_to_0_15(src4[w] + src3[w] + src2[w] + src1[w]);
               break;
+            case DMD_HOMEPIN:
             default:
               v = src4[w] * 8 + src3[w] * 4 + src2[w] * 2 + src1[w];
           }
@@ -1040,6 +1046,25 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }
+
+    case DMD_HOMEPIN: {
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(
+          &dmd_reader_homepin_program, dmd_reader_homepin_program_get_default_config,
+          &dmd_framedetect_homepin_program,
+          dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
+      source_planesperframe = 1; 
+      source_planehistoryperframe = 0;
+      // 4x line oversampling for Homepin, similar to SAM
+      source_lineoversampling = LINEOVERSAMPLING_4X;
+      source_mergeplanes = MERGEPLANES_NONE;
       break;
     }
 
