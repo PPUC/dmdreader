@@ -672,8 +672,6 @@ void dmd_dma_handler() {
               v = upscale_4bit_0_4_to_0_15(src4[w] + src3[w] + src2[w] + src1[w]);
               break;
             case DMD_HOMEPIN:
-              v = src4[w] * 8 + src3[w] * 4 + src2[w] * 2 + src1[w];
-              break;
             default:
               v = src4[w] * 8 + src3[w] * 4 + src2[w] * 2 + src1[w];
           }
