@@ -1054,7 +1054,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       dmdreader_programs_init(
           &dmd_reader_homepin_program, dmd_reader_homepin_program_get_default_config,
           &dmd_framedetect_homepin_program,
-          dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0);
+          dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
