@@ -302,81 +302,86 @@ uint32_t count_clock(uint pin) {
 
 DmdType detect_dmd() {
   uint32_t dotclk = count_clock(DOTCLK);
-  uint32_t de = count_clock(DE);
+  uint32_t rclk = count_clock(RCLK);
   uint32_t rdata = count_clock(RDATA);
 
   // By checking DOTCLK, DE and RDATA we can identify system types
   // All values are based on a 500ms sample of data, multiplied by 2
 
-  // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
-  if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) && (de < 8300) &&
+  // SPIKE1 -> DOTCLK: 1040000 | RCLK: 8150 | RDATA: 255
+  if ((dotclk > 1015000) && (dotclk < 1065000) && (rclk > 8000) && (rclk < 8300) &&
       (rdata > 245) && (rdata < 265)) {
     return DMD_SPIKE1;
 
-    // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
-  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
-             (de < 8100) && (rdata > 55) && (rdata < 65)) {
+    // SAM -> DOTCLK: 1025000 | RCLK: 2000 | RDATA: 60
+  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (rclk > 1950) &&
+             (rclk < 2050) && (rdata > 55) && (rdata < 65)) {
     return DMD_SAM;
   }
 #ifndef ALPHADMD
-  // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
-  else if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) &&
-           (de < 4000) && (rdata > 115) && (rdata < 130)) {
-    return DMD_DE_X16;
+  // WPC: DOTCLK: 500000 | RCLK: 3900 | RDATA: 120
+  else if ((dotclk > 450000) && (dotclk < 550000) && (rclk > 3800) &&
+           (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
+    return DMD_WPC;
 
-    // Data East X16: DOTCLK: 121000 or 60544 | DE: 1955 | RDATA: 120
-  } else if ((dotclk > 55000) && (dotclk < 125000) && (de > 1900) &&
-             (de < 2000) && (rdata > 110) && (rdata < 120)) {
-    return DMD_DE_X16;
+    // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
+  } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
+             (rclk < 3930) && (rdata > 110) && (rdata < 120)) {
+    return DMD_DE_X16_V1;
 
-    // Data East X32: DOTCLK: 640000 | DE: 5000 | RDATA: 80
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
-             (de < 5070) && (rdata > 75) && (rdata < 85)) {
+    // Data East X16 V2: DOTCLK: 121000 or 60544 | RCLK: 3850 | RDATA: 120
+  } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3825) &&
+             (rclk < 3875) && (rdata > 110) && (rdata < 120)) {
+    return DMD_DE_X16_V2;
+
+    // Data East X32: DOTCLK: 640000 | RCLK: 2500 | RDATA: 80
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (rclk > 2450) &&
+             (rclk < 2550) && (rdata > 75) && (rdata < 85)) {
     return DMD_DESEGA;
 
-    // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
-             (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
+    // SEGA: DOTCLK: 640000 | RCLK: 2500 | RDATA: 2580
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (rclk > 2450) &&
+             (rclk < 2550) && (rdata > 2530) && (rdata < 2630)) {
     return DMD_DESEGA;
 
-    // SEGA HD: DOTCLK: 1836000 | DE: 14350 | RDATA: 75
-  } else if ((dotclk > 1750000) && (dotclk < 1900000) && (de > 14250) &&
-             (de < 14450) && (rdata > 70) && (rdata < 80)) {
+    // SEGA HD: DOTCLK: 1836000 | RCLK: 4785 | RDATA: 75
+  } else if ((dotclk > 1750000) && (dotclk < 1900000) && (rclk > 4700) &&
+             (rclk < 4850) && (rdata > 70) && (rdata < 80)) {
     return DMD_SEGA_HD;
 
-    // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
-  } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
-             (de < 5200) && (rdata > 75) && (rdata < 85)) {
+    // Whitestar -> DOTCLK: 657000 | RCLK: 2568 | RDATA: 80
+  } else if ((dotclk > 645000) && (dotclk < 669000) && (rclk > 2500) &&
+             (rclk < 2620) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
 
-    // Gottlieb -> DOTCLK: 1647000 | DE: 12930 | RDATA: 390
-  } else if ((dotclk > 1550000) && (dotclk < 1750000) && (de > 12700) &&
-             (de < 13100) && (rdata > 370) && (rdata < 410)) {
+    // Gottlieb -> DOTCLK: 1647000 | RCLK: 13160 | RDATA: 390
+  } else if ((dotclk > 1550000) && (dotclk < 1750000) && (rclk > 13000) &&
+             (rclk < 13300) && (rdata > 370) && (rdata < 410)) {
     return DMD_GOTTLIEB;
 
-    // Alvin G -> DOTCLK: 1192000 | DE: 9400 | RDATA: 73
-  } else if ((dotclk > 1150000) && (dotclk < 1250000) && (de > 9200) &&
-             (de < 9600) && (rdata > 65) && (rdata < 80)) {
+    // Alvin G -> DOTCLK: 1192000 | RCLK: 2340 | RDATA: 73
+  } else if ((dotclk > 1150000) && (dotclk < 1250000) && (rclk > 2300) &&
+             (rclk < 2380) && (rdata > 65) && (rdata < 80)) {
     return DMD_ALVING;
 
-    // Island/SPinball(?) -> DOTCLK: 2323000 | DE: 18150 | RDATA: 565
-  } else if ((dotclk > 2200000) && (dotclk < 2450000) && (de > 17650) &&
-             (de < 18500) && (rdata > 540) && (rdata < 590)) {
+    // Island/SPinball(?) -> DOTCLK: 2323000 | RCLK: 18100 | RDATA: 565
+  } else if ((dotclk > 2200000) && (dotclk < 2450000) && (rclk > 17700) &&
+             (rclk < 18500) && (rdata > 540) && (rdata < 590)) {
     return DMD_ISLAND;
 
-    // Homepin -> DOTCLK: 837400 | DE: 6540 | RDATA: 50
-  } else if ((dotclk > 800000) && (dotclk < 870000) && (de > 6450) &&
-             (de < 6650) && (rdata > 45) && (rdata < 55)) {
+    // Homepin -> DOTCLK: 837400 | RCLK: 1635 | RDATA: 50
+  } else if ((dotclk > 800000) && (dotclk < 870000) && (rclk > 1580) &&
+             (rclk < 1690) && (rdata > 45) && (rdata < 55)) {
     return DMD_HOMEPIN;
 
     // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
-  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
-             (de < 16500) && (rdata > 490) && (rdata < 530)) {
+  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
+             (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
 
     // Capcom HD -> DOTCLK: 4168000 | DE: 16280 | RDATA: 255
-  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (de > 15500) &&
-             (de < 16500) && (rdata > 240) && (rdata < 270)) {
+  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (rclk > 16000) &&
+             (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
   }
 #endif
@@ -664,7 +669,7 @@ void dmd_dma_handler() {
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
       uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
                   // 1, 2, 2, 3, 3, 4, 4 ...
-      if (dmd_type != DMD_DE_X16) {
+      if (dmd_type != DMD_DE_X16_V1 && dmd_type != DMD_DE_X16_V2) {
         uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
         if ((px & 1) == 0) {
           // Write first 8 pixel in upper 16 Bit.
