@@ -10,17 +10,14 @@
 
 .program dmd_reader_de_x16_v1
 
-    wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
-
 .wrap_target
 
+    set y, 31
+
+    irq clear FRAME_START_IRQ
+    wait irq FRAME_START_IRQ   
+
 start:
-    mov x, osr         ; copy 8192 to x
-
-msb_check:
-    jmp pin reload_y_msb_lsb      ; if DOTCLK is high, it means we will have a valid MSB + LSB row
-    jmp x-- msb_check             ; loop for ~65.5 µs (based on 125MHz clkdiv)
-
     set x, 7                      ; loop 8 times
 no_msb_padding:
     in null 32                    ; 256 in nulls of padding, simulating a 64 pixel MSB 4bpp row
@@ -37,25 +34,8 @@ lsb_only_loop:
     in null 3                     ; 000 padding for 4bpp 
     wait 0 gpio DOTCLK            ; falling edge
     jmp x-- lsb_only_loop
-    jmp start
+    jmp y-- start
 
-reload_y_msb_lsb:
-    set y, 1
-reload_x_msb_lsb:
-    set x, 31
-dotloop:
-    ; Because of PIO limitations, we read in 4 bit: px 1 as 000v and px 2 as 0v00 (where v is either 0 or 1 depending on the SDATA state)
-    ; The first bit of px 2 always contains a padding 0, thanks to GPIO 1 because it's pulled low permanently.
-    ; in pins 3 = (px 1 -> v)0(v <- px 2). Here the zero in the middle is the padding bit (GPIO 1), and the 1s on either side are the actual pixel values.
-    ; This lets us create a unique combination which is either lit up (pixval 1) or off (pixval 0)
-    ; possible values here are 0000, 0001 and 0100
-    wait 1 gpio DOTCLK               ; rising edge
-    in null 3                        ; 000 padding for 4bpp 
-    in pins 3                        ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
-    in null 2                        ; 00 padding for 4bpp
-    wait 0 gpio DOTCLK               ; falling edge
-    jmp x-- dotloop
-    jmp y-- reload_x_msb_lsb
 .wrap
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.

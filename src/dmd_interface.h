@@ -39,7 +39,7 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
   } else {
     // -- Data East 128x16 case --
-    // We need to set DOTCLK as jump pin + the extra SDATA line as base in pin
+    // We need to set DOTCLK as the jump pin
     sm_config_set_jmp_pin(&c, DOTCLK);
 
     pio_gpio_init(pio, SDATA_X16);         // Extra data line for Data East X16
