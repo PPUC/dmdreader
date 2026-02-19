@@ -949,11 +949,11 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_HOMEPIN: {
-      uint input_pins[] = {RDATA};
+      uint input_pins[] = {RDATA, COLLAT};
       dmdreader_programs_init(
-          &dmd_reader_sam_program, dmd_reader_sam_program_get_default_config,
-          &dmd_framedetect_sam_program,
-          dmd_framedetect_sam_program_get_default_config, input_pins, 1, 0);
+          &dmd_reader_homepin_program, dmd_reader_homepin_program_get_default_config,
+          &dmd_framedetect_homepin_program,
+          dmd_framedetect_homepin_program_get_default_config, input_pins, 2, 0);
 
       source_width = 128;
       source_height = 32;
