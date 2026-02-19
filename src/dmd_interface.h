@@ -29,9 +29,9 @@ float divider = (float)sys_hz / target_hz;  // scales automatically
 // Init the DMD reader (dots) PIO program, common for all DMD types.
 void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uint in_base_pin) {
  
-  if(in_base_pin != SDATA_X16) {
     sm_config_set_in_pins(&c, in_base_pin);
 
+  if(in_base_pin != SDATA_X16) {
     // We only send, so disable the TX FIFO to make the RX FIFO deeper.
     // Joining is not possible with data east x16
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
@@ -39,7 +39,6 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c, uin
     // -- Data East 128x16 case --
     // We need to set DOTCLK as jump pin + the extra SDATA line as base in pin
     sm_config_set_jmp_pin(&c, DOTCLK);
-    sm_config_set_in_pins(&c, in_base_pin);
 
     pio_gpio_init(pio, SDATA_X16);         // Extra data line for Data East X16
     pio_gpio_init(pio, SDATA_X16_PADDING); // used as a padding 0 bit
