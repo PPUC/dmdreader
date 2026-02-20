@@ -322,7 +322,7 @@ DmdType detect_dmd() {
   // WPC: DOTCLK: 500000 | RCLK: 3900 | RDATA: 120
   else if ((dotclk > 450000) && (dotclk < 550000) && (rclk > 3800) &&
            (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
-    return DMD_WPC;
+    return DMD_DE_X16_V1;
 
     // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
@@ -714,7 +714,8 @@ void dmd_dma_handler() {
 
   // The code below doesn't work if we reduced the bit depth above. But at the
   // moment there's no system with oversampling and bit depth reduction.
-  if (source_bitsperpixel == target_bitsperpixel) {
+  if (source_bitsperpixel == target_bitsperpixel || 
+      dmd_type == DMD_DE_X16_V1 || dmd_type == DMD_DE_X16_V2) {
     // deal with whitestar line oversampling directly within framebuf
     if (source_lineoversampling == LINEOVERSAMPLING_2X) {
       uint16_t i = 0;
@@ -725,7 +726,7 @@ void dmd_dma_handler() {
 
       for (int l = 0; l < source_height; l++) {
         for (int w = 0; w < source_dwordsperline; w++) {
-          v = src1[w] * 2 + src2[w];
+          v = src1[w] + src2[w];
           dst[w] = v;
         }
         src1 += source_dwordsperline * 2;  // source skips 2 lines forward
@@ -929,6 +930,8 @@ bool dmdreader_init(bool return_on_no_detection) {
                               &dmd_framedetect_de_x16_v1_program,
                               dmd_framedetect_de_x16_v1_program_get_default_config,
                               input_pins, 2, RDATA, SDATA_X16);
+      gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT); // invert DOTCLK signal
+      // we need it to sample data on the rising edge
 
       source_width = 128;
       source_height = 16;
