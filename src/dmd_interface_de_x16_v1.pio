@@ -18,10 +18,10 @@
     wait irq FRAME_START_IRQ   
 
 start:
-    set x, 7                      ; loop 8 times
-no_msb_padding:
-    in null 32                    ; 256 in nulls of padding, simulating a 64 pixel MSB 4bpp row
-    jmp x-- no_msb_padding
+    ;set x, 7                      ; loop 8 times
+;no_msb_padding:
+    ;in null 32                    ; 256 in nulls of padding, simulating a 64 pixel MSB 4bpp row
+    ;jmp x-- no_msb_padding
 
     set x, 31                   
 lsb_only_loop:

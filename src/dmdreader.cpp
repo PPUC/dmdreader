@@ -941,7 +941,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       // containg one MSB row followed by one LSB row and so on
       source_planesperframe = 1;
       source_planehistoryperframe = 0;
-      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_NONE;
       break;
     }
