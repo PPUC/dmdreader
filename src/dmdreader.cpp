@@ -82,8 +82,8 @@ uint16_t source_planehistoryperframe;
 uint16_t source_dwordsperframe;
 uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
-uint16_t source_mergeplanes;
 uint16_t source_dwordsperline;
+uint16_t source_mergeplanes;
 uint16_t offset[MAX_PLANESPERFRAME];
 
 static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
@@ -647,6 +647,9 @@ void dmd_dma_handler() {
     // and 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
     // planes are out of sync and need to be shifted and no further check is
     // required for this frame.
+    // It seems to be sufficient to check every 8th pixel for these patterns to
+    // detect sync. So we could avoid bitschifiting of the uint32_t value to
+    // check every single pixel.
     if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted) {
       digitalWrite(LED_BUILTIN, HIGH);
       uint8_t value = pixval & 0x0F;
@@ -674,7 +677,7 @@ void dmd_dma_handler() {
                (value == 2 && ((planebuf[px] & 0x0F) == 1 ||
                                planebuf[offset[2] + px] & 0x0F) == 1)) {
         // An unsynchronized has been found.
-        // Disable the SM, clean the DMA channel and restart.
+        // Disable the state machine, clean the DMA channel and restart.
         // As a result, we will skip exactly one plane.
         pio_sm_set_enabled(dmd_pio, dmd_sm, false);
         dmd_dma_reset();
