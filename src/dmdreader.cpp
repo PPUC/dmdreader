@@ -82,8 +82,8 @@ uint16_t source_planehistoryperframe;
 uint16_t source_dwordsperframe;
 uint16_t source_bytesperframe;
 uint16_t source_lineoversampling;
-uint16_t source_dwordsperline;
 uint16_t source_mergeplanes;
+uint16_t source_dwordsperline;
 uint16_t offset[MAX_PLANESPERFRAME];
 
 static uint8_t *alloc_aligned_buffer(size_t size, size_t alignment,
@@ -290,88 +290,98 @@ uint32_t count_clock(uint pin) {
       &dmd_count_signal_program, &dmd_pio, &dmd_sm, &pio_offset, pin, 1, true);
   dmd_counter_program_init(dmd_pio, dmd_sm, pio_offset, pin);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-  delay(500);
+  delay(250);
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
   uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
   pio_sm_set_enabled(dmd_pio, dmd_sm, false);
   pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, dmd_sm,
                                     pio_offset);
 
-  return count * 2;
+  return count * 4;
 }
 
 DmdType detect_dmd() {
   uint32_t dotclk = count_clock(DOTCLK);
-  uint32_t de = count_clock(DE);
+  uint32_t rclk = count_clock(RCLK);
   uint32_t rdata = count_clock(RDATA);
 
-  // By checking DOTCLK, DE and RDATA we can identify system types
-  // All values are based on a 500ms sample of data, multiplied by 2
+  // By checking DOTCLK, RCLK and RDATA we can identify system types
+  // All values are based on a 1000ms sample of data
 
-  // SPIKE1 -> DOTCLK: 1040000 | DE: 8150 | RDATA: 255
-  if ((dotclk > 1015000) && (dotclk < 1065000) && (de > 8000) && (de < 8300) &&
-      (rdata > 245) && (rdata < 265)) {
+  // SPIKE1 -> DOTCLK: 1040000 | RCLK: 8150 | RDATA: 255
+  if ((dotclk > 1015000) && (dotclk < 1065000) && (rclk > 8000) &&
+      (rclk < 8300) && (rdata > 245) && (rdata < 265)) {
     return DMD_SPIKE1;
 
-    // SAM -> DOTCLK: 1025000 | DE: 8000 | RDATA: 60
-  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (de > 7900) &&
-             (de < 8100) && (rdata > 55) && (rdata < 65)) {
+    // SAM -> DOTCLK: 1025000 | RCLK: 2000 | RDATA: 60
+  } else if ((dotclk > 1000000) && (dotclk < 1050000) && (rclk > 1950) &&
+             (rclk < 2050) && (rdata > 55) && (rdata < 65)) {
     return DMD_SAM;
   }
 #ifndef ALPHADMD
-  // WPC: DOTCLK: 500000 | DE: 3900 | RDATA: 120
-  else if ((dotclk > 450000) && (dotclk < 550000) && (de > 3800) &&
-           (de < 4000) && (rdata > 115) && (rdata < 130)) {
+  // WPC: DOTCLK: 500000 | RCLK: 3900 | RDATA: 120
+  else if ((dotclk > 450000) && (dotclk < 550000) && (rclk > 3800) &&
+           (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
     return DMD_WPC;
 
-    // Data East: DOTCLK: 640000 | DE: 5000 | RDATA: 80
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
-             (de < 5070) && (rdata > 75) && (rdata < 85)) {
+    // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
+  } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
+             (rclk < 3930) && (rdata > 110) && (rdata < 120)) {
+    return DMD_DE_X16_V1;
+
+    // Data East X16 V2: DOTCLK: 121000 or 60544 | RCLK: 3850 | RDATA: 120
+  } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3825) &&
+             (rclk < 3875) && (rdata > 110) && (rdata < 120)) {
+    return DMD_DE_X16_V2;
+
+    // Data East X32: DOTCLK: 640000 | RCLK: 2500 | RDATA: 80
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (rclk > 2450) &&
+             (rclk < 2550) && (rdata > 75) && (rdata < 85)) {
     return DMD_DESEGA;
 
-    // SEGA: DOTCLK: 640000 | DE: 5000 | RDATA: 2580
-  } else if ((dotclk > 630000) && (dotclk < 650000) && (de > 4930) &&
-             (de < 5070) && (rdata > 2530) && (rdata < 2630)) {
+    // SEGA: DOTCLK: 640000 | RCLK: 2500 | RDATA: 2580
+  } else if ((dotclk > 630000) && (dotclk < 650000) && (rclk > 2450) &&
+             (rclk < 2550) && (rdata > 2530) && (rdata < 2630)) {
     return DMD_DESEGA;
 
-    // SEGA HD: DOTCLK: 1836000 | DE: 14350 | RDATA: 75
-  } else if ((dotclk > 1750000) && (dotclk < 1900000) && (de > 14250) &&
-             (de < 14450) && (rdata > 70) && (rdata < 80)) {
+    // SEGA HD: DOTCLK: 1836000 | RCLK: 4785 | RDATA: 75
+  } else if ((dotclk > 1750000) && (dotclk < 1900000) && (rclk > 4700) &&
+             (rclk < 4850) && (rdata > 70) && (rdata < 80)) {
     return DMD_SEGA_HD;
 
-    // Whitestar -> DOTCLK: 657000 | DE: 5140 | RDATA: 80
-  } else if ((dotclk > 645000) && (dotclk < 669000) && (de > 5075) &&
-             (de < 5200) && (rdata > 75) && (rdata < 85)) {
+    // Whitestar -> DOTCLK: 657000 | RCLK: 2568 | RDATA: 80
+  } else if ((dotclk > 645000) && (dotclk < 669000) && (rclk > 2500) &&
+             (rclk < 2620) && (rdata > 75) && (rdata < 85)) {
     return DMD_WHITESTAR;
 
-    // Gottlieb -> DOTCLK: 1647000 | DE: 12930 | RDATA: 390
-  } else if ((dotclk > 1550000) && (dotclk < 1750000) && (de > 12700) &&
-             (de < 13100) && (rdata > 370) && (rdata < 410)) {
+    // Gottlieb -> DOTCLK: 1647000 | RCLK: 13160 | RDATA: 390
+  } else if ((dotclk > 1550000) && (dotclk < 1750000) && (rclk > 13000) &&
+             (rclk < 13300) && (rdata > 370) && (rdata < 410)) {
     return DMD_GOTTLIEB;
 
-    // Alvin G -> DOTCLK: 1192000 | DE: 9400 | RDATA: 73
-  } else if ((dotclk > 1150000) && (dotclk < 1250000) && (de > 9200) &&
-             (de < 9600) && (rdata > 65) && (rdata < 80)) {
+    // Alvin G -> DOTCLK: 1192000 | RCLK: 2340 | RDATA: 73
+  } else if ((dotclk > 1150000) && (dotclk < 1250000) && (rclk > 2300) &&
+             (rclk < 2380) && (rdata > 65) && (rdata < 80)) {
     return DMD_ALVING;
 
-    // Island/SPinball(?) -> DOTCLK: 2323000 | DE: 18150 | RDATA: 565
-  } else if ((dotclk > 2200000) && (dotclk < 2450000) && (de > 17650) &&
-             (de < 18500) && (rdata > 540) && (rdata < 590)) {
+    // Island/SPinball(?) -> DOTCLK: 2323000 | RCLK: 18100 | RDATA: 565
+  } else if ((dotclk > 2200000) && (dotclk < 2450000) && (rclk > 17700) &&
+             (rclk < 18500) && (rdata > 540) && (rdata < 590)) {
     return DMD_ISLAND;
 
-    // Homepin -> DOTCLK: 837400 | DE: 6540 | RDATA: 50
-  } else if ((dotclk > 800000) && (dotclk < 870000) && (de > 6450) &&
-             (de < 6650) && (rdata > 45) && (rdata < 55)) {
+    // Homepin -> DOTCLK: 837400 | RCLK: 1635 | RDATA: 50
+  } else if ((dotclk > 800000) && (dotclk < 870000) && (rclk > 1580) &&
+             (rclk < 1690) && (rdata > 45) && (rdata < 55)) {
     return DMD_HOMEPIN;
 
-    // Capcom -> DOTCLK: 4168000 | DE: 16280 | RDATA: 510
-  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (de > 16000) &&
-             (de < 16500) && (rdata > 490) && (rdata < 530)) {
+    // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
+  } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
+             (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
 
-    // Capcom HD -> DOTCLK: 4168000 | DE: 16280 | RDATA: 255
-  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (de > 15500) &&
-             (de < 16500) && (rdata > 240) && (rdata < 270)) {
+    // Capcom HD -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
+  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (rclk > 15500) &&
+             (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
   }
 #endif
@@ -397,6 +407,45 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
 
   return result;
 }
+
+// ---------------------------------
+// convert_4bit_to_2bit_de_x16() BEGIN
+// ---------------------------------
+
+static constexpr uint8_t map_nibble_de_x16(uint8_t p) {
+  return (p <= 3) ? p : (p == 4) ? 1 : (p == 8) ? 2 : (p == 10) ? 0 : 3;
+}
+
+static constexpr uint8_t make_lut_entry_de_x16(uint16_t b) {
+  uint8_t lo = map_nibble_de_x16(uint8_t(b & 0x0F));
+  uint8_t hi = map_nibble_de_x16(uint8_t((b >> 4) & 0x0F));
+  return uint8_t((lo << 0) | (hi << 2));  // 2 nibbles -> 4 bits (2x2bit)
+}
+
+static constexpr std::array<uint8_t, 256> kByteLut_de_x16 = [] {
+  std::array<uint8_t, 256> a{};
+  for (uint16_t i = 0; i < 256; ++i) a[i] = make_lut_entry_de_x16(i);
+  return a;
+}();
+
+static inline __attribute__((always_inline)) uint16_t
+convert_4bit_to_2bit_de_x16(uint32_t input) {
+  uint32_t b0 = (input >> 0) & 0xFF;
+  uint32_t b1 = (input >> 8) & 0xFF;
+  uint32_t b2 = (input >> 16) & 0xFF;
+  uint32_t b3 = (input >> 24) & 0xFF;
+
+  uint16_t r0 = kByteLut_de_x16[b0];
+  uint16_t r1 = kByteLut_de_x16[b1];
+  uint16_t r2 = kByteLut_de_x16[b2];
+  uint16_t r3 = kByteLut_de_x16[b3];
+
+  return uint16_t((r0 << 0) | (r1 << 4) | (r2 << 8) | (r3 << 12));
+}
+
+// -------------------------------
+// convert_4bit_to_2bit_de_x16() END
+// -------------------------------
 
 // ---------------------------------
 // convert_4bit_to_2bit_fast() BEGIN
@@ -513,6 +562,29 @@ void dmd_set_and_enable_new_dma_target() {
 #endif
 }
 
+// Resets the DMD DMA data collection starting point.
+void dmd_dma_reset() {
+#ifdef RP2350
+  dma_irqn_set_channel_enabled(3, dmd_dma_channel, false);
+  irq_set_enabled(DMA_IRQ_3, false);
+#else
+  dma_channel_set_irq0_enabled(dmd_dma_channel, false);
+  irq_set_enabled(DMA_IRQ_0, false);
+#endif
+
+  dma_channel_abort(dmd_dma_channel);
+  dma_channel_set_trans_count(dmd_dma_channel, source_dwordsperframe, false);
+
+#ifdef RP2350
+  dma_irqn_set_channel_enabled(3, dmd_dma_channel, true);
+  irq_set_enabled(DMA_IRQ_3, true);
+#else
+  dma_channel_set_irq0_enabled(dmd_dma_channel, true);
+  irq_set_enabled(DMA_IRQ_0, true);
+#endif
+  dmd_set_and_enable_new_dma_target();
+}
+
 /**
  * @brief Handles DMD DMA requests by switching between the buffers
  *
@@ -524,6 +596,9 @@ void dmd_dma_handler() {
   plane0_shifted = false;
   detected_0_1_0_1 = false;
   detected_1_0_0_0 = false;
+
+  // Used for Data East 128x16 to correctly align 64x16 + 64x16
+  int16_t diff = 0;
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
@@ -572,58 +647,77 @@ void dmd_dma_handler() {
     // and 1/0/0/0 are present. If an illegal pattern occures for a pixel, the
     // planes are out of sync and need to be shifted and no further check is
     // required for this frame.
-    if (DMD_CAPCOM >= dmd_type && !locked_in && !plane0_shifted) {
-      for (uint8_t p = 0; p < 32; p += 4) {
-        uint8_t value = (pixval >> p) & 0x0F;
-        if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
-            (planebuf[offset[2] + px] & 0x0F) != 1) {
-          detected_0_1_0_1 = true;
-        } else if (value == 1 && (planebuf[px] & 0x0F) == 1) {
-          detected_1_0_0_0 = true;
-        }
-        // Check for illegal patterns that can happen when not in sync:
-        //   1/1/1/0 => 3
-        //   0/1/1/1 => 3
-        //   1/0/1/1 => 3
-        //   1/1/0/1 => 3
-        //
-        //   0/0/0/1 => 1
-        //   0/0/1/0 => 1
-        //   0/1/0/0 => 1
-        //
-        //   1/0/1/0 => 2
-        //   1/1/0/0 => 2
-        //   0/0/1/1 => 2
-        else if (value == 3 || value > 4 ||
-                 (value == 1 && (planebuf[px] & 0x0F) != 1) ||
-                 (value == 2 && ((planebuf[px] & 0x0F) == 1 ||
-                                 planebuf[offset[2] + px] & 0x0F) == 1)) {
-          // Stop the state machine that detects frames.
-          pio_sm_set_enabled(dmd_pio, frame_sm, false);
-          // Start state machine again. The PIO program will skip at least one
-          // plane as it is waiting for RDATA at the beginning.
-          pio_sm_set_enabled(dmd_pio, frame_sm, true);
-          plane0_shifted = true;
-          break;
-        }
+    if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      uint8_t value = pixval & 0x0F;
+      if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
+          (planebuf[offset[2] + px] & 0x0F) != 1) {
+        detected_0_1_0_1 = true;
+      } else if (value == 1 && (planebuf[px] & 0x0F) == 1) {
+        detected_1_0_0_0 = true;
+      }
+      // Check for illegal patterns that can happen when not in sync:
+      //   0/1/1/1 => 3
+      //   1/0/1/1 => 3
+      //   1/1/0/1 => 3
+      //   1/1/1/0 => 3
+      //
+      //   0/0/0/1 => 1
+      //   0/0/1/0 => 1
+      //   0/1/0/0 => 1
+      //
+      //   1/0/1/0 => 2
+      //   1/1/0/0 => 2
+      //   0/0/1/1 => 2
+      else if (value == 3 || value > 4 ||
+               (value == 1 && (planebuf[px] & 0x0F) != 1) ||
+               (value == 2 && ((planebuf[px] & 0x0F) == 1 ||
+                               planebuf[offset[2] + px] & 0x0F) == 1)) {
+        // An unsynchronized has been found.
+        // Disable the SM, clean the DMA channel and restart.
+        // As a result, we will skip exactly one plane.
+        pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+        dmd_dma_reset();
+        pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
+        pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+        plane0_shifted = true;
       }
     }
 
-    if (source_bitsperpixel == target_bitsperpixel || loopback) {
+    if (source_bitsperpixel == target_bitsperpixel ||
+        (loopback && dmd_type != DMD_DE_X16_V1 && dmd_type != DMD_DE_X16_V2)) {
       framebuf[px] = pixval;
     } else if (4 == source_bitsperpixel && 2 == target_bitsperpixel) {
-      uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
-      uint32_t out = px >> 1;  // Shifting leeds to that index steps: 0, 0, 1,
-                               // 1, 2, 2, 3, 3, 4, ...
-      if ((px & 1) == 0) {
-        // Write first 8 pixel in upper 16 Bit.
-        framebuf[out] = (uint32_t)v16 << 16;
-      } else {
-        // Write second 8 pixel in lower 16 Bit.
-        framebuf[out] |= v16;
+      if (dmd_type != DMD_DE_X16_V1 && dmd_type != DMD_DE_X16_V2) {
+        uint32_t out = px >> 1;  // Shifting leads to index steps 0, 0, 1,
+                                 // 1, 2, 2, 3, 3, 4, 4 ...
+        uint16_t v16 = convert_4bit_to_2bit_fast(pixval);
+        if ((px & 1) == 0) {
+          // Write first 8 pixel in upper 16 Bit.
+          framebuf[out] = (uint32_t)v16 << 16;
+        } else {
+          // Write second 8 pixel in lower 16 Bit.
+          framebuf[out] |= v16;
+        }
+      } else {  // Data East 128x16 case
+        framebuf[px + diff] = pixval;
+        // increase diff everytime we cross one MSB or LSB row (64 pixels wide)
+        // px is based on 4bpp, so we increase every 8 px.
+        if ((px & 7) == 7) {
+          diff += 8;
+          // When we have processed half of the pixels in an entire frame,
+          // turn the diff into a - value, it will start at the top again and
+          // work its way back to 0. This way we prepare framebuf for
+          // oversampling
+          if (px == ((source_dwordsperplane / 2) - 1)) {
+            diff -=
+                8;  // we immediately decrement once to select the correct row
+            diff *= -1;
+          }
+        }
       }
     } else if (2 == source_bitsperpixel && 4 == target_bitsperpixel) {
-      // There's no syetem using this conversion yet, but let's have it ready
+      // There's no system using this conversion yet, but let's have it ready
     }
   }
 
@@ -632,12 +726,52 @@ void dmd_dma_handler() {
     locked_in = true;
   }
 
-  // The code below doesn't work if we reduced the bit depth above. But at the
-  // moment there's no system with oversampling and bit depth reduction.
+  if (dmd_type == DMD_DE_X16_V1 || dmd_type == DMD_DE_X16_V2) {
+    // merge the rows and convert from 4bpp to 2bpp with a LUT
+    uint32_t *dst, *src1, *src2;
+    dst = src1 = framebuf;
+    src2 = src1 + source_dwordsperline;
+
+    if (dmd_type == DMD_DE_X16_V1) {
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
+          uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] * 3));
+          if ((w & 1) == 0) {
+            // Write first 8 pixel in upper 16 Bit.
+            dst[out] = (uint32_t)v16 << 16;
+          } else {
+            // Write second 8 pixel in lower 16 Bit.
+            dst[out] |= v16;
+          }
+        }
+        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
+        dst += source_dwordsperline / 2;   // 4bbp -> 2bpp
+      }
+    } else {
+      // DMD_DE_X16_V2 case
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
+          uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] + src2[w] * 2));
+          if ((w & 1) == 0) {
+            // Write first 8 pixel in upper 16 Bit.
+            dst[out] = (uint32_t)v16 << 16;
+          } else {
+            // Write second 8 pixel in lower 16 Bit.
+            dst[out] |= v16;
+          }
+        }
+        src1 += source_dwordsperline * 2;  // source skips 2 lines forward
+        src2 += source_dwordsperline * 2;
+        dst += source_dwordsperline / 2;  // 4bbp -> 2bpp
+      }
+    }
+  }
+
   if (source_bitsperpixel == target_bitsperpixel) {
-    // deal with whitestar line oversampling directly within framebuf
+    // deal with line oversampling directly within framebuf
     if (source_lineoversampling == LINEOVERSAMPLING_2X) {
-      uint16_t i = 0;
       uint32_t *dst, *src1, *src2;
       dst = src1 = framebuf;
       src2 = src1 + source_dwordsperline;
@@ -653,7 +787,6 @@ void dmd_dma_handler() {
         dst += source_dwordsperline;  // destination skips only one line
       }
     } else if (source_lineoversampling == LINEOVERSAMPLING_4X) {
-      uint16_t i = 0;
       uint32_t *dst, *src1, *src2, *src3, *src4;
       dst = src1 = framebuf;
       src2 = src1 + source_dwordsperline;
@@ -669,7 +802,8 @@ void dmd_dma_handler() {
               v = src4[w] * 8 + src3[w] * 1 + src2[w] * 4 + src1[w] * 2;
               break;
             case DMD_ALVING:
-              v = upscale_4bit_0_4_to_0_15(src4[w] + src3[w] + src2[w] + src1[w]);
+              v = upscale_4bit_0_4_to_0_15(src4[w] + src3[w] + src2[w] +
+                                           src1[w]);
               break;
             case DMD_HOMEPIN:
             default:
@@ -683,10 +817,22 @@ void dmd_dma_handler() {
         src4 += source_dwordsperline * 4;
         dst += source_dwordsperline;  // destination skips only one line
       }
+    } else if (dmd_type == DMD_ISLAND) {
+      // processed as 4bpp, but we need to increase the brightness
+      uint32_t *dst;
+      dst = framebuf;
+
+      for (int l = 0; l < source_height; l++) {
+        for (int w = 0; w < source_dwordsperline; w++) {
+          dst[w] = upscale_4bit_0_4_to_0_15(dst[w]);
+        }
+        dst += source_dwordsperline;  // destination skips only one line
+      }
     }
   }
 
-  memcpy(current_framebuf, processingbuf, loopback ? source_bytes : target_bytes);
+  memcpy(current_framebuf, processingbuf,
+         loopback ? source_bytes : target_bytes);
 
   frame_crc =
       crc32(0, current_framebuf, loopback ? source_bytes : target_bytes);
@@ -715,18 +861,18 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
                              const pio_program_t *dmd_framedetect_program,
                              DmdConfigGetter framedetect_get_default_config,
                              uint *input_pins, uint8_t num_input_pins,
-                             uint8_t jump_pin) {
+                             uint8_t jump_pin, uint8_t in_base_pin) {
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_reader_program, &dmd_pio, &dmd_sm, &dmd_offset,
-      (DE < SDATA) ? DE : SDATA, 5, true));
+      (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
-  dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config);
+  dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config, in_base_pin);
 
   // The framedetect program just runs and detects the beginning of a new
   // frame
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_framedetect_program, &frame_pio, &frame_sm, &frame_offset,
-      (DE < SDATA) ? DE : SDATA, 5, true));
+      (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config frame_config = framedetect_get_default_config(frame_offset);
   dmd_framedetect_program_init(frame_pio, frame_sm, frame_offset, frame_config,
                                input_pins, num_input_pins, jump_pin);
@@ -743,9 +889,9 @@ bool dmdreader_init(bool return_on_no_detection) {
       return false;
     }
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
+    delay(300);
     digitalWrite(LED_BUILTIN, LOW);
-    delay(500);
+    delay(200);
   } while (dmd_type == DMD_UNKNOWN);
 
   // Delay is still needed when blink gets removed above.
@@ -765,10 +911,11 @@ bool dmdreader_init(bool return_on_no_detection) {
   switch (dmd_type) {
     case DMD_WPC: {
       uint input_pins[] = {RDATA, DE, DOTCLK};
-      dmdreader_programs_init(
-          &dmd_reader_wpc_program, dmd_reader_wpc_program_get_default_config,
-          &dmd_framedetect_wpc_program,
-          dmd_framedetect_wpc_program_get_default_config, input_pins, 3, 0);
+      dmdreader_programs_init(&dmd_reader_wpc_program,
+                              dmd_reader_wpc_program_get_default_config,
+                              &dmd_framedetect_wpc_program,
+                              dmd_framedetect_wpc_program_get_default_config,
+                              input_pins, 3, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -788,7 +935,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_reader_whitestar_program_get_default_config,
           &dmd_framedetect_whitestar_program,
           dmd_framedetect_whitestar_program_get_default_config, input_pins, 1,
-          0);
+          0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -810,7 +957,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_spike_program_get_default_config,
                               &dmd_framedetect_spike_program,
                               dmd_framedetect_spike_program_get_default_config,
-                              input_pins, 2, RDATA);
+                              input_pins, 2, RDATA, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -825,10 +972,11 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_SAM: {
       uint input_pins[] = {RDATA};
-      dmdreader_programs_init(
-          &dmd_reader_sam_program, dmd_reader_sam_program_get_default_config,
-          &dmd_framedetect_sam_program,
-          dmd_framedetect_sam_program_get_default_config, input_pins, 1, 0);
+      dmdreader_programs_init(&dmd_reader_sam_program,
+                              dmd_reader_sam_program_get_default_config,
+                              &dmd_framedetect_sam_program,
+                              dmd_framedetect_sam_program_get_default_config,
+                              input_pins, 1, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -842,13 +990,75 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
+    case DMD_DE_X16_V1: {
+      uint input_pins[] = {DE, RDATA};
+      dmdreader_programs_init(
+          &dmd_reader_de_x16_v1_program,
+          dmd_reader_de_x16_v1_program_get_default_config,
+          &dmd_framedetect_de_x16_v1_program,
+          dmd_framedetect_de_x16_v1_program_get_default_config, input_pins, 2,
+          DE, SDATA_X16);
+      gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT);  // invert DOTCLK signal
+      // we need it to sample data on the rising edge
+
+      source_width = 128;
+      source_height = 16;
+      source_bitsperpixel = 4;  // recorded as 4bpp in the pio
+      target_bitsperpixel = 2;  // max pixel value is 3
+      // in DE-Sega, there's only one plane,
+      // containg one MSB row followed by one LSB row and so on
+      source_planesperframe = 1;
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
+    case DMD_DE_X16_V2: {
+      uint input_pins[] = {DE};
+      dmdreader_programs_init(
+          &dmd_reader_de_x16_v2_program,
+          dmd_reader_de_x16_v2_program_get_default_config,
+          &dmd_framedetect_de_x16_v2_program,
+          dmd_framedetect_de_x16_v2_program_get_default_config, input_pins, 1,
+          DE, SDATA_X16);
+      gpio_set_inover(DOTCLK, GPIO_OVERRIDE_INVERT);  // invert DOTCLK signal
+      // we need it to sample data on the rising edge
+
+      // initialise Y register to zero
+      pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
+                                pio_encode_mov(pio_y, pio_null));
+
+      // load 8192 directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 8192);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
+      // load 3000 directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 3000);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
+
+      source_width = 128;
+      source_height = 16;
+      source_bitsperpixel = 4;  // recorded as 4bpp in the pio
+      target_bitsperpixel = 2;  // max pixvalues are 0, 1, 2, 3
+      // in DE-Sega, there's only one plane,
+      // containg one MSB row followed by one LSB row and so on
+      source_planesperframe = 1;
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
     case DMD_DESEGA: {
       uint input_pins[] = {DE};
       dmdreader_programs_init(&dmd_reader_desega_program,
                               dmd_reader_desega_program_get_default_config,
                               &dmd_framedetect_desega_program,
                               dmd_framedetect_desega_program_get_default_config,
-                              input_pins, 1, DE);
+                              input_pins, 1, DE, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -870,7 +1080,8 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_reader_sega_hd_program,
           dmd_reader_sega_hd_program_get_default_config,
           &dmd_framedetect_sega_hd_program,
-          dmd_framedetect_sega_hd_program_get_default_config, input_pins, 1, 0);
+          dmd_framedetect_sega_hd_program_get_default_config, input_pins, 1, 0,
+          SDATA);
 
       source_width = 192;
       source_height = 64;
@@ -892,8 +1103,8 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_reader_gottlieb_program,
           dmd_reader_gottlieb_program_get_default_config,
           &dmd_framedetect_gottlieb_program,
-          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1,
-          0);
+          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1, 0,
+          SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -912,7 +1123,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_alving_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
-                              input_pins, 3, 0);
+                              input_pins, 3, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -932,8 +1143,8 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_reader_gottlieb_program,
           dmd_reader_gottlieb_program_get_default_config,
           &dmd_framedetect_gottlieb_program,
-          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1,
-          0);
+          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1, 0,
+          SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -949,15 +1160,17 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_HOMEPIN: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_homepin_program, dmd_reader_homepin_program_get_default_config,
+          &dmd_reader_homepin_program,
+          dmd_reader_homepin_program_get_default_config,
           &dmd_framedetect_homepin_program,
-          dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0);
+          dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0,
+          SDATA);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
-      source_planesperframe = 1; 
+      source_planesperframe = 1;
       source_planehistoryperframe = 0;
       // 4x line oversampling for Homepin, similar to SAM
       source_lineoversampling = LINEOVERSAMPLING_4X;
@@ -971,7 +1184,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_capcom_program_get_default_config,
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
-                              input_pins, 2, 0);
+                              input_pins, 2, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
@@ -991,7 +1204,7 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_reader_capcom_hd_program_get_default_config,
           &dmd_framedetect_capcom_hd_program,
           dmd_framedetect_capcom_hd_program_get_default_config, input_pins, 2,
-          0);
+          0, SDATA);
 
       source_width = 256;
       source_height = 64;
@@ -1175,6 +1388,12 @@ uint8_t *dmdreader_loopback_render() {
     if (func) {
       if (2 == source_bitsperpixel) {
         for (uint16_t i = 0; i < source_dwords; i++) {
+          frame4bit[i] =
+              convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
+        }
+        func((uint32_t *)frame4bit, current_renderbuf);
+      } else if (dmd_type == DMD_DE_X16_V1 || dmd_type == DMD_DE_X16_V2) {
+        for (uint16_t i = 0; i < source_dwords / 2; i++) {
           frame4bit[i] =
               convert_2bit_to_4bit_fast(((uint32_t *)framebuf_to_send)[i]);
         }
