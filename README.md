@@ -11,7 +11,7 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 ## Currently supported hardware systems
 
 * WPC95 & WPC -> 128x32
-* Data East -> 128x32
+* Data East -> 128x32 & 128x16
 * Sega -> 128x32 & 192x64
 * Stern Whitestar -> 128x32
 * Stern SAM -> 128x32

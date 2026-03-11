@@ -22,13 +22,15 @@ enum DmdType : uint8_t {
   DMD_WHITESTAR,
   DMD_SPIKE1,
   DMD_SAM,
+  DMD_DE_X16_V1,
+  DMD_DE_X16_V2,
   DMD_DESEGA,
   DMD_SEGA_HD,
   DMD_GOTTLIEB,
   DMD_ALVING,
   DMD_ISLAND,
   DMD_HOMEPIN,
-  // CAPCOM need to be the last entries:
+  // CAPCOM needs to be the last two entries:
   DMD_CAPCOM,
   DMD_CAPCOM_HD,
 };

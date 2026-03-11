@@ -19,6 +19,12 @@
 #ifndef SDATA
 #define SDATA 2
 #endif
+#ifndef SDATA_X16_PADDING
+#define SDATA_X16_PADDING 1
+#endif
+#ifndef SDATA_X16
+#define SDATA_X16 0
+#endif
 
 // SPI Defines
 #define SPI0 spi0
