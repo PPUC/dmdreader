@@ -24,7 +24,7 @@
 #include "hardware/pio.h"
 
 // Derive divider from current clock so PIO runs at ~125 MHz reference
-float dmd_interface_clk_divider =
+float dmd_interface_125mhz_clk_divider =
     (float)(clock_get_hz(clk_sys)) / 125000000.0f;  // scales automatically
 
 // Init the DMD reader (dots) PIO program, common for all DMD types.
@@ -46,6 +46,9 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c,
 
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16_PADDING, 1, false);
+
+    // Make sure we run this sm with a 125MHz clk
+    sm_config_set_clkdiv(&c, dmd_interface_125mhz_clk_divider);
   }
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, SDATA);
@@ -62,9 +65,6 @@ void dmd_reader_program_init(PIO pio, uint sm, uint offset, pio_sm_config c,
                          true,   // autopush enabled
                          32      // autopush threshold
   );
-
-  // Make sure we run this sm with a 125MHz clk
-  sm_config_set_clkdiv(&c, dmd_interface_clk_divider);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
@@ -92,7 +92,7 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                          0);
 
   // Make sure we run this sm with a 125MHz clk
-  sm_config_set_clkdiv(&c, dmd_interface_clk_divider);
+  sm_config_set_clkdiv(&c, dmd_interface_125mhz_clk_divider);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
