@@ -651,7 +651,7 @@ void dmd_dma_handler() {
     // detect sync. So we could avoid bitschifiting of the uint32_t value to
     // check every single pixel.
     if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted &&
-        (px & 2) == 0) {
+        (px & 3) == 0) {
       digitalWrite(LED_BUILTIN, HIGH);
       uint8_t value = pixval & 0x0F;
       if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
