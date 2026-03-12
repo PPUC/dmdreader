@@ -91,8 +91,13 @@ void dmd_framedetect_program_init(PIO pio, uint sm, uint offset,
                          false,  // no autopush
                          0);
 
+    // Derive divider from current clock so PIO runs at ~125 MHz reference
+  uint32_t sys_hz = clock_get_hz(clk_sys);    // e.g. 125/200/266 MHz
+  float target_hz = 125000000.0f;             // PIO code designed for 125 MHz
+  float divider = (float)sys_hz / target_hz;  // scales automatically
+  sm_config_set_clkdiv(&c, divider);
   // Make sure we run this sm with a 125MHz clk
-  sm_config_set_clkdiv(&c, dmd_interface_125mhz_clk_divider);
+  //sm_config_set_clkdiv(&c, dmd_interface_125mhz_clk_divider);
 
   // Load our configuration, do not yet start the program
   pio_sm_init(pio, sm, offset, &c);
