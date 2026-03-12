@@ -1038,13 +1038,13 @@ bool dmdreader_init(bool return_on_no_detection) {
       pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
                                 pio_encode_mov(pio_y, pio_null));
 
-      // load 8192 directly to TX fifo
-      pio_sm_put(dmd_pio, dmd_sm, 8192);
+      // load 3096 directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 4096);
       // pull 32 bits from the TX fifo into osr
       pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
-      // load 3000 directly to TX fifo
-      pio_sm_put(frame_pio, frame_sm, 3000);
+      // load 2000 directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 2000);
       // pull 32 bits from the TX fifo into osr
       pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
