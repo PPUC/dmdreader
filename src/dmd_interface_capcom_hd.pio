@@ -48,6 +48,6 @@ rclk_loop:
     wait 1 gpio RCLK
     wait 0 gpio RCLK
     jmp x-- rclk_loop
-    nop [3]
     irq PLANE_START_IRQ
+    wait 1 gpio RDATA
 .wrap
