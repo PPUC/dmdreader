@@ -32,7 +32,7 @@ dotloop:
     jmp y-- start
 
 skip:
-    mov x, osr                   ; copy 8192 to x
+    mov x, osr                   ; copy 4096 to x
 lsb_msb_check:
     jmp pin reload_dotloop_y     ; if DOTCLK is high, it means we will have a valid LSB + MSB row
     jmp x-- lsb_msb_check        ; loop for ~65.5 µs (based on 125MHz clkdiv)
@@ -62,7 +62,7 @@ reload_dotloop_y:
 
 wait_low:
     wait 0 gpio DE      ; Wait for DE to go low
-    mov x, osr          ; Use x as storage for 3000 iterations
+    mov x, osr          ; Use x as storage for 2500 iterations
 
 delay_loop:
     jmp x-- delay_loop     ; Decrement x and repeat until zero
