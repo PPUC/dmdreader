@@ -592,6 +592,20 @@ void dmd_dma_reset() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
+  if(dmd_type == DMD_DE_X16_V2) {
+    delayMicroseconds(400);
+    if(!pio_interrupt_get(frame_pio, 5)) {
+      // if the IRQ is not set during the execution of this code, it means
+      // the x16 v2 frame is not synchronized -> reset pio and clear DMA.
+      pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+      //dmd_dma_reset();
+            // initialise Y register to zero
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_mov(pio_isr, pio_null));
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
+      pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+    }
+  }
+
   // Required as long as CAPCOM is not locked-in:
   plane0_shifted = false;
   detected_0_1_0_1 = false;
@@ -753,17 +767,6 @@ void dmd_dma_handler() {
       }
     } else {
       // DMD_DE_X16_V2 case
-      delayMicroseconds(300);
-      if(!pio_interrupt_get(frame_pio, 5)) {
-        // if the IRQ is not set during the execution of this code, it means
-        // the x16 v2 frame is not synchronized -> reset pio and clear DMA.
-        pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-        //dmd_dma_reset();
-              // initialise Y register to zero
-        pio_sm_exec(dmd_pio, dmd_sm, pio_encode_mov(pio_isr, pio_null));
-        pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
-        pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-      }
       for (int l = 0; l < source_height; l++) {
         for (int w = 0; w < source_dwordsperline; w++) {
           uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
