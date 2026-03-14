@@ -11,6 +11,7 @@
 .program dmd_reader_de_x16_v2
 
     wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
+    mov isr, null               ; clean the isr before starting a new frame
 
 .wrap_target
 
@@ -70,7 +71,6 @@ delay_loop:
     ; After ~16 µs, check if still low
     jmp pin, frame_start         ; If DE went high early → we found the start
     wait 1 gpio DE
-    irq clear FRAME_START_IRQ    ; through this way, we check for a frame sync in the pio code
     jmp wait_low                 ; DE didn't go high early → restart
 
 frame_start:

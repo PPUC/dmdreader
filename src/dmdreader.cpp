@@ -593,11 +593,9 @@ void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
   if(dmd_type == DMD_DE_X16_V2) {
-    delayMicroseconds(400);
-    if(!pio_interrupt_get(frame_pio, 5)) {
-      // if the IRQ is not set during the execution of this code, it means
-      // the x16 v2 frame is not synchronized -> reset pio and clear DMA.
+    if(pio_interrupt_get(frame_pio, 5)) {
       pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+      pio_interrupt_clear(frame_pio, 5);
       dmd_dma_reset();
       pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
       pio_sm_set_enabled(dmd_pio, dmd_sm, true);
