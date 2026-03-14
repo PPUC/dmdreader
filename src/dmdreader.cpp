@@ -753,7 +753,7 @@ void dmd_dma_handler() {
       }
     } else {
       // DMD_DE_X16_V2 case
-      delayMicroseconds(400);
+      // delayMicroseconds(400);
       if(!pio_interrupt_get(frame_pio, 5)) {
         // if the IRQ is not set during the execution of this code, it means
         // the x16 v2 frame is not synchronized -> reset pio and clear DMA.
