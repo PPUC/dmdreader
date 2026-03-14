@@ -753,12 +753,14 @@ void dmd_dma_handler() {
       }
     } else {
       // DMD_DE_X16_V2 case
-      // delayMicroseconds(400);
+      delayMicroseconds(300);
       if(!pio_interrupt_get(frame_pio, 5)) {
         // if the IRQ is not set during the execution of this code, it means
         // the x16 v2 frame is not synchronized -> reset pio and clear DMA.
         pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-        dmd_dma_reset();
+        //dmd_dma_reset();
+              // initialise Y register to zero
+        pio_sm_exec(dmd_pio, dmd_sm, pio_encode_mov(pio_isr, pio_null));
         pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
         pio_sm_set_enabled(dmd_pio, dmd_sm, true);
       }
