@@ -65,12 +65,13 @@ wait_low:
     mov x, osr          ; Use x as storage for 2500 iterations
 
 delay_loop:
-    jmp x-- delay_loop     ; Decrement x and repeat until zero
+    jmp x-- delay_loop           ; Decrement x and repeat until zero
 
     ; After ~16 µs, check if still low
-    jmp pin, frame_start   ; If DE went high early → we found the start
+    jmp pin, frame_start         ; If DE went high early → we found the start
     wait 1 gpio DE
-    jmp wait_low           ; DE didn't go high early → restart
+    irq clear FRAME_START_IRQ    ; through this way, we check for a frame sync in the pio code
+    jmp wait_low                 ; DE didn't go high early → restart
 
 frame_start:
     irq FRAME_START_IRQ
