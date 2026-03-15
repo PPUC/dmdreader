@@ -10,8 +10,8 @@
 
 .program dmd_reader_de_x16_v2
 
-    wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
     mov isr, null               ; clean the isr before starting a new frame
+    wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
 
 .wrap_target
 
