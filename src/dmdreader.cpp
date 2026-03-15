@@ -597,6 +597,8 @@ void dmd_dma_handler() {
       pio_sm_set_enabled(dmd_pio, dmd_sm, false);
       pio_interrupt_clear(frame_pio, 5);
       dmd_dma_reset();
+      pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
+                          pio_encode_mov(pio_y, pio_null));
       pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
       pio_sm_set_enabled(dmd_pio, dmd_sm, true);
     }
