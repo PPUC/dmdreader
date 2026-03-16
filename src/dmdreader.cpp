@@ -593,17 +593,14 @@ void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
   if (dmd_type == DMD_DE_X16_V2) {
-    // if (frame_pio->irq & (1u << 5)) {
-      // Due to the complexity of x16 v2, we use this way to re-sync
-      // if the signals are noisy, or whatever else could happen.
-      pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-      pio_interrupt_clear(frame_pio, 5);
-      // dmd_dma_reset();
-      pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
-                                pio_encode_mov(pio_y, pio_null));
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
-      pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-    // }
+    // Due to the complexity of x16 v2, we use this way to re-sync
+    // if the signals are noisy, or whatever else could happen.
+    pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+    // clear the interrupt for irq 5 in the pio
+    dmd_pio->irq = (1u << 5);
+    pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_mov(pio_y, pio_null));
+    pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
+    pio_sm_set_enabled(dmd_pio, dmd_sm, true);
   }
 
   // Required as long as CAPCOM is not locked-in:
