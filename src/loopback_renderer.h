@@ -138,7 +138,7 @@ constexpr std::array<uint8_t, 16> make_brightness_map(uint8_t max_value) {
 static constexpr std::array<uint8_t, 16> kCapcomBrightnessMap =
     make_brightness_map(4);
 static constexpr std::array<uint8_t, 16> kGottliebBrightnessMap =
-    make_brightness_map(7);
+    make_brightness_map(6);
 
 // ------------- Color base functions definitions -------------
 // Color values are done in a way that they are less harsh to the eye.
