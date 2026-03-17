@@ -146,7 +146,7 @@ static constexpr std::array<uint8_t, 16> kGottliebBrightnessMap =
 // Rule of thumb: avoid fully saturated extremes. Instead add warmth and depth
 // → makes it look more organic.
 constexpr RGB888 orange_base(uint8_t brightness) {
-  // Orange: R=255, G=165, B=0 scaled with brightness
+  // Orange: R=255, G=128, B=0 scaled with brightness
   const uint16_t scale = brightness * 17;  // 0-15 -> 0-255 (≈17 per step)
   return RGB888(static_cast<uint8_t>(scale),
                 static_cast<uint8_t>(scale * 128 / 255), 0);
