@@ -149,7 +149,7 @@ constexpr RGB888 orange_base(uint8_t brightness) {
   // Orange: R=255, G=110, B=0 scaled with brightness
   const uint16_t scale = brightness * 17;  // 0-15 -> 0-255 (≈17 per step)
   return RGB888(static_cast<uint8_t>(scale),
-                static_cast<uint8_t>(scale * 110 / 255), 0);
+                static_cast<uint8_t>(scale * 115 / 255), 0);
 }
 
 constexpr RGB888 red_base(uint8_t brightness) {
