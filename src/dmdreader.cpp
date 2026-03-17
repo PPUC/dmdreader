@@ -599,6 +599,7 @@ void dmd_dma_handler() {
     // clear the interrupt for FRAME_START_IRQ 5 in the pio
     dmd_pio->irq = (1u << 5);
     pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_mov(pio_y, pio_null));
+    dmd_dma_reset();
     pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
     pio_sm_set_enabled(dmd_pio, dmd_sm, true);
   }
