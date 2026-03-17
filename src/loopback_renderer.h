@@ -169,10 +169,9 @@ constexpr RGB888 blue_base(uint8_t brightness) {
 }
 
 constexpr RGB888 purple_base(uint8_t brightness) {
-  // Purple: R=128, G=0, B=128
   const uint16_t scale = brightness * 17;
-  return RGB888(static_cast<uint8_t>(scale * 128 / 255), 0,
-                static_cast<uint8_t>(scale * 128 / 255));
+  return RGB888(static_cast<uint8_t>(scale), 0,
+                static_cast<uint8_t>(scale));
 }
 
 constexpr RGB888 pink_base(uint8_t brightness) {
