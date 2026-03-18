@@ -609,8 +609,9 @@ void dmd_dma_handler() {
   detected_0_1_0_1 = false;
   detected_1_0_0_0 = false;
 
-  // Used for Data East 128x16 to correctly align 64x16 + 64x16
-  int16_t diff = 0;
+  // Used for Data East 128x16 to correctly align 64x16 + 64x16.
+  // Also lets the frame start exactly in the middle of a 128x32 frame.
+  int16_t diff = 255;
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
@@ -725,8 +726,7 @@ void dmd_dma_handler() {
           // work its way back to 0. This way we prepare framebuf for
           // oversampling
           if (px == ((source_dwordsperplane / 2) - 1)) {
-            diff -=
-                8;  // we immediately decrement once to select the correct row
+            diff -= 8;  // immediately decrement once to select the correct row
             diff *= -1;
           }
         }
@@ -744,11 +744,11 @@ void dmd_dma_handler() {
   if (dmd_type == DMD_DE_X16_V1 || dmd_type == DMD_DE_X16_V2) {
     // merge the rows and convert from 4bpp to 2bpp with a LUT
     uint32_t *dst, *src1, *src2;
-    dst = src1 = framebuf;
+    dst = src1 = framebuf + 255; // start in the middle of 128x32 frame
     src2 = src1 + source_dwordsperline;
 
     if (dmd_type == DMD_DE_X16_V1) {
-      for (int l = 0; l < source_height; l++) {
+      for (int l = 0; l < source_height / 2; l++) {
         for (int w = 0; w < source_dwordsperline; w++) {
           uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
           uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] * 3));
@@ -765,7 +765,7 @@ void dmd_dma_handler() {
       }
     } else {
       // DMD_DE_X16_V2 case
-      for (int l = 0; l < source_height; l++) {
+      for (int l = 0; l < source_height / 2; l++) {
         for (int w = 0; w < source_dwordsperline; w++) {
           uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
           uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] + src2[w] * 2));
@@ -1023,7 +1023,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       // we need it to sample data on the rising edge
 
       source_width = 128;
-      source_height = 16;
+      source_height = 32; // is actually 16, but we process as 32
       source_bitsperpixel = 4;  // recorded as 4bpp in the pio
       target_bitsperpixel = 2;  // max pixel value is 3
       // in DE-Sega, there's only one plane,
@@ -1061,7 +1061,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
       source_width = 128;
-      source_height = 16;
+      source_height = 32; // is actually 16, but we process as 32
       source_bitsperpixel = 4;  // recorded as 4bpp in the pio
       target_bitsperpixel = 2;  // max pixvalues are 0, 1, 2, 3
       // in DE-Sega, there's only one plane,
@@ -1299,6 +1299,13 @@ bool dmdreader_init(bool return_on_no_detection) {
   // Calculate offsets for the first pixel of each plane and cache these.
   for (int i = 0; i < MAX_PLANESPERFRAME; i++) {
     offset[i] = i * source_dwordsperplane;
+  }
+
+  // Read a 128x16 frame but process as 128x32, so, change the number of
+  // transfers at this stage to trigger a dma transfer at the right time.
+  if (dmd_type == DMD_DE_X16_V1 || dmd_type == DMD_DE_X16_V2) {
+      source_dwordsperframe /= 2;
+      source_dwordsperplane /= 2;
   }
 
   // DMA for DMD reader
