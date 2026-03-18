@@ -11,6 +11,7 @@
 .program dmd_reader_de_x16_v2
 
     wait irq FRAME_START_IRQ    ; we only check for an IRQ once because of limitations
+    mov isr, null               ; clean the isr before starting a new frame
 
 .wrap_target
 
@@ -32,7 +33,7 @@ dotloop:
     jmp y-- start
 
 skip:
-    mov x, osr                   ; copy 8192 to x
+    mov x, osr                   ; copy 4096 to x
 lsb_msb_check:
     jmp pin reload_dotloop_y     ; if DOTCLK is high, it means we will have a valid LSB + MSB row
     jmp x-- lsb_msb_check        ; loop for ~65.5 µs (based on 125MHz clkdiv)
@@ -62,15 +63,15 @@ reload_dotloop_y:
 
 wait_low:
     wait 0 gpio DE      ; Wait for DE to go low
-    mov x, osr          ; Use x as storage for 3000 iterations
+    mov x, osr          ; Use x as storage for 2500 iterations
 
 delay_loop:
-    jmp x-- delay_loop     ; Decrement x and repeat until zero
+    jmp x-- delay_loop           ; Decrement x and repeat until zero
 
     ; After ~16 µs, check if still low
-    jmp pin, frame_start   ; If DE went high early → we found the start
+    jmp pin, frame_start         ; If DE went high early → we found the start
     wait 1 gpio DE
-    jmp wait_low           ; DE didn't go high early → restart
+    jmp wait_low                 ; DE didn't go high early → restart
 
 frame_start:
     irq FRAME_START_IRQ

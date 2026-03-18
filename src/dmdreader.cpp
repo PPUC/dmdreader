@@ -592,6 +592,18 @@ void dmd_dma_reset() {
 void dmd_dma_handler() {
   dmd_set_and_enable_new_dma_target();
 
+  if (dmd_type == DMD_DE_X16_V2) {
+    // Due to the complexity of x16 v2, we use this way to re-sync
+    // if the signals are noisy, or whatever else could happen.
+    pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+    // clear the interrupt for FRAME_START_IRQ 5 in the pio
+    dmd_pio->irq = (1u << 5);
+    pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_mov(pio_y, pio_null));
+    dmd_dma_reset();
+    pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
+    pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+  }
+
   // Required as long as CAPCOM is not locked-in:
   plane0_shifted = false;
   detected_0_1_0_1 = false;
@@ -650,7 +662,7 @@ void dmd_dma_handler() {
     // It seems to be sufficient to check every 8th pixel for these patterns to
     // detect sync. So we could avoid bitschifiting of the uint32_t value to
     // check every single pixel.
-    if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted) {
+    if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted) {
       digitalWrite(LED_BUILTIN, HIGH);
       uint8_t value = pixval & 0x0F;
       if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
@@ -724,7 +736,7 @@ void dmd_dma_handler() {
     }
   }
 
-  if (DMD_CAPCOM >= dmd_type && !locked_in && !plane0_shifted &&
+  if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted &&
       detected_0_1_0_1 && detected_1_0_0_0) {
     locked_in = true;
   }
@@ -865,11 +877,16 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
                              DmdConfigGetter framedetect_get_default_config,
                              uint *input_pins, uint8_t num_input_pins,
                              uint8_t jump_pin, uint8_t in_base_pin) {
+  uint32_t sys_hz = clock_get_hz(clk_sys);  // e.g. 125/200/266 MHz
+  float target_hz = 125000000.0f;           // PIO code designed for 125 MHz
+  float dmd_clkdiv = (float)sys_hz / target_hz;  // scales automatically
+
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
       dmd_reader_program, &dmd_pio, &dmd_sm, &dmd_offset,
       (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
-  dmd_reader_program_init(dmd_pio, dmd_sm, dmd_offset, dmd_config, in_base_pin);
+  dmd_reader_program_init(dmd_clkdiv, dmd_pio, dmd_sm, dmd_offset, dmd_config,
+                          in_base_pin);
 
   // The framedetect program just runs and detects the beginning of a new
   // frame
@@ -877,8 +894,9 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
       dmd_framedetect_program, &frame_pio, &frame_sm, &frame_offset,
       (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config frame_config = framedetect_get_default_config(frame_offset);
-  dmd_framedetect_program_init(frame_pio, frame_sm, frame_offset, frame_config,
-                               input_pins, num_input_pins, jump_pin);
+  dmd_framedetect_program_init(dmd_clkdiv, frame_pio, frame_sm, frame_offset,
+                               frame_config, input_pins, num_input_pins,
+                               jump_pin);
   pio_sm_set_enabled(frame_pio, frame_sm, true);
 }
 
@@ -1032,13 +1050,13 @@ bool dmdreader_init(bool return_on_no_detection) {
       pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
                                 pio_encode_mov(pio_y, pio_null));
 
-      // load 8192 directly to TX fifo
-      pio_sm_put(dmd_pio, dmd_sm, 8192);
+      // load 4096 directly to TX fifo (32uS)
+      pio_sm_put(dmd_pio, dmd_sm, 4096);
       // pull 32 bits from the TX fifo into osr
       pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
-      // load 3000 directly to TX fifo
-      pio_sm_put(frame_pio, frame_sm, 3000);
+      // load 2500 directly to TX fifo (20uS)
+      pio_sm_put(frame_pio, frame_sm, 2500);
       // pull 32 bits from the TX fifo into osr
       pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
@@ -1311,7 +1329,6 @@ bool dmdreader_init(bool return_on_no_detection) {
   irq_set_exclusive_handler(DMA_IRQ_0, dmd_dma_handler);
   irq_set_enabled(DMA_IRQ_0, true);
 #endif
-
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);

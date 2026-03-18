@@ -41,12 +41,12 @@ dotloop:
 
 wait_low:
     wait 0 gpio DE      ; Wait for DE to go low
-    set x, 31           ; Use x as storage for 32 iterations
+    set x, 20           ; Use x as storage for 20 iterations
 
 delay_loop:
     nop [31]
     nop [31]
-    jmp x-- delay_loop [31]  ; Decrement x and repeat until zero
+    jmp x-- delay_loop  ; Decrement x and repeat until zero
 
     ; After ~10 µs, check if still low
     jmp pin, wait_low   ; If pin went high early → back to wait_low
