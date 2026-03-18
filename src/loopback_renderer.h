@@ -138,49 +138,59 @@ constexpr std::array<uint8_t, 16> make_brightness_map(uint8_t max_value) {
 static constexpr std::array<uint8_t, 16> kCapcomBrightnessMap =
     make_brightness_map(4);
 static constexpr std::array<uint8_t, 16> kGottliebBrightnessMap =
-    make_brightness_map(7);
+    make_brightness_map(6);
 
-// Color base functions definitions
+// ------------- Color base functions definitions -------------
+// Color values are done in a way that they are less harsh to the eye.
+// We do this by mixing in some lower value colors with the primary colors.
+// Rule of thumb: avoid fully saturated extremes. Instead add warmth and depth
+// → makes it look more organic.
 constexpr RGB888 orange_base(uint8_t brightness) {
-  // Orange: R=255, G=165, B=0 scaled with brightness
+  // Orange: R=255, G=115, B=0 scaled with brightness
   const uint16_t scale = brightness * 17;  // 0-15 -> 0-255 (≈17 per step)
   return RGB888(static_cast<uint8_t>(scale),
-                static_cast<uint8_t>(scale * 165 / 255), 0);
+                static_cast<uint8_t>(scale * 115 / 255), 0);
 }
 
 constexpr RGB888 red_base(uint8_t brightness) {
   const uint16_t scale = brightness * 17;
-  return RGB888(static_cast<uint8_t>(scale), 0, 0);
-}
-
-constexpr RGB888 yellow_base(uint8_t brightness) {
-  const uint16_t scale = brightness * 17;
-  return RGB888(static_cast<uint8_t>(scale), static_cast<uint8_t>(scale), 0);
+  return RGB888(static_cast<uint8_t>(scale),
+                static_cast<uint8_t>(scale * 20 / 255),
+                static_cast<uint8_t>(scale * 20 / 255));
 }
 
 constexpr RGB888 green_base(uint8_t brightness) {
   const uint16_t scale = brightness * 17;
-  return RGB888(0, static_cast<uint8_t>(scale), 0);
+  return RGB888(static_cast<uint8_t>(scale * 20 / 255),
+                static_cast<uint8_t>(scale),
+                static_cast<uint8_t>(scale * 20 / 255));
 }
 
 constexpr RGB888 blue_base(uint8_t brightness) {
   const uint16_t scale = brightness * 17;
-  return RGB888(0, 0, static_cast<uint8_t>(scale));
+  return RGB888(static_cast<uint8_t>(scale * 20 / 255),
+                static_cast<uint8_t>(scale * 20 / 255),
+                static_cast<uint8_t>(scale));
+}
+
+constexpr RGB888 yellow_base(uint8_t brightness) {
+  const uint16_t scale = brightness * 17;
+  return RGB888(static_cast<uint8_t>(scale), static_cast<uint8_t>(scale),
+                static_cast<uint8_t>(scale * 20 / 255));
 }
 
 constexpr RGB888 purple_base(uint8_t brightness) {
-  // Purple: R=128, G=0, B=128
   const uint16_t scale = brightness * 17;
-  return RGB888(static_cast<uint8_t>(scale * 128 / 255), 0,
-                static_cast<uint8_t>(scale * 128 / 255));
+  return RGB888(static_cast<uint8_t>(scale * 128 / 255),
+                static_cast<uint8_t>(scale * 20 / 255),
+                static_cast<uint8_t>(scale));
 }
 
 constexpr RGB888 pink_base(uint8_t brightness) {
-  // Pink: R=255, G=192, B=203
   const uint16_t scale = brightness * 17;
   return RGB888(static_cast<uint8_t>(scale),
-                static_cast<uint8_t>(scale * 192 / 255),
-                static_cast<uint8_t>(scale * 203 / 255));
+                static_cast<uint8_t>(scale * 20 / 255),
+                static_cast<uint8_t>(scale));
 }
 
 constexpr RGB888 white_base(uint8_t brightness) {
