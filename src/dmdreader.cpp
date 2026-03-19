@@ -611,7 +611,7 @@ void dmd_dma_handler() {
 
   // Used for Data East 128x16 to correctly align 64x16 + 64x16.
   // Also stores initial data in the hidden part of framebuf.
-  int16_t diff = 0;
+  int16_t diff_x16 = 0;
   uint8_t offset_x16 = 255;
 
   // Fix byte order within the buffer
@@ -717,18 +717,18 @@ void dmd_dma_handler() {
           framebuf[out] |= v16;
         }
       } else {  // Data East 128x16 case
-        framebuf[px + diff + offset_x16] = pixval;
+        framebuf[px + diff_x16 + offset_x16] = pixval;
         // increase diff everytime we cross one MSB or LSB row (64 pixels wide)
         // px is based on 4bpp, so we increase every 8 px.
         if ((px & 7) == 7) {
-          diff += 8;
+          diff_x16 += 8;
           // When we have processed half of the pixels in an entire frame,
           // turn the diff into a - value, it will start at the top again and
           // work its way back to 0. This way we prepare framebuf for
           // oversampling
           if (px == ((source_dwordsperplane / 2) - 1)) {
-            diff -= 8;  // immediately decrement once to select the correct row
-            diff *= -1;
+            diff_x16 -= 8;  // immediately decrement once -> select correct row
+            diff_x16 *= -1;
           }
         }
       }
