@@ -611,7 +611,7 @@ void dmd_dma_handler() {
 
   // Used for Data East 128x16 to correctly align 64x16 + 64x16.
   // Also lets the frame start exactly in the middle of a 128x32 frame.
-  int16_t diff = 255;
+  int16_t diff = 511;
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
@@ -744,7 +744,8 @@ void dmd_dma_handler() {
   if (dmd_type == DMD_DE_X16_V1 || dmd_type == DMD_DE_X16_V2) {
     // merge the rows and convert from 4bpp to 2bpp with a LUT
     uint32_t *dst, *src1, *src2;
-    dst = src1 = framebuf + 255; // start in the middle of 128x32 frame
+    dst = framebuf + 127; // start in the middle of 128x32 frame
+    src1 = framebuf + 511; // everything is stored from here onwards
     src2 = src1 + source_dwordsperline;
 
     if (dmd_type == DMD_DE_X16_V1) {
