@@ -1226,6 +1226,26 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
+    case DMD_SLEIC: {
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(
+          &dmd_reader_whitestar_program,
+          dmd_reader_whitestar_program_get_default_config,
+          &dmd_framedetect_whitestar_program,
+          dmd_framedetect_whitestar_program_get_default_config, input_pins, 1,
+          0, SDATA);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 1;
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_2X;
+      source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
     case DMD_CAPCOM: {
       uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(&dmd_reader_capcom_program,

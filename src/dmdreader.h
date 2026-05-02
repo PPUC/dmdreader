@@ -31,6 +31,7 @@ enum DmdType : uint8_t {
   DMD_ISLAND,
   DMD_HOMEPIN,
   DMD_SPINBALL,
+  DMD_SLEIC,
   // CAPCOM needs to be the last two entries:
   DMD_CAPCOM,
   DMD_CAPCOM_HD,
