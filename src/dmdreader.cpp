@@ -374,6 +374,11 @@ DmdType detect_dmd() {
              (rclk < 1690) && (rdata > 45) && (rdata < 55)) {
     return DMD_HOMEPIN;
 
+    // Spinball -> DOTCLK: 543872 | RCLK: 4250 | RDATA: 132
+  } else if ((dotclk > 520000) && (dotclk < 560000) && (rclk > 4100) &&
+             (rclk < 4400) && (rdata > 125) && (rdata < 140)) {
+    return DMD_WPC;
+
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
              (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
