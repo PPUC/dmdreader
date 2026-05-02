@@ -8,7 +8,7 @@ The Pi Pico is directly connected to the 6 DMD data lines. Communication between
 On this IRQ line, the Pico signals that new data is available and consumer must start the data transfer.
 Since not any consumer (especially the Raspberry Pi) can act as an SPI slave this method is used.
 
-## Officially Supported hardware systems
+## Officially supported hardware systems
 
 * WPC95 & WPC -> 128x32
 * Data East -> 128x32 & 128x16
@@ -20,6 +20,8 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 * Gottlieb/Premier -> 128x32
 * Alvin G. & Co -> 128x32
 * Homepin -> 128x32
+* Spinball -> 128x32
+* Sleic -> 128x32
 
 ## Reading data
 
