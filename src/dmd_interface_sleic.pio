@@ -41,14 +41,14 @@ dotloop:
 .wrap_target
 
 wait_low:
-    mov x, isr
+    mov x, isr          ; set x to 6144
     wait 0 gpio DE      ; Wait for DE to go low
 
 delay_loop:
     jmp pin, wait_low   ; If pin went high early → back to wait_low
     jmp x-- delay_loop  ; Decrement x and repeat until zero
 
-    ; If after ~10 µs still low → frame start found
+    ; If after ~12 µs still low → frame start found
     wait 1 gpio RDATA
-    irq FRAME_START_IRQ ; Pin remained low long enough → frame started
+    irq FRAME_START_IRQ
 .wrap
