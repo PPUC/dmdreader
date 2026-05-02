@@ -33,22 +33,22 @@ dotloop:
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_sleic
+
+    set x, 3            ; x = 3
+    in x, 2             ; shift in 2 bits, isr = 3
+    in null, 11         ; shift left by 11 bits = 6144
+
 .wrap_target
 
-
 wait_low:
+    mov x, isr
     wait 0 gpio DE      ; Wait for DE to go low
-    set x, 20           ; Use x as storage for 20 iterations
 
 delay_loop:
-    nop [31]
-    nop [31]
+    jmp pin, wait_low   ; If pin went high early → back to wait_low
     jmp x-- delay_loop  ; Decrement x and repeat until zero
 
-    ; After ~10 µs, check if still low
-    jmp pin, wait_low   ; If pin went high early → back to wait_low
+    ; If after ~10 µs still low → frame start found
+    wait 1 gpio RDATA
     irq FRAME_START_IRQ ; Pin remained low long enough → frame started
-
-    wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
-    jmp wait_low        ; went high, time to go back to wait_low
 .wrap

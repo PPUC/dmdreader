@@ -379,6 +379,11 @@ DmdType detect_dmd() {
              (rclk < 4400) && (rdata > 125) && (rdata < 140)) {
     return DMD_SPINBALL;
 
+    // Sleic -> DOTCLK: 599000 | RCLK: 4712 | RDATA: 145
+  } else if ((dotclk > 570000) && (dotclk < 630000) && (rclk > 4550) &&
+             (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
+    return DMD_SLEIC;
+
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
              (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
@@ -1227,13 +1232,13 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_SLEIC: {
-      uint input_pins[] = {RDATA};
+      uint input_pins[] = {DE, RDATA};
       dmdreader_programs_init(
-          &dmd_reader_whitestar_program,
-          dmd_reader_whitestar_program_get_default_config,
-          &dmd_framedetect_whitestar_program,
-          dmd_framedetect_whitestar_program_get_default_config, input_pins, 1,
-          0, SDATA);
+          &dmd_reader_sleic_program,
+          dmd_reader_sleic_program_get_default_config,
+          &dmd_framedetect_sleic_program,
+          dmd_framedetect_sleic_program_get_default_config, input_pins, 2,
+          DE, SDATA);
 
       source_width = 128;
       source_height = 32;
