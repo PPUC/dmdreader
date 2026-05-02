@@ -1213,7 +1213,8 @@ bool dmdreader_init(bool return_on_no_detection) {
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
                               input_pins, 2, 0, SDATA);
-
+      // Spinball uses the WPC rendering method (timings are very close actually)
+      // The Capcom framedetect method is used to find the start of a frame
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;
