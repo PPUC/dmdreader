@@ -364,7 +364,7 @@ DmdType detect_dmd() {
              (rclk < 2380) && (rdata > 65) && (rdata < 80)) {
     return DMD_ALVING;
 
-    // Island/SPinball(?) -> DOTCLK: 2323000 | RCLK: 18100 | RDATA: 565
+    // Island -> DOTCLK: 2323000 | RCLK: 18100 | RDATA: 565
   } else if ((dotclk > 2200000) && (dotclk < 2450000) && (rclk > 17700) &&
              (rclk < 18500) && (rdata > 540) && (rdata < 590)) {
     return DMD_ISLAND;
@@ -377,7 +377,7 @@ DmdType detect_dmd() {
     // Spinball -> DOTCLK: 543872 | RCLK: 4250 | RDATA: 132
   } else if ((dotclk > 520000) && (dotclk < 560000) && (rclk > 4100) &&
              (rclk < 4400) && (rdata > 125) && (rdata < 140)) {
-    return DMD_WPC;
+    return DMD_SPINBALL;
 
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
@@ -1203,6 +1203,25 @@ bool dmdreader_init(bool return_on_no_detection) {
       // 4x line oversampling for Homepin, similar to SAM
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
+    case DMD_SPINBALL: {
+      uint input_pins[] = {RDATA, DE, DOTCLK};
+      dmdreader_programs_init(&dmd_reader_wpc_program,
+                              dmd_reader_wpc_program_get_default_config,
+                              &dmd_framedetect_wpc_program,
+                              dmd_framedetect_wpc_program_get_default_config,
+                              input_pins, 3, 0, SDATA);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 3;
+      source_planehistoryperframe = 2;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
 
