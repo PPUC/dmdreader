@@ -21,7 +21,6 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 * Alvin G. & Co -> 128x32
 * Homepin -> 128x32
 * Spinball -> 128x32
-* Sleic -> 128x32
 
 ## Reading data
 
