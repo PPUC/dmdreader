@@ -1207,12 +1207,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_SPINBALL: {
-      uint input_pins[] = {RDATA, DE, DOTCLK};
+      uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(&dmd_reader_wpc_program,
                               dmd_reader_wpc_program_get_default_config,
-                              &dmd_framedetect_wpc_program,
-                              dmd_framedetect_wpc_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+                              &dmd_framedetect_capcom_program,
+                              dmd_framedetect_capcom_program_get_default_config,
+                              input_pins, 2, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
