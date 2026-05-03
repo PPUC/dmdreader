@@ -326,12 +326,12 @@ DmdType detect_dmd() {
 
     // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
-             (rclk < 3930) && (rdata > 110) && (rdata < 120)) {
+             (rclk < 3930) && (rdata > 110) && (rdata < 125)) {
     return DMD_DE_X16_V1;
 
     // Data East X16 V2: DOTCLK: 121000 or 60544 | RCLK: 3850 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3825) &&
-             (rclk < 3875) && (rdata > 110) && (rdata < 120)) {
+             (rclk < 3875) && (rdata > 110) && (rdata < 125)) {
     return DMD_DE_X16_V2;
 
     // Data East X32: DOTCLK: 640000 | RCLK: 2500 | RDATA: 80
