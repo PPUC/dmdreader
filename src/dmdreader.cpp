@@ -374,12 +374,12 @@ DmdType detect_dmd() {
              (rclk < 1690) && (rdata > 45) && (rdata < 55)) {
     return DMD_HOMEPIN;
 
-    // Spinball -> DOTCLK: 543872 | RCLK: 4250 | RDATA: 132
-  } else if ((dotclk > 520000) && (dotclk < 560000) && (rclk > 4100) &&
+    // Spinball -> DOTCLK: 544000 | RCLK: 4250 | RDATA: 130
+  } else if ((dotclk > 520000) && (dotclk < 570000) && (rclk > 4100) &&
              (rclk < 4400) && (rdata > 125) && (rdata < 140)) {
     return DMD_SPINBALL;
 
-    // Sleic -> DOTCLK: 599000 | RCLK: 4712 | RDATA: 145
+    // Sleic -> DOTCLK: 599000 | RCLK: 4700 | RDATA: 145
   } else if ((dotclk > 570000) && (dotclk < 630000) && (rclk > 4550) &&
              (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
     return DMD_SLEIC;
