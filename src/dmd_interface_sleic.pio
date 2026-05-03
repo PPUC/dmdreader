@@ -48,7 +48,7 @@ delay_loop:
     jmp pin, wait_low   ; If pin went high early → back to wait_low
     jmp x-- delay_loop  ; Decrement x and repeat until zero
 
-    ; If after ~12 µs still low → frame start found
+    ; If after ~100 µs still low → frame start found
     wait 1 gpio RDATA
     irq FRAME_START_IRQ
 .wrap
