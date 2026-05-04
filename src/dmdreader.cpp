@@ -650,7 +650,11 @@ void dmd_dma_handler() {
     for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
-        v <<= plane;
+        if (dmd_type == DMD_SPIKE1) {
+          v <<= plane;
+        } else if (dmd_type == DMD_SLEIC) {
+          v <<= (source_planesperframe - 1) - plane;
+        }
       }
       pixval += v;
     }
@@ -1244,10 +1248,10 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_height = 32;
       source_bitsperpixel = 2;
       target_bitsperpixel = 2;
-      source_planesperframe = 1;
+      source_planesperframe = 2;
       source_planehistoryperframe = 0;
-      source_lineoversampling = LINEOVERSAMPLING_2X;
-      source_mergeplanes = MERGEPLANES_NONE;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADDSHIFT;
       break;
     }
 
