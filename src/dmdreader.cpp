@@ -326,12 +326,12 @@ DmdType detect_dmd() {
 
     // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
-             (rclk < 3930) && (rdata > 110) && (rdata < 120)) {
+             (rclk < 3930) && (rdata > 110) && (rdata < 125)) {
     return DMD_DE_X16_V1;
 
     // Data East X16 V2: DOTCLK: 121000 or 60544 | RCLK: 3850 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3825) &&
-             (rclk < 3875) && (rdata > 110) && (rdata < 120)) {
+             (rclk < 3875) && (rdata > 110) && (rdata < 125)) {
     return DMD_DE_X16_V2;
 
     // Data East X32: DOTCLK: 640000 | RCLK: 2500 | RDATA: 80
@@ -364,7 +364,7 @@ DmdType detect_dmd() {
              (rclk < 2380) && (rdata > 65) && (rdata < 80)) {
     return DMD_ALVING;
 
-    // Island/SPinball(?) -> DOTCLK: 2323000 | RCLK: 18100 | RDATA: 565
+    // Island -> DOTCLK: 2323000 | RCLK: 18100 | RDATA: 565
   } else if ((dotclk > 2200000) && (dotclk < 2450000) && (rclk > 17700) &&
              (rclk < 18500) && (rdata > 540) && (rdata < 590)) {
     return DMD_ISLAND;
@@ -373,6 +373,16 @@ DmdType detect_dmd() {
   } else if ((dotclk > 800000) && (dotclk < 870000) && (rclk > 1580) &&
              (rclk < 1690) && (rdata > 45) && (rdata < 55)) {
     return DMD_HOMEPIN;
+
+    // Spinball -> DOTCLK: 544000 | RCLK: 4250 | RDATA: 130
+  } else if ((dotclk > 520000) && (dotclk < 570000) && (rclk > 4100) &&
+             (rclk < 4400) && (rdata > 125) && (rdata < 140)) {
+    return DMD_SPINBALL;
+
+    // Sleic -> DOTCLK: 599000 | RCLK: 4700 | RDATA: 145
+  } else if ((dotclk > 570000) && (dotclk < 630000) && (rclk > 4550) &&
+             (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
+    return DMD_SLEIC;
 
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
@@ -640,7 +650,11 @@ void dmd_dma_handler() {
     for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
-        v <<= plane;
+        if (dmd_type == DMD_SPIKE1) {
+          v <<= plane;
+        } else if (dmd_type == DMD_SLEIC) {
+          v <<= (source_planesperframe - 1) - plane;
+        }
       }
       pixval += v;
     }
@@ -1198,6 +1212,46 @@ bool dmdreader_init(bool return_on_no_detection) {
       // 4x line oversampling for Homepin, similar to SAM
       source_lineoversampling = LINEOVERSAMPLING_4X;
       source_mergeplanes = MERGEPLANES_NONE;
+      break;
+    }
+
+    case DMD_SPINBALL: {
+      uint input_pins[] = {RDATA, RCLK};
+      dmdreader_programs_init(&dmd_reader_wpc_program,
+                              dmd_reader_wpc_program_get_default_config,
+                              &dmd_framedetect_capcom_program,
+                              dmd_framedetect_capcom_program_get_default_config,
+                              input_pins, 2, 0, SDATA);
+      // Spinball uses the WPC rendering method (timings are very close actually)
+      // The Capcom framedetect method is used to find the start of a frame
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 3;
+      source_planehistoryperframe = 2;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }
+
+    case DMD_SLEIC: {
+      uint input_pins[] = {DE, RDATA};
+      dmdreader_programs_init(
+          &dmd_reader_sleic_program,
+          dmd_reader_sleic_program_get_default_config,
+          &dmd_framedetect_sleic_program,
+          dmd_framedetect_sleic_program_get_default_config, input_pins, 2,
+          DE, SDATA);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 2;
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADDSHIFT;
       break;
     }
 
