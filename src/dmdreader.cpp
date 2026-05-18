@@ -61,7 +61,7 @@ DmdType dmd_type;
 #define MAX_WIDTH 256
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
-#define MAX_PLANESPERFRAME 6
+#define MAX_PLANESPERFRAME 15
 #define MAX_OVERSAMPLING LINEOVERSAMPLING_4X
 
 // Use uint16_t for all of these variables to erase calculations:
@@ -1257,6 +1257,25 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADDSHIFT;
+      break;
+    }
+
+    case DMD_SPOOKY: {
+      uint input_pins[] = {RDATA, DE, DOTCLK};
+      dmdreader_programs_init(&dmd_reader_wpc_program,
+                              dmd_reader_wpc_program_get_default_config,
+                              &dmd_framedetect_wpc_program,
+                              dmd_framedetect_wpc_program_get_default_config,
+                              input_pins, 3, 0, SDATA);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
+      source_planesperframe = 15;
+      source_planehistoryperframe = 14;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
 
