@@ -17,6 +17,7 @@
 #include "dmd_interface_gottlieb.pio.h"
 #include "dmd_interface_homepin.pio.h"
 #include "dmd_interface_sleic.pio.h"
+#include "dmd_interface_spooky.pio.h"
 #include "dmd_interface_sega_hd.pio.h"
 #include "dmd_interface_whitestar.pio.h"
 #include "dmd_interface_wpc.pio.h"
