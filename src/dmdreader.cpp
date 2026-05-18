@@ -1262,18 +1262,18 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_SPOOKY: {
       uint input_pins[] = {RDATA, DE, DOTCLK};
-      dmdreader_programs_init(&dmd_reader_wpc_program,
-                              dmd_reader_wpc_program_get_default_config,
-                              &dmd_framedetect_wpc_program,
-                              dmd_framedetect_wpc_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_spooky_program,
+                              dmd_reader_spooky_program_get_default_config,
+                              &dmd_framedetect_spooky_program,
+                              dmd_framedetect_spooky_program_get_default_config,
                               input_pins, 3, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
       target_bitsperpixel = 4;
-      source_planesperframe = 15;
-      source_planehistoryperframe = 14;
+      source_planesperframe = 15; // Spooky quickly merges 15 planes -> 4bpp
+      source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADD;
       break;
