@@ -384,12 +384,17 @@ DmdType detect_dmd() {
              (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
     return DMD_SLEIC;
 
+    // Spooky -> DOTCLK: 3211000 | RCLK: 25100  | RDATA: 784
+  } else if ((dotclk > 3100000) && (dotclk < 3300000) && (rclk > 24000) &&
+             (rclk < 26000) && (rdata > 750) && (rdata < 820)) {
+    return DMD_SPOOKY;
+
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
              (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
 
-    // Capcom HD -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
+    // Capcom HD & ROMSTAR -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
   } else if ((dotclk > 3900000) && (dotclk < 4300000) && (rclk > 15500) &&
              (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
