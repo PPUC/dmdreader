@@ -317,11 +317,10 @@ DmdType detect_dmd() {
   } else if ((dotclk > 1000000) && (dotclk < 1050000) && (rclk > 1950) &&
              (rclk < 2050) && (rdata > 55) && (rdata < 65)) {
     return DMD_SAM;
-  }
-#ifndef ALPHADMD
-  // WPC: DOTCLK: 500000 | RCLK: 3900 | RDATA: 120
-  else if ((dotclk > 450000) && (dotclk < 550000) && (rclk > 3800) &&
-           (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
+
+    // WPC: DOTCLK: 500000 | RCLK: 3900 | RDATA: 120
+  } else if ((dotclk > 450000) && (dotclk < 550000) && (rclk > 3800) &&
+             (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
     return DMD_WPC;
 
     // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
@@ -394,7 +393,6 @@ DmdType detect_dmd() {
              (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
   }
-#endif
 
   return DMD_UNKNOWN;
 }

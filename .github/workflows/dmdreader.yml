@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dmd: ['ppucdmd', 'ppucdmd2', 'alphadmd']
+        dmd: ['ppucdmd', 'ppucdmd2']
 
     name: Build for ${{ matrix.dmd }}
 
@@ -98,8 +98,6 @@ jobs:
             zip ../dmdreader-ppucdmd.zip dmdreader-ppucdmd.elf dmdreader-ppucdmd.uf2 VERSION LICENSE README.md
             cd ../dmdreader-ppucdmd2
             zip ../dmdreader-ppucdmd2.zip dmdreader-ppucdmd2.elf dmdreader-ppucdmd2.uf2 VERSION LICENSE README.md
-            cd ../dmdreader-alphadmd
-            zip ../dmdreader-alphadmd.zip dmdreader-alphadmd.elf dmdreader-alphadmd.uf2 VERSION LICENSE README.md
             cd ..
 
       - name: Release
@@ -110,4 +108,3 @@ jobs:
           files: |
             dmdreader-ppucdmd.zip
             dmdreader-ppucdmd2.zip
-            dmdreader-alphadmd.zip
