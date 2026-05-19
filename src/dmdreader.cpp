@@ -12,7 +12,7 @@
 #include "hardware/irq.h"
 #include "hardware/pio.h"
 #include "loopback_renderer.h"
-#include "spi_slave_sender.pio.h"
+#include "pio/spi_slave_sender.pio.h"
 typedef struct buf32_t {
   uint8_t byte0;
   uint8_t byte1;
