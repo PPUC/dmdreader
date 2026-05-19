@@ -6,12 +6,12 @@
 #include "hardware/pio.h"
 #include "pio/dmd_dotloop.pio.h"
 #include "pio/dmd_framedetect_alving.pio.h"
+#include "pio/dmd_framedetect_capcom.pio.h"
+#include "pio/dmd_framedetect_de_x16.pio.h"
 #include "pio/dmd_framedetect_desega.pio.h"
 #include "pio/dmd_framedetect_generic.pio.h"
 #include "pio/dmd_framedetect_homepin.pio.h"
-#include "pio/dmd_framedetect_de_x16.pio.h"
 #include "pio/dmd_framedetect_sleic.pio.h"
-#include "pio/dmd_framedetect_capcom.pio.h"
 #include "pio/dmd_framedetect_spike.pio.h"
 
 // Init the DMD reader (dots) PIO program, common for all DMD types.
