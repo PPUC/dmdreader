@@ -948,10 +948,10 @@ bool dmdreader_init(bool return_on_no_detection) {
   switch (dmd_type) {
     case DMD_WPC: {
       uint input_pins[] = {RDATA, DE, DOTCLK};
-      dmdreader_programs_init(&dmd_reader_wpc_program,
-                              dmd_reader_wpc_program_get_default_config,
-                              &dmd_framedetect_wpc_program,
-                              dmd_framedetect_wpc_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_2bpp_program,
+                              dmd_reader_2bpp_program_get_default_config,
+                              &dmd_framedetect_generic_program,
+                              dmd_framedetect_generic_program_get_default_config,
                               input_pins, 3, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
@@ -973,10 +973,10 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_WHITESTAR: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_whitestar_program,
-          dmd_reader_whitestar_program_get_default_config,
-          &dmd_framedetect_whitestar_program,
-          dmd_framedetect_whitestar_program_get_default_config, input_pins, 1,
+          &dmd_reader_2bpp_program,
+          dmd_reader_2bpp_program_get_default_config,
+          &dmd_framedetect_generic_program,
+          dmd_framedetect_generic_program_get_default_config, input_pins, 1,
           0, SDATA);
 
       // load 8192 - 1 pixels directly to TX fifo
@@ -1000,8 +1000,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_SPIKE1: {
       uint input_pins[] = {RCLK, RDATA};
-      dmdreader_programs_init(&dmd_reader_spike_program,
-                              dmd_reader_spike_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_4bpp_program,
+                              dmd_reader_4bpp_program_get_default_config,
                               &dmd_framedetect_spike_program,
                               dmd_framedetect_spike_program_get_default_config,
                               input_pins, 2, RDATA, SDATA);
@@ -1024,10 +1024,10 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_SAM: {
       uint input_pins[] = {RDATA};
-      dmdreader_programs_init(&dmd_reader_sam_program,
-                              dmd_reader_sam_program_get_default_config,
-                              &dmd_framedetect_sam_program,
-                              dmd_framedetect_sam_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_4bpp_program,
+                              dmd_reader_4bpp_program_get_default_config,
+                              &dmd_framedetect_generic_program,
+                              dmd_framedetect_generic_program_get_default_config,
                               input_pins, 1, 0, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
@@ -1111,8 +1111,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_DESEGA: {
       uint input_pins[] = {DE};
-      dmdreader_programs_init(&dmd_reader_desega_program,
-                              dmd_reader_desega_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_2bpp_program,
+                              dmd_reader_2bpp_program_get_default_config,
                               &dmd_framedetect_desega_program,
                               dmd_framedetect_desega_program_get_default_config,
                               input_pins, 1, DE, SDATA);
@@ -1139,10 +1139,10 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_SEGA_HD: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_sega_hd_program,
-          dmd_reader_sega_hd_program_get_default_config,
-          &dmd_framedetect_sega_hd_program,
-          dmd_framedetect_sega_hd_program_get_default_config, input_pins, 1, 0,
+          &dmd_reader_2bpp_program,
+          dmd_reader_2bpp_program_get_default_config,
+          &dmd_framedetect_generic_program,
+          dmd_framedetect_generic_program_get_default_config, input_pins, 1, 0,
           SDATA);
 
       // load 24576 - 1 pixels directly to TX fifo
@@ -1167,10 +1167,10 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_GOTTLIEB: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_gottlieb_program,
-          dmd_reader_gottlieb_program_get_default_config,
-          &dmd_framedetect_gottlieb_program,
-          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1, 0,
+          &dmd_reader_4bpp_program,
+          dmd_reader_4bpp_program_get_default_config,
+          &dmd_framedetect_generic_program,
+          dmd_framedetect_generic_program_get_default_config, input_pins, 1, 0,
           SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
@@ -1191,8 +1191,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_ALVING: {
       uint input_pins[] = {RDATA, RCLK, COLLAT};
-      dmdreader_programs_init(&dmd_reader_alving_program,
-                              dmd_reader_alving_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_4bpp_program,
+                              dmd_reader_4bpp_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
                               input_pins, 3, 0, SDATA);
@@ -1217,10 +1217,10 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_ISLAND: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_gottlieb_program,
-          dmd_reader_gottlieb_program_get_default_config,
-          &dmd_framedetect_gottlieb_program,
-          dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1, 0,
+          &dmd_reader_4bpp_program,
+          dmd_reader_4bpp_program_get_default_config,
+          &dmd_framedetect_generic_program,
+          dmd_framedetect_generic_program_get_default_config, input_pins, 1, 0,
           SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
@@ -1242,8 +1242,8 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_HOMEPIN: {
       uint input_pins[] = {RDATA};
       dmdreader_programs_init(
-          &dmd_reader_homepin_program,
-          dmd_reader_homepin_program_get_default_config,
+          &dmd_reader_4bpp_program,
+          dmd_reader_4bpp_program_get_default_config,
           &dmd_framedetect_homepin_program,
           dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0,
           SDATA);
@@ -1267,8 +1267,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_SPINBALL: {
       uint input_pins[] = {RDATA, RCLK};
-      dmdreader_programs_init(&dmd_reader_wpc_program,
-                              dmd_reader_wpc_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_2bpp_program,
+                              dmd_reader_2bpp_program_get_default_config,
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
                               input_pins, 2, 0, SDATA);
@@ -1294,8 +1294,8 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_SLEIC: {
       uint input_pins[] = {DE, RDATA};
       dmdreader_programs_init(
-          &dmd_reader_sleic_program,
-          dmd_reader_sleic_program_get_default_config,
+          &dmd_reader_2bpp_program,
+          dmd_reader_2bpp_program_get_default_config,
           &dmd_framedetect_sleic_program,
           dmd_framedetect_sleic_program_get_default_config, input_pins, 2,
           DE, SDATA);
@@ -1343,8 +1343,8 @@ bool dmdreader_init(bool return_on_no_detection) {
     case DMD_CAPCOM_HD: {
       uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(
-          &dmd_reader_capcom_hd_program,
-          dmd_reader_capcom_hd_program_get_default_config,
+          &dmd_reader_4bpp_program,
+          dmd_reader_4bpp_program_get_default_config,
           &dmd_framedetect_capcom_hd_program,
           dmd_framedetect_capcom_hd_program_get_default_config, input_pins, 2,
           0, SDATA);

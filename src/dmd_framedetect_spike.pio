@@ -6,22 +6,6 @@
 .define SDATA 2
 .define FRAME_START_IRQ 5
 
-.program dmd_reader_spike
-.wrap_target
-    mov x, osr         ; load number of pixels -> 16383 (128x32x4 - 1)
-    mov isr, null      ; clear ISR and reset shift counter
-
-    irq clear FRAME_START_IRQ
-    wait irq FRAME_START_IRQ
-
-dotloop:
-    wait 0 gpio DOTCLK  ; falling edge
-    in null, 3          ; left padding with 3 zeros
-    wait 1 gpio DOTCLK  ; raising edge
-    in pins 1           ; read pin data
-    jmp x-- dotloop
-.wrap
-
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_spike
     ; Frame detection in Spike:
