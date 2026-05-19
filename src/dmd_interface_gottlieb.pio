@@ -7,16 +7,8 @@
 .define PLANE_START_IRQ 5
 
 .program dmd_reader_gottlieb
-    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
-    in x, 5            ; shift in 5 bits, isr is 31 now
-    set x, 31          ; load 31, 5 bits is max allowed (0b11111)
-    in x, 5            ; shift in 5 bits, isr is 1023 now
-    set x, 3           ; load 3
-    in x, 2            ; shift in 2 bits, isr is 4095 now (128x32 - 1)
-    mov y, isr         ; copy 4095 to y
-
 .wrap_target
-    mov x, y           ; load number of pixels per plane (128x32 - 1)
+    mov x, osr         ; load number of pixels -> 4095 (128x32 - 1)
     mov isr, null      ; clear ISR and reset shift counter
 
     irq clear PLANE_START_IRQ

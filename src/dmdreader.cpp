@@ -954,6 +954,11 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_framedetect_wpc_program_get_default_config,
                               input_pins, 3, 0, SDATA);
 
+      // load 4096 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 4095);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;
@@ -973,6 +978,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_framedetect_whitestar_program,
           dmd_framedetect_whitestar_program_get_default_config, input_pins, 1,
           0, SDATA);
+
+      // load 8192 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 8191);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -996,6 +1006,11 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_framedetect_spike_program_get_default_config,
                               input_pins, 2, RDATA, SDATA);
 
+      // load 16384 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
@@ -1014,6 +1029,11 @@ bool dmdreader_init(bool return_on_no_detection) {
                               &dmd_framedetect_sam_program,
                               dmd_framedetect_sam_program_get_default_config,
                               input_pins, 1, 0, SDATA);
+
+      // load 16384 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1097,6 +1117,11 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_framedetect_desega_program_get_default_config,
                               input_pins, 1, DE, SDATA);
 
+      // load 8192 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 8191);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;  // Data East and Sega are 2bpp
@@ -1119,6 +1144,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_framedetect_sega_hd_program,
           dmd_framedetect_sega_hd_program_get_default_config, input_pins, 1, 0,
           SDATA);
+
+      // load 24576 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 24575);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 192;
       source_height = 64;
@@ -1143,6 +1173,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1, 0,
           SDATA);
 
+      // load 4096 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 4095);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
@@ -1161,6 +1196,11 @@ bool dmdreader_init(bool return_on_no_detection) {
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
                               input_pins, 3, 0, SDATA);
+
+      // load 16384 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1183,6 +1223,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_framedetect_gottlieb_program_get_default_config, input_pins, 1, 0,
           SDATA);
 
+      // load 16384 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 4;
@@ -1202,6 +1247,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_framedetect_homepin_program,
           dmd_framedetect_homepin_program_get_default_config, input_pins, 1, 0,
           SDATA);
+
+      // load 16384 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1224,6 +1274,12 @@ bool dmdreader_init(bool return_on_no_detection) {
                               input_pins, 2, 0, SDATA);
       // Spinball uses the WPC rendering method (timings are very close actually)
       // The Capcom framedetect method is used to find the start of a frame
+
+      // load 4096 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 4095);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;
@@ -1244,6 +1300,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           dmd_framedetect_sleic_program_get_default_config, input_pins, 2,
           DE, SDATA);
 
+      // load 8192 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 8191);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+
       source_width = 128;
       source_height = 32;
       source_bitsperpixel = 2;
@@ -1262,6 +1323,11 @@ bool dmdreader_init(bool return_on_no_detection) {
                               &dmd_framedetect_capcom_program,
                               dmd_framedetect_capcom_program_get_default_config,
                               input_pins, 2, 0, SDATA);
+
+      // load 127 directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 127);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1282,6 +1348,11 @@ bool dmdreader_init(bool return_on_no_detection) {
           &dmd_framedetect_capcom_hd_program,
           dmd_framedetect_capcom_hd_program_get_default_config, input_pins, 2,
           0, SDATA);
+
+      // load 16384 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // pull 32 bits from the TX fifo into osr
+      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 256;
       source_height = 64;
