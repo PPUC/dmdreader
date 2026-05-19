@@ -2,6 +2,5 @@
 .pio
 generated
 src/*.pio.h
-.vscode
-src/pio/
 src/pio/*.pio.h
+.vscode
