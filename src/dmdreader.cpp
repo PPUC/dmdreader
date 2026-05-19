@@ -954,8 +954,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -979,8 +977,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 8192 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 8191);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1006,8 +1002,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1030,8 +1024,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1086,8 +1078,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 directly to TX fifo (32uS)
       pio_sm_put(dmd_pio, dmd_sm, 4096);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       // load 2500 directly to TX fifo (20uS)
       pio_sm_put(frame_pio, frame_sm, 2500);
@@ -1117,8 +1107,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 8192 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 8191);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1145,8 +1133,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 24576 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 24575);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 192;
       source_height = 64;
@@ -1173,8 +1159,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1197,8 +1181,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1223,8 +1205,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1248,8 +1228,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1275,8 +1253,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1300,8 +1276,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 8192 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 8191);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1324,8 +1298,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 127 directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 127);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32;
@@ -1349,8 +1321,6 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
       source_width = 256;
       source_height = 64;
@@ -1363,6 +1333,9 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
   }
+
+  // pull 32 bits of data (if configured) from the TX fifo into osr
+  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
 
   // Calculate display parameters
   source_pixelsperbyte = 8 / source_bitsperpixel;
