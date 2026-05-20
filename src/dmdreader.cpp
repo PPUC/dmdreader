@@ -598,6 +598,14 @@ void dmd_dma_reset() {
   dmd_set_and_enable_new_dma_target();
 }
 
+// Skips exactly one plane by jumping out of the ongoing dotloop
+void dmd_skip_plane() {
+  pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+  dmd_dma_reset();
+  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
+  pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+}
+
 /**
  * @brief Handles DMD DMA requests by switching between the buffers
  *
@@ -709,10 +717,29 @@ void dmd_dma_handler() {
         // An unsynchronized has been found.
         // Disable the state machine, clean the DMA channel and restart.
         // As a result, we will skip exactly one plane.
-        pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-        dmd_dma_reset();
-        pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
-        pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+        dmd_skip_plane();
+        plane0_shifted = true;
+      }
+    }
+
+    // SPOOKY has 15 valid planes and 1 garbage plane.
+    // The first valid plane always contains pixel data unless the frame is
+    // fully black, The last plane (16th) never contains valid data. Since we
+    // only record 15 planes (not to forget it is 4bpp after all), we detect
+    // misalignment by checking if plane 0 is empty but plane 1 contains data.
+    // If so, we skip one extra plane and lock into the stream.
+    if (dmd_type == DMD_SPOOKY && !locked_in && !plane0_shifted) {
+      uint8_t value = pixval & 0x0F;
+      if (value >= 1) {
+        if ((planebuf[px] & 0x0F) != 1 &&
+            (planebuf[offset[1] + px] & 0x0F) == 1) {
+          // 0 in first plane but 1 in second plane
+          // skip one more plane and then lock-in
+          locked_in = true;
+        }
+        // as long as value >= 1 always skip a plane
+        // the above if statement will decide whether we lock in.
+        dmd_skip_plane();
         plane0_shifted = true;
       }
     }
