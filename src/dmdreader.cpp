@@ -950,12 +950,12 @@ bool dmdreader_init(bool return_on_no_detection) {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      uint input_pins[] = {RDATA, DE, DOTCLK};
+      uint input_pins[] = {RDATA};
       dmdreader_programs_init(&dmd_reader_2bpp_program,
                               dmd_reader_2bpp_program_get_default_config,
                               &dmd_framedetect_generic_program,
                               dmd_framedetect_generic_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+                              input_pins, 1, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
@@ -1294,12 +1294,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_SPOOKY: {
-      uint input_pins[] = {RDATA, DE, DOTCLK};
-      dmdreader_programs_init(&dmd_reader_spooky_program,
-                              dmd_reader_spooky_program_get_default_config,
-                              &dmd_framedetect_spooky_program,
-                              dmd_framedetect_spooky_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(&dmd_reader_4bpp_program,
+                              dmd_reader_4bpp_program_get_default_config,
+                              &dmd_framedetect_generic_program,
+                              dmd_framedetect_generic_program_get_default_config,
+                              input_pins, 1, 0, SDATA);
 
       source_width = 128;
       source_height = 32;
