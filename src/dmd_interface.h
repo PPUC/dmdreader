@@ -1,29 +1,18 @@
 #ifndef DMD_INTERFACE_H
 #define DMD_INTERFACE_H
 
-#ifdef ALPHADMD
-#include "dmd_interface_sam_alphadmd.pio.h"
-#include "dmd_interface_spike_alphadmd.pio.h"
-#else
-#include "dmd_interface_sam.pio.h"
-#include "dmd_interface_spike.pio.h"
-#endif
-#include "dmd_interface_alving.pio.h"
-#include "dmd_interface_capcom.pio.h"
-#include "dmd_interface_capcom_hd.pio.h"
-#include "dmd_interface_de_x16_v1.pio.h"
-#include "dmd_interface_de_x16_v2.pio.h"
-#include "dmd_interface_desega.pio.h"
-#include "dmd_interface_gottlieb.pio.h"
-#include "dmd_interface_homepin.pio.h"
-#include "dmd_interface_sleic.pio.h"
-#include "dmd_interface_spooky.pio.h"
-#include "dmd_interface_sega_hd.pio.h"
-#include "dmd_interface_whitestar.pio.h"
-#include "dmd_interface_wpc.pio.h"
 #include "dmdreader_pins.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
+#include "pio/dmd_dotloop.pio.h"
+#include "pio/dmd_framedetect_alving.pio.h"
+#include "pio/dmd_framedetect_capcom.pio.h"
+#include "pio/dmd_framedetect_de_x16.pio.h"
+#include "pio/dmd_framedetect_desega.pio.h"
+#include "pio/dmd_framedetect_generic.pio.h"
+#include "pio/dmd_framedetect_homepin.pio.h"
+#include "pio/dmd_framedetect_sleic.pio.h"
+#include "pio/dmd_framedetect_spike.pio.h"
 
 // Init the DMD reader (dots) PIO program, common for all DMD types.
 void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pio_sm_config c,

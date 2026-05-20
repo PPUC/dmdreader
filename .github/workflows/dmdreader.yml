@@ -14,7 +14,7 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - id: version
@@ -38,16 +38,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dmd: ['ppucdmd', 'ppucdmd2', 'alphadmd']
+        dmd: ['ppucdmd', 'ppucdmd2']
 
     name: Build for ${{ matrix.dmd }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -55,14 +55,16 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
-
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
@@ -75,7 +77,7 @@ jobs:
           cp .pio/build/${{ matrix.dmd }}/firmware.uf2 dmdreader-${{ matrix.dmd }}.uf2
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dmdreader-${{ matrix.dmd }}
           path: |
@@ -90,7 +92,7 @@ jobs:
     needs: [ version, build ]
     name: Release
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
       - name: Package
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
@@ -98,16 +100,13 @@ jobs:
             zip ../dmdreader-ppucdmd.zip dmdreader-ppucdmd.elf dmdreader-ppucdmd.uf2 VERSION LICENSE README.md
             cd ../dmdreader-ppucdmd2
             zip ../dmdreader-ppucdmd2.zip dmdreader-ppucdmd2.elf dmdreader-ppucdmd2.uf2 VERSION LICENSE README.md
-            cd ../dmdreader-alphadmd
-            zip ../dmdreader-alphadmd.zip dmdreader-alphadmd.elf dmdreader-alphadmd.uf2 VERSION LICENSE README.md
             cd ..
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           draft: true
           files: |
             dmdreader-ppucdmd.zip
             dmdreader-ppucdmd2.zip
-            dmdreader-alphadmd.zip

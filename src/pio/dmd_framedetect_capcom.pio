@@ -1,0 +1,43 @@
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
+.define PLANE_START_IRQ 5
+
+; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
+.program dmd_framedetect_capcom
+    wait 0 gpio RDATA
+    wait 1 gpio RDATA
+; When RDATA turned HIGH, we already missed the start of the first row, so we skip 32 end of rows before sending the first IRQ.
+.wrap_target
+    set x, 31          ; 32 rows
+
+rclk_loop:
+    wait 1 gpio RCLK
+    wait 0 gpio RCLK
+    jmp x-- rclk_loop
+    irq PLANE_START_IRQ
+    wait 1 gpio RDATA
+.wrap
+
+.program dmd_framedetect_capcom_hd
+    set x, 31           ; x = 31 (max 5-bit value)
+    in x, 5             ; shift in 5 bits, isr = 31
+    set x, 1            ; x = 1
+    in x, 1             ; shift 1 bit, isr = 63
+
+    wait 0 gpio RDATA
+    wait 1 gpio RDATA
+; When RDATA turned HIGH, we already missed the start of the first row, so we skip 64 end of rows before sending the first IRQ.
+.wrap_target
+    mov x, isr          ; 64 rows
+
+rclk_loop:
+    wait 1 gpio RCLK
+    wait 0 gpio RCLK
+    jmp x-- rclk_loop
+    irq PLANE_START_IRQ
+    wait 1 gpio RDATA
+.wrap
