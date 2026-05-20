@@ -722,12 +722,12 @@ void dmd_dma_handler() {
       }
     }
 
-    // SPOOKY has 15 valid planes and 1 garbage plane.
-    // The first valid plane always contains pixel data unless the frame is
-    // fully black, The last plane (16th) never contains valid data. Since we
-    // only record 15 planes (not to forget it is 4bpp after all), we detect
-    // misalignment by checking if plane 0 is empty but plane 1 contains data.
-    // If so, we skip one extra plane and lock into the stream.
+    // SPOOKY has 15 valid planes plus 1 garbage plane.
+    // The first plane should contain lit pixels unless the frame is fully black.
+    // The garbage plane is fully black no matter what.
+    // Since only 15 planes are recorded (4bpp), we detect misalignment when the
+    // garbage plane appears as plane 0. If the next plane contains valid data,
+    // then one more plane must be skipped to lock in.
     if (dmd_type == DMD_SPOOKY && !locked_in && !plane0_shifted) {
       uint8_t value = pixval & 0x0F;
       if (value >= 1) {
