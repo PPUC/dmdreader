@@ -61,7 +61,7 @@ DmdType dmd_type;
 #define MAX_WIDTH 256
 #define MAX_HEIGHT 64
 #define MAX_BITSPERPIXEL 4
-#define MAX_PLANESPERFRAME 6
+#define MAX_PLANESPERFRAME 15
 #define MAX_OVERSAMPLING LINEOVERSAMPLING_4X
 
 // Use uint16_t for all of these variables to erase calculations:
@@ -383,12 +383,17 @@ DmdType detect_dmd() {
              (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
     return DMD_SLEIC;
 
+    // Spooky -> DOTCLK: 3211000 | RCLK: 25100  | RDATA: 784
+  } else if ((dotclk > 3100000) && (dotclk < 3300000) && (rclk > 24000) &&
+             (rclk < 26000) && (rdata > 750) && (rdata < 820)) {
+    return DMD_SPOOKY;
+
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
              (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
 
-    // Capcom HD -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
+    // Capcom HD & ROMSTAR -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
   } else if ((dotclk > 3900000) && (dotclk < 4300000) && (rclk > 15500) &&
              (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
@@ -593,6 +598,14 @@ void dmd_dma_reset() {
   dmd_set_and_enable_new_dma_target();
 }
 
+// Skips exactly one plane by jumping out of the ongoing dotloop
+void dmd_skip_plane() {
+  pio_sm_set_enabled(dmd_pio, dmd_sm, false);
+  dmd_dma_reset();
+  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
+  pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+}
+
 /**
  * @brief Handles DMD DMA requests by switching between the buffers
  *
@@ -677,7 +690,6 @@ void dmd_dma_handler() {
     // detect sync. So we could avoid bitschifiting of the uint32_t value to
     // check every single pixel.
     if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted) {
-      digitalWrite(LED_BUILTIN, HIGH);
       uint8_t value = pixval & 0x0F;
       if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
           (planebuf[offset[2] + px] & 0x0F) != 1) {
@@ -705,10 +717,29 @@ void dmd_dma_handler() {
         // An unsynchronized has been found.
         // Disable the state machine, clean the DMA channel and restart.
         // As a result, we will skip exactly one plane.
-        pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-        dmd_dma_reset();
-        pio_sm_exec(dmd_pio, dmd_sm, pio_encode_jmp(dmd_offset));
-        pio_sm_set_enabled(dmd_pio, dmd_sm, true);
+        dmd_skip_plane();
+        plane0_shifted = true;
+      }
+    }
+
+    // SPOOKY has 15 valid planes plus 1 garbage plane.
+    // The first plane should contain lit pixels unless the frame is fully black.
+    // The garbage plane is fully black no matter what.
+    // Since only 15 planes are recorded (4bpp), we detect misalignment when the
+    // garbage plane appears as plane 0. If the next plane contains valid data,
+    // then one more plane must be skipped to lock in.
+    if (dmd_type == DMD_SPOOKY && !locked_in && !plane0_shifted) {
+      uint8_t value = pixval & 0x0F;
+      if (value >= 1) {
+        if ((planebuf[px] & 0x0F) != 1 &&
+            (planebuf[offset[1] + px] & 0x0F) == 1) {
+          // 0 in first plane but 1 in second plane
+          // skip one more plane and then lock-in
+          locked_in = true;
+        }
+        // as long as value >= 1 always skip a plane
+        // the above if statement will decide whether we lock in.
+        dmd_skip_plane();
         plane0_shifted = true;
       }
     }
@@ -758,7 +789,7 @@ void dmd_dma_handler() {
     // merge the rows and convert from 4bpp to 2bpp with a LUT
     uint32_t *dst, *src1, *src2;
     dst = framebuf + 64; // start in the middle of 128x32 frame
-    src1 = framebuf + 511; // everything is stored from here onwards
+    src1 = framebuf + offset_x16; // everything is stored from here onwards
     src2 = src1 + source_dwordsperline;
 
     if (dmd_type == DMD_DE_X16_V1) {
@@ -945,12 +976,12 @@ bool dmdreader_init(bool return_on_no_detection) {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      uint input_pins[] = {RDATA, DE, DOTCLK};
+      uint input_pins[] = {RDATA};
       dmdreader_programs_init(&dmd_reader_2bpp_program,
                               dmd_reader_2bpp_program_get_default_config,
                               &dmd_framedetect_generic_program,
                               dmd_framedetect_generic_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+                              input_pins, 1, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
@@ -1285,6 +1316,28 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_planehistoryperframe = 0;
       source_lineoversampling = LINEOVERSAMPLING_NONE;
       source_mergeplanes = MERGEPLANES_ADDSHIFT;
+      break;
+    }
+
+    case DMD_SPOOKY: {
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(&dmd_reader_4bpp_program,
+                              dmd_reader_4bpp_program_get_default_config,
+                              &dmd_framedetect_generic_program,
+                              dmd_framedetect_generic_program_get_default_config,
+                              input_pins, 1, 0, SDATA);
+
+      // load 61440 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 61439);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 4;
+      target_bitsperpixel = 4;
+      source_planesperframe = 15; // Spooky quickly merges 15 planes -> 4bpp
+      source_planehistoryperframe = 0;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
 
