@@ -1,7 +1,7 @@
 #ifndef DMD_COUNTER_H
 #define DMD_COUNTER_H
 
-#include "dmd_counter.pio.h"
+#include "pio/dmd_counter.pio.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 

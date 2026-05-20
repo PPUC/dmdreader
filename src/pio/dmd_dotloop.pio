@@ -1,0 +1,158 @@
+.define DE 7
+.define RDATA 6
+.define RCLK 5
+.define COLLAT 4
+.define DOTCLK 3
+.define SDATA 2
+.define SDATA_X16_PADDING 1
+.define SDATA_X16 0
+.define START_READING_IRQ 5
+
+; This file defines the various PIO programs used for pixel collection.
+
+; An IRQ initiates the read process, allowing execution to enter the
+; dotloop section and capture a preconfigured number of pixels.
+
+; Almost every system makes use of the 2bpp or 4bpp reader, except Capcom 128x32 and Data East 128x16.
+; Therefore, all dotloop programs have been put into a single pio file.
+
+; // --------------- //
+; // dmd_reader_2bpp //
+; // --------------- //
+
+.program dmd_reader_2bpp
+.wrap_target
+    mov x, osr         ; loads number of configured pixels
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+dotloop:
+    wait 0 gpio DOTCLK  ; falling edge
+    in null 1           ; left padding with 1 zero
+    wait 1 gpio DOTCLK  ; rising edge
+    in pins 1           ; read pin data
+    jmp x-- dotloop
+.wrap
+
+; // --------------- //
+; // dmd_reader_4bpp //
+; // --------------- //
+
+.program dmd_reader_4bpp
+.wrap_target
+    mov x, osr         ; loads number of configured pixels
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+dotloop:
+    wait 0 gpio DOTCLK  ; falling edge
+    in null 3           ; left padding with 3 zeros
+    wait 1 gpio DOTCLK  ; rising edge
+    in pins 1           ; read pin data
+    jmp x-- dotloop
+.wrap
+
+; // ----------------- //
+; // dmd_reader_capcom //
+; // ----------------- //
+
+.program dmd_reader_capcom
+.wrap_target
+    set y, 31          ; number of rows
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+row_loop:
+    mov x, osr         ; load number of dots to skip (128)
+dot_skip_loop:
+    wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
+    wait 1 gpio DOTCLK
+    jmp x-- dot_skip_loop       ; skip 128 dots
+
+    mov x, osr         ; load number of pixels to read (128)
+dot_read_loop:
+    wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
+    in null 3          ; left padding three 0 to the output as CAPCOM is 4bit/px
+    wait 1 gpio DOTCLK ; raising edge
+    in pins 1          ; read 1 bit pin data
+    jmp x-- dot_read_loop
+    jmp y-- row_loop
+.wrap
+
+; // -------------------- //
+; // dmd_reader_de_x16_v1 //
+; // -------------------- //
+
+.program dmd_reader_de_x16_v1
+.wrap_target
+    set y, 31
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+start:
+    set x, 31
+
+dotloop:
+    wait 1 gpio DOTCLK               ; rising edge
+    in null 3                        ; 000 padding for 4bpp 
+    in pins 3                        ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
+    in null 2                        ; 00 padding for 4bpp
+    wait 0 gpio DOTCLK               ; falling edge
+    jmp x-- dotloop
+
+    set x, 7                        ; loop 32 times
+no_lsb_msb_padding:
+    in null 32
+    jmp x-- no_lsb_msb_padding
+
+    jmp y-- start
+.wrap
+
+; // -------------------- //
+; // dmd_reader_de_x16_v2 //
+; // -------------------- //
+
+.program dmd_reader_de_x16_v2
+    wait irq START_READING_IRQ  ; we only check for an IRQ once because of limitations
+    mov isr, null               ; clean the isr before starting a new frame
+
+.wrap_target
+start:
+    set x, 31
+dotloop:
+    wait 1 gpio DOTCLK           ; rising edge
+    in null 3                    ; 000 padding for 4bpp 
+    in pins 3                    ; read value of px 1(GPIO2), padding 0 (GPIO1) and px 2 (GPIO0) as they're sampled on the same DOTCLK edge
+    in null 2                    ; 00 padding for 4bpp
+    wait 0 gpio DOTCLK           ; falling edge
+    jmp x-- dotloop
+    jmp !y skip
+    jmp y-- start
+
+skip:
+    mov x, osr                   ; copy 4096 to x
+lsb_msb_check:
+    jmp pin reload_dotloop_y     ; if DOTCLK is high, it means we will have a valid LSB + MSB row
+    jmp x-- lsb_msb_check        ; loop for ~65.5 µs (based on 125MHz clkdiv)
+
+    set x, 5                     ; 0b101
+    set y, 31
+no_lsb_msb_padding:
+    ; Shift in 0101 0101 32 times. We record 64 pixels like this as the missing MSB row.
+    in x, 4
+    in x, 4
+    jmp y-- no_lsb_msb_padding
+
+    mov y, null
+    jmp start
+
+reload_dotloop_y:
+    set y, 1
+.wrap
