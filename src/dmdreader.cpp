@@ -1333,8 +1333,9 @@ bool dmdreader_init(bool return_on_no_detection) {
   }
 
   // pull 32 bits of data (if configured) from the TX fifo into osr
-  pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_out(pio_y, 32));
-  pio_sm_exec_wait_blocking(frame_pio, frame_sm, pio_encode_out(pio_y, 32));
+  pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+  pio_sm_exec_wait_blocking(frame_pio, frame_sm, pio_encode_pull(false, false));
+
 
   // Calculate display parameters
   source_pixelsperbyte = 8 / source_bitsperpixel;
