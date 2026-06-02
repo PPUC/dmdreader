@@ -911,7 +911,6 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
   dmd_framedetect_program_init(dmd_clkdiv, frame_pio, frame_sm, frame_offset,
                                frame_config, input_pins, num_input_pins,
                                jump_pin);
-  pio_sm_set_enabled(frame_pio, frame_sm, true);
 }
 
 bool dmdreader_init(bool return_on_no_detection) {
@@ -1078,11 +1077,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 directly to TX fifo (32uS)
       pio_sm_put(dmd_pio, dmd_sm, 4096);
-
       // load 2500 directly to TX fifo (20uS)
       pio_sm_put(frame_pio, frame_sm, 2500);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32; // is actually 16, but we process as 32
@@ -1172,15 +1168,17 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_ALVING: {
-      uint input_pins[] = {RDATA, RCLK, COLLAT};
+      uint input_pins[] = {RDATA, COLLAT};
       dmdreader_programs_init(&dmd_reader_4bpp_program,
                               dmd_reader_4bpp_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+                              input_pins, 2, 0, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // load 128 - 1 cycles directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 127);
 
       source_width = 128;
       source_height = 32;
@@ -1335,7 +1333,8 @@ bool dmdreader_init(bool return_on_no_detection) {
   }
 
   // pull 32 bits of data (if configured) from the TX fifo into osr
-  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+  pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+  pio_sm_exec_wait_blocking(frame_pio, frame_sm, pio_encode_pull(false, false));
 
   // Calculate display parameters
   source_pixelsperbyte = 8 / source_bitsperpixel;
@@ -1436,6 +1435,7 @@ bool dmdreader_init(bool return_on_no_detection) {
 #endif
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();
+  pio_sm_set_enabled(frame_pio, frame_sm, true);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 
   return true;
