@@ -1075,9 +1075,9 @@ bool dmdreader_init(bool return_on_no_detection) {
       pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
                                 pio_encode_mov(pio_y, pio_null));
 
-      // load 4096 directly to TX fifo (32uS)
+      // load 4096 delay cycles directly to TX fifo (32uS)
       pio_sm_put(dmd_pio, dmd_sm, 4096);
-      // load 2500 directly to TX fifo (20uS)
+      // load 2500 delay cycles directly to TX fifo (20uS)
       pio_sm_put(frame_pio, frame_sm, 2500);
 
       source_width = 128;
@@ -1177,7 +1177,7 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
-      // load 128 - 1 cycles directly to TX fifo
+      // load 128 - 1 COLLAT edges directly to TX fifo
       pio_sm_put(frame_pio, frame_sm, 127);
 
       source_width = 128;
@@ -1251,6 +1251,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
+      // load 32 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 31);
 
       source_width = 128;
       source_height = 32;
@@ -1274,7 +1276,7 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 8192 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 8191);
-      // load 6144 cycles directly to TX fifo
+      // load 6144 delay cycles directly to TX fifo
       pio_sm_put(frame_pio, frame_sm, 6144);
 
       source_width = 128;
@@ -1298,6 +1300,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 127 directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 127);
+      // load 32 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 31);
 
       source_width = 128;
       source_height = 32;
@@ -1315,12 +1319,14 @@ bool dmdreader_init(bool return_on_no_detection) {
       dmdreader_programs_init(
           &dmd_reader_4bpp_program,
           dmd_reader_4bpp_program_get_default_config,
-          &dmd_framedetect_capcom_hd_program,
-          dmd_framedetect_capcom_hd_program_get_default_config, input_pins, 2,
+          &dmd_framedetect_capcom_program,
+          dmd_framedetect_capcom_program_get_default_config, input_pins, 2,
           0, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // load 64 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 63);
 
       source_width = 256;
       source_height = 64;
