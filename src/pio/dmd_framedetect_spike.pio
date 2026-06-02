@@ -8,16 +8,23 @@
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_spike
+.wrap_target
+
+; Stern SPIKE 1 frame start detection
+; ~1.1µs is the longest state in which COLLAT can be high without it being a new frame
+; ~2µs is the usual time of COLLAT for it to be a legitimate frame start. 
+; We go with 1.5µs to be safe and confirm the start of a new frame.
+
 wait_low:
-    wait 1 gpio COLLAT      ; Wait for DE to go low
-    set x, 5           ; Use x as storage for 20 iterations
+    wait 1 gpio COLLAT      ; Wait for COLLAT to go high
+    set x, 5                ; Use x as storage for 6 iterations
 
 delay_loop:
     jmp x-- delay_loop [31] ; Decrement x and repeat until zero
 
-    jmp pin, trigger_irq   ; If pin still high → trigger irq
+    jmp pin, trigger_irq    ; If pin still high → trigger irq
     jmp wait_low
 
 trigger_irq:
-    irq FRAME_START_IRQ ; Pin remained low long enough → frame started
+    irq FRAME_START_IRQ
 .wrap
