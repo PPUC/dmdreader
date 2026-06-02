@@ -952,7 +952,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               input_pins, 3, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
-      pio_sm_put_blocking(dmd_pio, dmd_sm, 4095);
+      pio_sm_put(dmd_pio, dmd_sm, 4095);
 
       source_width = 128;
       source_height = 32;
@@ -1333,9 +1333,8 @@ bool dmdreader_init(bool return_on_no_detection) {
   }
 
   // pull 32 bits of data (if configured) from the TX fifo into osr
-  pio_sm_exec_wait_blocking(dmd_pio, dmd_sm, pio_encode_pull(false, false));
-  pio_sm_exec_wait_blocking(frame_pio, frame_sm, pio_encode_pull(false, false));
-
+  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+  pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
   // Calculate display parameters
   source_pixelsperbyte = 8 / source_bitsperpixel;
