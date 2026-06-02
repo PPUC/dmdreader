@@ -648,7 +648,11 @@ void dmd_dma_handler() {
     for (int plane = 0; plane < source_planesperframe; plane++) {
       uint32_t v = planebuf[offset[plane] + px];
       if (source_shiftplanesatmerge) {
-        v <<= plane;
+        if (dmd_type == DMD_SPIKE1) {
+          v <<= plane;
+        } else if (dmd_type == DMD_SLEIC) {
+          v <<= (source_planesperframe - 1) - plane;
+        }
       }
       pixval += v;
     }
