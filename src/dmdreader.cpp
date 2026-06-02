@@ -951,8 +951,12 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_framedetect_generic_program_get_default_config,
                               input_pins, 3, 0, SDATA);
 
+      // initialise osr register to zero
+      pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
+                                pio_encode_mov(pio_osr, pio_null));
+
       // load 4096 - 1 pixels directly to TX fifo
-      pio_sm_put(dmd_pio, dmd_sm, 1095);
+      pio_sm_put(dmd_pio, dmd_sm, 4095);
 
       source_width = 128;
       source_height = 32;
