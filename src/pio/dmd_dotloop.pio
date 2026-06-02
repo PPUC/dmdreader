@@ -22,7 +22,6 @@
 
 .program dmd_reader_2bpp
 .wrap_target
-
     mov x, osr         ; loads number of configured pixels
     mov isr, null      ; clear ISR and reset shift counter
 
