@@ -20,10 +20,6 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
   sm_config_set_in_pins(&c, in_base_pin);
 
   if (in_base_pin != SDATA_X16) {
-    // We only send, so disable the TX FIFO to make the RX FIFO deeper.
-    // Joining is not possible with data east x16
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-  } else {
     // -- Data East 128x16 case --
     // We need to set DOTCLK as the jump pin
     sm_config_set_jmp_pin(&c, DOTCLK);
