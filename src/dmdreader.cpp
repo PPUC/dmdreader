@@ -992,12 +992,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_SPIKE1: {
-      uint input_pins[] = {RCLK, RDATA};
+      uint input_pins[] = {RDATA};
       dmdreader_programs_init(&dmd_reader_4bpp_program,
                               dmd_reader_4bpp_program_get_default_config,
                               &dmd_framedetect_spike_program,
                               dmd_framedetect_spike_program_get_default_config,
-                              input_pins, 2, RDATA, SDATA);
+                              input_pins, 1, RDATA, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
