@@ -6,26 +6,15 @@
 .define SDATA 2
 .define FRAME_START_IRQ 5
 
-; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_alving
-    wait 0 gpio RDATA
-    wait 1 gpio RDATA
-; When RDATA turned HIGH, we already missed the start of the first row, so we skip 32 end of rows before sending the first IRQ.
-; Alvin G needs to skip 3 COLLAT edges right after for a correct starting point.
 .wrap_target
-    set x, 31          ; 32 rows
-    set y, 2           ; 3 COLLAT edges
-
-rclk_loop:
-    wait 0 gpio RCLK
-    wait 1 gpio RCLK
-    jmp x-- rclk_loop
+    mov x, osr            ; set x to 127, we need to skip 128 COLLAT edges
+    wait 1 gpio RDATA
 
 collat_loop:
     wait 0 gpio COLLAT
     wait 1 gpio COLLAT
-    jmp y-- collat_loop
+    jmp x--collat_loop
 
     irq FRAME_START_IRQ
 .wrap
-
