@@ -1001,6 +1001,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // load 24576 cycles directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 24576);
 
       source_width = 128;
       source_height = 32;

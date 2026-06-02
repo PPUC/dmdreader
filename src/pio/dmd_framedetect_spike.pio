@@ -14,21 +14,12 @@
     ; Then wait for RDATA to go LOW and HIGH again, this is the beginning of a new frame
     ; Based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
     ; We use 24576 here, because it0s 0b11 << 13
-
-    ; initialize isr with 24576
-    set x, 3
-    in x, 2
-    in null, 13
-
 .wrap_target
-
-; synchronize on the least significant plane
-
 waitrdata:
     ; wait for RDATA to measure the length of the impulse
     wait 1 gpio RDATA
 
-    mov x, isr
+    mov x, osr  ; initialize osr with 24576
 delayloop:
     jmp x-- delayloop
 
@@ -39,13 +30,8 @@ delayloop:
     jmp waitrdata
 
 longrdata:
-
-    ; skip the next 30 lines
-    set x,30
-lineloop:
-    wait 1 gpio RCLK
-    wait 0 gpio RCLK
-    jmp x-- lineloop
+    wait 0 gpio RDATA
+    wait 1 gpio RDATA
 
     irq FRAME_START_IRQ
 .wrap
