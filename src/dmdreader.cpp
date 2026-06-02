@@ -952,7 +952,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               input_pins, 3, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
-      pio_sm_put(dmd_pio, dmd_sm, 4095);
+      pio_sm_put_blocking(dmd_pio, dmd_sm, 4095);
 
       source_width = 128;
       source_height = 32;
