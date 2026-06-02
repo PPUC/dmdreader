@@ -30,8 +30,12 @@ delayloop:
     jmp waitrdata
 
 longrdata:
-    wait 0 gpio RDATA
-    wait 1 gpio RDATA
+    ; skip the next 30 lines
+    set x,30
+lineloop:
+    wait 1 gpio RCLK
+    wait 0 gpio RCLK
+    jmp x-- lineloop
 
     irq FRAME_START_IRQ
 .wrap
