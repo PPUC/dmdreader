@@ -944,16 +944,12 @@ bool dmdreader_init(bool return_on_no_detection) {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      uint input_pins[] = {RDATA, DE, DOTCLK};
+      uint input_pins[] = {RDATA};
       dmdreader_programs_init(&dmd_reader_2bpp_program,
                               dmd_reader_2bpp_program_get_default_config,
                               &dmd_framedetect_generic_program,
                               dmd_framedetect_generic_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
-
-      // initialise osr register to zero
-      pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
-                                pio_encode_mov(pio_osr, pio_null));
+                              input_pins, 1, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);

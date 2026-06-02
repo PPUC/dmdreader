@@ -22,11 +22,12 @@
 
 .program dmd_reader_2bpp
 .wrap_target
-    irq clear START_READING_IRQ
-    wait irq START_READING_IRQ
 
     mov x, osr         ; loads number of configured pixels
     mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
 
 dotloop:
     wait 0 gpio DOTCLK  ; falling edge
