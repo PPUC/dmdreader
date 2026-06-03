@@ -633,12 +633,12 @@ void dmd_dma_handler() {
   uint32_t res;
   // source_dwordsperframe is not the entire frame buffer if plane history is
   // used. So only the new plane data is fixed here.
-  //for (int i = 0; i < source_dwordsperframe; i++) {
-  //  v = (buf32_t *)planebuf;
-  //  res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
-  //  *planebuf = res;
-  //  planebuf++;
-  //}
+  for (int i = 0; i < source_dwordsperframe; i++) {
+    v = (buf32_t *)planebuf;
+    res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
+    *planebuf = res;
+    planebuf++;
+  }
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
   uint32_t *framebuf = (uint32_t *)processingbuf;
