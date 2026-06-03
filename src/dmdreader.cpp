@@ -676,7 +676,7 @@ void dmd_dma_handler() {
     // It seems to be sufficient to check every 8th pixel for these patterns to
     // detect sync. So we could avoid bitschifiting of the uint32_t value to
     // check every single pixel.
-    if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted) {
+    if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted) {
       digitalWrite(LED_BUILTIN, HIGH);
       uint8_t value = pixval & 0x0F;
       if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
@@ -698,11 +698,8 @@ void dmd_dma_handler() {
       //   1/0/1/0 => 2
       //   1/1/0/0 => 2
       //   0/0/1/1 => 2
-      else if (value == 3 || value > 4 ||
-               (value == 1 && (planebuf[px] & 0x0F) != 1) ||
-               (value == 2 && ((planebuf[px] & 0x0F) == 1 ||
-                               planebuf[offset[2] + px] & 0x0F) == 1)) {
-        // An unsynchronized has been found.
+      else if (value == 3 || value > 4) {
+        // An unsynchronized frame has been found.
         // Disable the state machine, clean the DMA channel and restart.
         // As a result, we will skip exactly one plane.
         pio_sm_set_enabled(dmd_pio, dmd_sm, false);
@@ -749,8 +746,9 @@ void dmd_dma_handler() {
     }
   }
 
-  if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted &&
+  if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted &&
       detected_0_1_0_1 && detected_1_0_0_0) {
+    digitalWrite(LED_BUILTIN, LOW);
     locked_in = true;
   }
 
