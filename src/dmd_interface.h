@@ -44,9 +44,9 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
 
   // Shifting to left matches the customary MSB-first ordering of SPI.
   sm_config_set_in_shift(&c,
-                         false,  // shift-to-right = false
+                         true,  // shift-to-right = false
                          true,   // autopush enabled
-                         32      // autopush threshold
+                         8      // autopush threshold
   );
 
   // Load our configuration, do not yet start the program

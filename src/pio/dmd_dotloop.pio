@@ -29,10 +29,10 @@
     wait irq START_READING_IRQ
 
 dotloop:
-    wait 0 gpio DOTCLK  ; falling edge
-    in null 1           ; left padding with 1 zero
-    wait 1 gpio DOTCLK  ; rising edge
-    in pins 1           ; read pin data
+    wait 1 gpio DOTCLK  ; falling edge
+    in pins 1           ; left padding with 1 zero
+    wait 0 gpio DOTCLK  ; rising edge
+    in null 1           ; read pin data
     jmp x-- dotloop
 .wrap
 
