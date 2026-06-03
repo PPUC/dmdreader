@@ -383,13 +383,18 @@ DmdType detect_dmd() {
              (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
     return DMD_SLEIC;
 
+    // ROMSTAR -> DOTCLK: 4000000 | RCLK: 15625 | RDATA: 245
+  } else if ((dotclk > 3900000) && (dotclk < 4100000) && (rclk > 15300) &&
+             (rclk < 15900) && (rdata > 230) && (rdata < 260)) {
+    return DMD_ROMSTAR;
+
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
              (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
 
     // Capcom HD -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
-  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (rclk > 15500) &&
+  } else if ((dotclk > 4100000) && (dotclk < 4300000) && (rclk > 15900) &&
              (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
   }
@@ -689,7 +694,7 @@ void dmd_dma_handler() {
       //   0/1/1/1 => 3
       //   1/0/1/1 => 3
       //   1/1/0/1 => 3
-      //   1/1/1/0 => 3
+      //   1/1/1/0 => 3 (checking whether value 3 appears is actually enough)
       //
       //   0/0/0/1 => 1
       //   0/0/1/0 => 1
@@ -1312,6 +1317,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
+    case DMD_ROMSTAR:
     case DMD_CAPCOM_HD: {
       uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(
