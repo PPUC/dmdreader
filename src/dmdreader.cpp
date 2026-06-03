@@ -640,10 +640,6 @@ void dmd_dma_handler() {
   //  planebuf++;
   //}
 
-  for (int i = 0; i < source_dwordsperframe; i++) {
-    planebuf[i] = __builtin_bswap32(planebuf[i]);
-  }
-
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
   uint32_t *framebuf = (uint32_t *)processingbuf;
 
@@ -1428,6 +1424,9 @@ bool dmdreader_init(bool return_on_no_detection) {
   channel_config_set_write_increment(&dmd_dma_channel_cfg, true);
   channel_config_set_dreq(&dmd_dma_channel_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
+
+  channel_config_set_transfer_data_size(&dmd_dma_channel_cfg, DMA_SIZE_8);
+  channel_config_set_bswap(&dmd_dma_channel_cfg, true);
 
   // Configure the DMA channel. As soon as the PIO pushed a specified number
   // of words to its RX FIFO, the DMA transfer will be triggered. The amount
