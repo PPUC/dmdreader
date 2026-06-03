@@ -1425,6 +1425,9 @@ bool dmdreader_init(bool return_on_no_detection) {
   channel_config_set_dreq(&dmd_dma_channel_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
 
+  channel_config_set_transfer_data_size(&dmd_dma_channel_cfg, DMA_SIZE_32);
+  channel_config_set_bswap(&dmd_dma_channel_cfg, true);
+
   // Configure the DMA channel. As soon as the PIO pushed a specified number
   // of words to its RX FIFO, the DMA transfer will be triggered. The amount
   // of words to transfer is source_dwordsperframe.
