@@ -46,7 +46,7 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
   sm_config_set_in_shift(&c,
                          true,  // shift-to-right = false
                          true,   // autopush enabled
-                         8      // autopush threshold
+                         32      // autopush threshold
   );
 
   // Load our configuration, do not yet start the program
