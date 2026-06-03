@@ -640,6 +640,10 @@ void dmd_dma_handler() {
   //  planebuf++;
   //}
 
+  for (int i = 0; i < source_dwordsperframe; i++) {
+    planebuf[i] = __builtin_bswap32(planebuf[i]);
+  }
+
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
   uint32_t *framebuf = (uint32_t *)processingbuf;
 
