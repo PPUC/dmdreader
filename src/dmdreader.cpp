@@ -633,19 +633,17 @@ void dmd_dma_handler() {
   //uint32_t res;
   // source_dwordsperframe is not the entire frame buffer if plane history is
   // used. So only the new plane data is fixed here.
-  //for (int i = 0; i < source_dwordsperframe; i++) {
-  //  v = (buf32_t *)planebuf;
-  //  res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
-  //  *planebuf = res;
-  //  planebuf++;
-  //}
+  for (int i = 0; i < source_dwordsperframe; i++) {
+      *planebuf = __builtin_bswap32(*planebuf);
+      planebuf++;
+  }
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
   uint32_t *framebuf = (uint32_t *)processingbuf;
 
   bool source_shiftplanesatmerge = (source_mergeplanes == MERGEPLANES_ADDSHIFT);
 
-  //planebuf = (uint32_t *)currentPlaneBuffer;
+  planebuf = (uint32_t *)currentPlaneBuffer;
   // px represents a group of pixels stored in a double word. 8 pixels of 4bit
   // or 16 pixels of 2bit depth.
   for (int px = 0; px < source_dwordsperplane; px++) {
@@ -1424,9 +1422,6 @@ bool dmdreader_init(bool return_on_no_detection) {
   channel_config_set_write_increment(&dmd_dma_channel_cfg, true);
   channel_config_set_dreq(&dmd_dma_channel_cfg,
                           pio_get_dreq(dmd_pio, dmd_sm, false));
-
-  channel_config_set_transfer_data_size(&dmd_dma_channel_cfg, DMA_SIZE_32);
-  channel_config_set_bswap(&dmd_dma_channel_cfg, true);
 
   // Configure the DMA channel. As soon as the PIO pushed a specified number
   // of words to its RX FIFO, the DMA transfer will be triggered. The amount
