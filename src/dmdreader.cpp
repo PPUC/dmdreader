@@ -629,13 +629,13 @@ void dmd_dma_handler() {
 
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
-  //buf32_t *v;
-  //uint32_t res;
+  buf32_t *v;
   // source_dwordsperframe is not the entire frame buffer if plane history is
   // used. So only the new plane data is fixed here.
   for (int i = 0; i < source_dwordsperframe; i++) {
-      *planebuf = __builtin_bswap32(*planebuf);
-      planebuf++;
+    v = (buf32_t *)planebuf;
+    *planebuf = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
+    planebuf++;
   }
 
   // Get a 32bit pointer to the frame buffer to handle more pixels at once.
