@@ -142,10 +142,10 @@ lsb_msb_check:
     jmp pin reload_dotloop_y     ; if DOTCLK is high, it means we will have a valid LSB + MSB row
     jmp x-- lsb_msb_check        ; loop for ~65.5 µs (based on 125MHz clkdiv)
 
-    set x, 5                     ; 0b101
+    set x, 7                     ; 0b111
     set y, 31
 no_lsb_msb_padding:
-    ; Shift in 0101 0101 32 times. We record 64 pixels like this as the missing MSB row.
+    ; Shift in 0111 0111 32 times. We record 64 pixels like this as the missing MSB row.
     in x, 4
     in x, 4
     jmp y-- no_lsb_msb_padding

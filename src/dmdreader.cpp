@@ -426,7 +426,7 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
 // ---------------------------------
 
 static constexpr uint8_t map_nibble_de_x16(uint8_t p) {
-  return (p <= 3) ? p : (p == 4) ? 1 : (p == 8) ? 2 : (p == 10) ? 0 : 3;
+  return (p <= 3) ? p : (p == 4) ? 1 : (p == 7) ? 0 : (p == 8) ? 2 : 3;
 }
 
 static constexpr uint8_t make_lut_entry_de_x16(uint16_t b) {
@@ -783,7 +783,7 @@ void dmd_dma_handler() {
       for (int l = 0; l < source_height / 2; l++) {
         for (int w = 0; w < source_dwordsperline; w++) {
           uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
-          uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] + src2[w] * 2));
+          uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] * 2 + src2[w]));
           if ((w & 1) == 0) {
             // Write first 8 pixel in upper 16 Bit.
             dst[out] = (uint32_t)v16 << 16;
