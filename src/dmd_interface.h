@@ -19,7 +19,7 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
                              uint in_base_pin) {
   sm_config_set_in_pins(&c, in_base_pin);
 
-  if (in_base_pin != SDATA_X16) {
+  if (in_base_pin == SDATA_X16) {
     // -- Data East 128x16 case --
     // We need to set DOTCLK as the jump pin
     sm_config_set_jmp_pin(&c, DOTCLK);
