@@ -977,7 +977,7 @@ bool dmdreader_init(bool return_on_no_detection) {
                               dmd_reader_dotmation_program_get_default_config,
                               &dmd_framedetect_generic_program,
                               dmd_framedetect_generic_program_get_default_config,
-                              input_pins, 1, 0, SDATA);
+                              input_pins, 1, DOTCLK, SDATA);
 
       // load 12288 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 12287);
