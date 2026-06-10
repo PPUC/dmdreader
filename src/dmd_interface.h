@@ -6,6 +6,7 @@
 #include "hardware/pio.h"
 #include "pio/dmd_dotloop.pio.h"
 #include "pio/dmd_framedetect_alving.pio.h"
+#include "pio/dmd_framedetect_dotmation.pio.h"
 #include "pio/dmd_framedetect_capcom.pio.h"
 #include "pio/dmd_framedetect_de_x16.pio.h"
 #include "pio/dmd_framedetect_desega.pio.h"
