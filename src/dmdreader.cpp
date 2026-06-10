@@ -972,12 +972,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_DOTMATION: {
-      uint input_pins[] = {RDATA};
+      uint input_pins[] = {RDATA, COLLAT};
       dmdreader_programs_init(&dmd_reader_dotmation_program,
                               dmd_reader_dotmation_program_get_default_config,
-                              &dmd_framedetect_generic_program,
-                              dmd_framedetect_generic_program_get_default_config,
-                              input_pins, 1, 0, SDATA);
+                              &dmd_framedetect_dotmation_program,
+                              dmd_framedetect_dotmation_program_get_default_config,
+                              input_pins, 2, 0, SDATA);
 
       // load 12288 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 12287);
