@@ -13,7 +13,7 @@
 ; An IRQ initiates the read process, allowing execution to enter the
 ; dotloop section and capture a preconfigured number of pixels.
 
-; Almost every system makes use of the 2bpp or 4bpp reader, except Capcom 128x32 and Data East 128x16.
+; Almost every system makes use of the 2bpp or 4bpp reader, except Capcom 128x32, Data East 128x16 and Dotmation.
 ; Therefore, all dotloop programs have been put into a single pio file.
 
 ; // --------------- //

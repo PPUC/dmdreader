@@ -906,7 +906,7 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
       (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
   dmd_reader_program_init(dmd_clkdiv, dmd_pio, dmd_sm, dmd_offset, dmd_config,
-                          in_base_pin);
+                          dmd_type, in_base_pin);
 
   // The framedetect program just runs and detects the beginning of a new
   // frame
