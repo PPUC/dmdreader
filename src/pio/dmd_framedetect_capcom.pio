@@ -9,7 +9,7 @@
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_capcom
 .wrap_target
-    mov x, osr          ; 32 or 64 rows, depending on 128x32 or 256x64
+    mov x, osr          ; 32 or 64 rows, depending on 128x32, 256x64 or 192x64
 
     wait 0 gpio RDATA
     wait 1 gpio RDATA   ; we just missed the start, so skip x amount of rows

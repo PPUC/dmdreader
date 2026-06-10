@@ -22,6 +22,7 @@ Since not any consumer (especially the Raspberry Pi) can act as an SPI slave thi
 * Homepin -> 128x32
 * Spinball -> 128x32
 * Sleic/Petaco -> 128x32
+* Dotmation -> 192x64
 
 ## Reading data
 
