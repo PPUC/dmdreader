@@ -9,7 +9,6 @@
 #include "pio/dmd_framedetect_capcom.pio.h"
 #include "pio/dmd_framedetect_de_x16.pio.h"
 #include "pio/dmd_framedetect_desega.pio.h"
-#include "pio/dmd_framedetect_dotmation.pio.h"
 #include "pio/dmd_framedetect_generic.pio.h"
 #include "pio/dmd_framedetect_homepin.pio.h"
 #include "pio/dmd_framedetect_sleic.pio.h"
