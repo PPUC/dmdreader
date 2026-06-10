@@ -19,21 +19,26 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
                              uint in_base_pin) {
   sm_config_set_in_pins(&c, in_base_pin);
 
-  // Some systems need this, so just set it for all of them
-  // DE x16 & Dotmation
-  sm_config_set_jmp_pin(&c, DOTCLK);
+    sm_config_set_jmp_pin(&c, DOTCLK);
+    // Make sure we run this sm with a 125MHz clk
+    sm_config_set_clkdiv(&c, dmd_clkdiv);
+
+  //if (dmd_type == DMD_DOTMATION || dmd_type == DMD_DE_X16_V1 ||
+  //    dmd_type == DMD_DE_X16_V2) {
+  //  // set DOTCLK as the jmp pin
+  //  sm_config_set_jmp_pin(&c, DOTCLK);
+  //  // Make sure we run this sm with a 125MHz clk
+  //  sm_config_set_clkdiv(&c, dmd_clkdiv);
+  //}
 
   if (in_base_pin == SDATA_X16) {
-
     pio_gpio_init(pio, SDATA_X16);          // Extra data line for Data East X16
     pio_gpio_init(pio, SDATA_X16_PADDING);  // used as a padding 0 bit
 
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm, SDATA_X16_PADDING, 1, false);
-
-    // Make sure we run this sm with a 125MHz clk
-    sm_config_set_clkdiv(&c, dmd_clkdiv);
   }
+
   // Connect these GPIOs to this PIO block
   pio_gpio_init(pio, SDATA);
   pio_gpio_init(pio, DOTCLK);
