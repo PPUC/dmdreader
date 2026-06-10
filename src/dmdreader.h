@@ -19,6 +19,7 @@ enum class Color : uint8_t {
 enum DmdType : uint8_t {
   DMD_UNKNOWN,
   DMD_WPC,
+  DMD_DOTMATION,
   DMD_WHITESTAR,
   DMD_SPIKE1,
   DMD_SAM,

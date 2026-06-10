@@ -323,6 +323,11 @@ DmdType detect_dmd() {
              (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
     return DMD_WPC;
 
+    // DOTMATION: DOTCLK: 1900000 | RCLK: 9950 | RDATA: 155
+  } else if ((dotclk > 1800000) && (dotclk < 2000000) && (rclk > 9700) &&
+             (rclk < 10200) && (rdata > 140) && (rdata < 170)) {
+    return DMD_DOTMATION;
+
     // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
              (rclk < 3930) && (rdata > 110) && (rdata < 125)) {
@@ -965,6 +970,28 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
+
+    case DMD_DOTMATION: {
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(&dmd_reader_2bpp_program,
+                              dmd_reader_2bpp_program_get_default_config,
+                              &dmd_framedetect_generic_program,
+                              dmd_framedetect_generic_program_get_default_config,
+                              input_pins, 1, 0, SDATA);
+
+      // load 12288 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 12287);
+
+      source_width = 192;
+      source_height = 64;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 3;
+      source_planehistoryperframe = 2;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }    
 
     case DMD_WHITESTAR: {
       uint input_pins[] = {RDATA};
