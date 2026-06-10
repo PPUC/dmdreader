@@ -973,8 +973,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
     case DMD_DOTMATION: {
       uint input_pins[] = {RDATA};
-      dmdreader_programs_init(&dmd_reader_2bpp_program,
-                              dmd_reader_2bpp_program_get_default_config,
+      dmdreader_programs_init(&dmd_reader_dotmation_program,
+                              dmd_reader_dotmation_program_get_default_config,
                               &dmd_framedetect_generic_program,
                               dmd_framedetect_generic_program_get_default_config,
                               input_pins, 1, 0, SDATA);

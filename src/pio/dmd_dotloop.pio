@@ -156,3 +156,29 @@ no_lsb_msb_padding:
 reload_dotloop_y:
     set y, 1
 .wrap
+
+; // -------------------- //
+; // dmd_reader_dotmation //
+; // -------------------- //
+
+.program dmd_reader_dotmation
+.wrap_target
+    mov x, osr         ; loads number of configured pixels
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+dotloop:
+    wait 0 gpio DOTCLK       ; falling edge
+    in null 1                ; left padding with 1 zero
+
+dot_check_loop:
+    wait 1 gpio DOTCLK [18]  ; wait 19 * 8ns = 152ns to confirm the dot
+    jmp pin legit_dot
+    jmp dotloop
+
+legit_dot:
+    in pins 1           ; read pin data
+    jmp x-- dotloop
+.wrap
