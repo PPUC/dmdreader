@@ -11,9 +11,8 @@
 .wrap_target
 
 ; This program is in use by WPC/WPC95, Stern SAM, Stern Whitestar, Gottlieb/Premier, Sega HD and Island
-
+    wait 0 gpio RDATA
     wait 1 gpio RDATA
     wait 1 gpio COLLAT
-    wait 0 gpio RDATA
     irq FRAME_START_IRQ
 .wrap
