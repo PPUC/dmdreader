@@ -174,9 +174,9 @@ dotloop:
     in null 1                ; left padding with 1 zero
 
 dot_check_loop:
-   wait 1 gpio DOTCLK  ; wait 19 * 8ns = 152ns to confirm the dot
-   ; jmp pin legit_dot
-   ; jmp dot_check_loop
+   wait 1 gpio DOTCLK [18] ; wait 19 * 8ns = 152ns to confirm the dot
+   jmp pin legit_dot
+   jmp dot_check_loop
 
 legit_dot:
     in pins 1           ; read pin data

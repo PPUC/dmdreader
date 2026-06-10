@@ -19,10 +19,11 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
                              uint in_base_pin) {
   sm_config_set_in_pins(&c, in_base_pin);
 
+  // Some systems need this, so just set it for all of them
+  // DE x16 & Dotmation
+  sm_config_set_jmp_pin(&c, DOTCLK);
+
   if (in_base_pin == SDATA_X16) {
-    // -- Data East 128x16 case --
-    // We need to set DOTCLK as the jump pin
-    sm_config_set_jmp_pin(&c, DOTCLK);
 
     pio_gpio_init(pio, SDATA_X16);          // Extra data line for Data East X16
     pio_gpio_init(pio, SDATA_X16_PADDING);  // used as a padding 0 bit
