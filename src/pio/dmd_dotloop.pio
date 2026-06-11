@@ -13,7 +13,7 @@
 ; An IRQ initiates the read process, allowing execution to enter the
 ; dotloop section and capture a preconfigured number of pixels.
 
-; Almost every system makes use of the 2bpp or 4bpp reader, except Capcom 128x32 and Data East 128x16.
+; Almost every system makes use of the 2bpp or 4bpp reader, except Capcom 128x32, Data East 128x16 and Dotmation.
 ; Therefore, all dotloop programs have been put into a single pio file.
 
 ; // --------------- //
@@ -142,10 +142,10 @@ lsb_msb_check:
     jmp pin reload_dotloop_y     ; if DOTCLK is high, it means we will have a valid LSB + MSB row
     jmp x-- lsb_msb_check        ; loop for ~65.5 µs (based on 125MHz clkdiv)
 
-    set x, 5                     ; 0b101
+    set x, 7                     ; 0b111
     set y, 31
 no_lsb_msb_padding:
-    ; Shift in 0101 0101 32 times. We record 64 pixels like this as the missing MSB row.
+    ; Shift in 0111 0111 32 times. We record 64 pixels like this as the missing MSB row.
     in x, 4
     in x, 4
     jmp y-- no_lsb_msb_padding
@@ -155,4 +155,30 @@ no_lsb_msb_padding:
 
 reload_dotloop_y:
     set y, 1
+.wrap
+
+; // -------------------- //
+; // dmd_reader_dotmation //
+; // -------------------- //
+
+.program dmd_reader_dotmation
+.wrap_target
+    mov x, osr         ; loads number of configured pixels
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+dotloop:
+    wait 0 gpio DOTCLK       ; falling edge
+    in null 1                ; left padding with 1 zero
+
+dot_check_loop:
+   wait 1 gpio DOTCLK [16] ; wait 17 * 8ns = 136ns to confirm the dot
+   jmp pin legit_dot
+   jmp dot_check_loop
+
+legit_dot:
+    in pins 1           ; read pin data
+    jmp x-- dotloop
 .wrap

@@ -20,13 +20,11 @@ wait_low:
 
 delay_loop:
     nop [31]
-    nop [31]
-    jmp x-- delay_loop  ; Decrement x and repeat until zero
+    jmp x-- delay_loop [31] ; Decrement x and repeat until zero
 
     ; After ~10 µs, check if still low
     jmp pin, wait_low   ; If pin went high early → back to wait_low
     irq FRAME_START_IRQ ; Pin remained low long enough → frame started
 
     wait 1 gpio DE      ; Wait again for it to go high before restarting cycle
-    jmp wait_low        ; went high, time to go back to wait_low
 .wrap

@@ -8,15 +8,10 @@
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_sleic
-
-    set x, 3            ; x = 3
-    in x, 2             ; shift in 2 bits, isr = 3
-    in null, 11         ; shift left by 11 bits = 6144
-
 .wrap_target
 
 wait_low:
-    mov x, isr          ; set x to 6144
+    mov x, osr          ; set x to 6144
     wait 0 gpio DE      ; Wait for DE to go low
 
 delay_loop:

@@ -323,6 +323,11 @@ DmdType detect_dmd() {
              (rclk < 4000) && (rdata > 115) && (rdata < 130)) {
     return DMD_WPC;
 
+    // DOTMATION: DOTCLK: 1900000 | RCLK: 9950 | RDATA: 155
+  } else if ((dotclk > 1800000) && (dotclk < 2000000) && (rclk > 9700) &&
+             (rclk < 10200) && (rdata > 140) && (rdata < 170)) {
+    return DMD_DOTMATION;
+
     // Data East X16 V1: DOTCLK: 121000 or 60544 | RCLK: 3905 | RDATA: 120
   } else if ((dotclk > 55000) && (dotclk < 125000) && (rclk > 3880) &&
              (rclk < 3930) && (rdata > 110) && (rdata < 125)) {
@@ -383,13 +388,18 @@ DmdType detect_dmd() {
              (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
     return DMD_SLEIC;
 
+    // ROMSTAR -> DOTCLK: 4000000 | RCLK: 15625 | RDATA: 245
+  } else if ((dotclk > 3900000) && (dotclk < 4100000) && (rclk > 15300) &&
+             (rclk < 15900) && (rdata > 230) && (rdata < 260)) {
+    return DMD_ROMSTAR;
+
     // Capcom -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 510
   } else if ((dotclk > 4000000) && (dotclk < 4300000) && (rclk > 16000) &&
              (rclk < 16500) && (rdata > 490) && (rdata < 530)) {
     return DMD_CAPCOM;
 
     // Capcom HD -> DOTCLK: 4168000 | RCLK: 16280 | RDATA: 255
-  } else if ((dotclk > 3900000) && (dotclk < 4300000) && (rclk > 15500) &&
+  } else if ((dotclk > 4100000) && (dotclk < 4300000) && (rclk > 15900) &&
              (rclk < 16500) && (rdata > 240) && (rdata < 270)) {
     return DMD_CAPCOM_HD;
   }
@@ -421,7 +431,7 @@ uint64_t convert_2bit_to_4bit_fast(uint32_t input) {
 // ---------------------------------
 
 static constexpr uint8_t map_nibble_de_x16(uint8_t p) {
-  return (p <= 3) ? p : (p == 4) ? 1 : (p == 8) ? 2 : (p == 10) ? 0 : 3;
+  return (p <= 3) ? p : (p == 4) ? 1 : (p == 7) ? 0 : (p == 8) ? 2 : 3;
 }
 
 static constexpr uint8_t make_lut_entry_de_x16(uint16_t b) {
@@ -625,13 +635,11 @@ void dmd_dma_handler() {
   // Fix byte order within the buffer
   uint32_t *planebuf = (uint32_t *)currentPlaneBuffer;
   buf32_t *v;
-  uint32_t res;
   // source_dwordsperframe is not the entire frame buffer if plane history is
   // used. So only the new plane data is fixed here.
   for (int i = 0; i < source_dwordsperframe; i++) {
     v = (buf32_t *)planebuf;
-    res = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
-    *planebuf = res;
+    *planebuf = (v->byte3 << 24) | (v->byte2 << 16) | (v->byte1 << 8) | (v->byte0);
     planebuf++;
   }
 
@@ -676,7 +684,7 @@ void dmd_dma_handler() {
     // It seems to be sufficient to check every 8th pixel for these patterns to
     // detect sync. So we could avoid bitschifiting of the uint32_t value to
     // check every single pixel.
-    if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted) {
+    if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted) {
       digitalWrite(LED_BUILTIN, HIGH);
       uint8_t value = pixval & 0x0F;
       if (value == 2 && (planebuf[px] & 0x0F) != 1 &&
@@ -689,7 +697,7 @@ void dmd_dma_handler() {
       //   0/1/1/1 => 3
       //   1/0/1/1 => 3
       //   1/1/0/1 => 3
-      //   1/1/1/0 => 3
+      //   1/1/1/0 => 3 (checking whether value 3 appears is actually enough)
       //
       //   0/0/0/1 => 1
       //   0/0/1/0 => 1
@@ -698,11 +706,8 @@ void dmd_dma_handler() {
       //   1/0/1/0 => 2
       //   1/1/0/0 => 2
       //   0/0/1/1 => 2
-      else if (value == 3 || value > 4 ||
-               (value == 1 && (planebuf[px] & 0x0F) != 1) ||
-               (value == 2 && ((planebuf[px] & 0x0F) == 1 ||
-                               planebuf[offset[2] + px] & 0x0F) == 1)) {
-        // An unsynchronized has been found.
+      else if (value == 3 || value > 4) {
+        // An unsynchronized frame has been found.
         // Disable the state machine, clean the DMA channel and restart.
         // As a result, we will skip exactly one plane.
         pio_sm_set_enabled(dmd_pio, dmd_sm, false);
@@ -749,8 +754,9 @@ void dmd_dma_handler() {
     }
   }
 
-  if (dmd_type == DMD_CAPCOM && !locked_in && !plane0_shifted &&
+  if (dmd_type >= DMD_CAPCOM && !locked_in && !plane0_shifted &&
       detected_0_1_0_1 && detected_1_0_0_0) {
+    digitalWrite(LED_BUILTIN, LOW);
     locked_in = true;
   }
 
@@ -782,7 +788,7 @@ void dmd_dma_handler() {
       for (int l = 0; l < source_height / 2; l++) {
         for (int w = 0; w < source_dwordsperline; w++) {
           uint32_t out = w >> 1;  // Shifting leads to 0, 0, 1, 1, etc
-          uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] + src2[w] * 2));
+          uint16_t v16 = convert_4bit_to_2bit_de_x16((src1[w] * 2 + src2[w]));
           if ((w & 1) == 0) {
             // Write first 8 pixel in upper 16 Bit.
             dst[out] = (uint32_t)v16 << 16;
@@ -900,7 +906,7 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
       (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
   dmd_reader_program_init(dmd_clkdiv, dmd_pio, dmd_sm, dmd_offset, dmd_config,
-                          in_base_pin);
+                          dmd_type, in_base_pin);
 
   // The framedetect program just runs and detects the beginning of a new
   // frame
@@ -911,7 +917,6 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
   dmd_framedetect_program_init(dmd_clkdiv, frame_pio, frame_sm, frame_offset,
                                frame_config, input_pins, num_input_pins,
                                jump_pin);
-  pio_sm_set_enabled(frame_pio, frame_sm, true);
 }
 
 bool dmdreader_init(bool return_on_no_detection) {
@@ -945,12 +950,12 @@ bool dmdreader_init(bool return_on_no_detection) {
   // Initialize DMD reader
   switch (dmd_type) {
     case DMD_WPC: {
-      uint input_pins[] = {RDATA, DE, DOTCLK};
+      uint input_pins[] = {RDATA};
       dmdreader_programs_init(&dmd_reader_2bpp_program,
                               dmd_reader_2bpp_program_get_default_config,
                               &dmd_framedetect_generic_program,
                               dmd_framedetect_generic_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+                              input_pins, 1, 0, SDATA);
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
@@ -965,6 +970,30 @@ bool dmdreader_init(bool return_on_no_detection) {
       source_mergeplanes = MERGEPLANES_ADD;
       break;
     }
+
+    case DMD_DOTMATION: {
+      uint input_pins[] = {RDATA, RCLK};
+      dmdreader_programs_init(&dmd_reader_dotmation_program,
+                              dmd_reader_dotmation_program_get_default_config,
+                              &dmd_framedetect_capcom_program,
+                              dmd_framedetect_capcom_program_get_default_config,
+                              input_pins, 2, 0, SDATA);
+
+      // load 12288 - 1 pixels directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 12287);
+      // load 64 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 63);
+
+      source_width = 192;
+      source_height = 64;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 3;
+      source_planehistoryperframe = 2;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }    
 
     case DMD_WHITESTAR: {
       uint input_pins[] = {RDATA};
@@ -993,12 +1022,12 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_SPIKE1: {
-      uint input_pins[] = {RCLK, RDATA};
+      uint input_pins[] = {COLLAT};
       dmdreader_programs_init(&dmd_reader_4bpp_program,
                               dmd_reader_4bpp_program_get_default_config,
                               &dmd_framedetect_spike_program,
                               dmd_framedetect_spike_program_get_default_config,
-                              input_pins, 2, RDATA, SDATA);
+                              input_pins, 1, COLLAT, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
@@ -1076,13 +1105,10 @@ bool dmdreader_init(bool return_on_no_detection) {
       pio_sm_exec_wait_blocking(dmd_pio, dmd_sm,
                                 pio_encode_mov(pio_y, pio_null));
 
-      // load 4096 directly to TX fifo (32uS)
+      // load 4096 delay cycles directly to TX fifo (32uS)
       pio_sm_put(dmd_pio, dmd_sm, 4096);
-
-      // load 2500 directly to TX fifo (20uS)
+      // load 2500 delay cycles directly to TX fifo (20uS)
       pio_sm_put(frame_pio, frame_sm, 2500);
-      // pull 32 bits from the TX fifo into osr
-      pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
       source_width = 128;
       source_height = 32; // is actually 16, but we process as 32
@@ -1172,15 +1198,17 @@ bool dmdreader_init(bool return_on_no_detection) {
     }
 
     case DMD_ALVING: {
-      uint input_pins[] = {RDATA, RCLK, COLLAT};
+      uint input_pins[] = {RDATA, COLLAT};
       dmdreader_programs_init(&dmd_reader_4bpp_program,
                               dmd_reader_4bpp_program_get_default_config,
                               &dmd_framedetect_alving_program,
                               dmd_framedetect_alving_program_get_default_config,
-                              input_pins, 3, 0, SDATA);
+                              input_pins, 2, 0, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // load 128 - 1 COLLAT edges directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 127);
 
       source_width = 128;
       source_height = 32;
@@ -1253,6 +1281,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 4096 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 4095);
+      // load 32 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 31);
 
       source_width = 128;
       source_height = 32;
@@ -1276,6 +1306,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 8192 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 8191);
+      // load 6144 delay cycles directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 6144);
 
       source_width = 128;
       source_height = 32;
@@ -1298,6 +1330,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
       // load 127 directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 127);
+      // load 32 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 31);
 
       source_width = 128;
       source_height = 32;
@@ -1310,17 +1344,20 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
+    case DMD_ROMSTAR:
     case DMD_CAPCOM_HD: {
       uint input_pins[] = {RDATA, RCLK};
       dmdreader_programs_init(
           &dmd_reader_4bpp_program,
           dmd_reader_4bpp_program_get_default_config,
-          &dmd_framedetect_capcom_hd_program,
-          dmd_framedetect_capcom_hd_program_get_default_config, input_pins, 2,
+          &dmd_framedetect_capcom_program,
+          dmd_framedetect_capcom_program_get_default_config, input_pins, 2,
           0, SDATA);
 
       // load 16384 - 1 pixels directly to TX fifo
       pio_sm_put(dmd_pio, dmd_sm, 16383);
+      // load 64 - 1 rows directly to TX fifo
+      pio_sm_put(frame_pio, frame_sm, 63);
 
       source_width = 256;
       source_height = 64;
@@ -1336,6 +1373,7 @@ bool dmdreader_init(bool return_on_no_detection) {
 
   // pull 32 bits of data (if configured) from the TX fifo into osr
   pio_sm_exec(dmd_pio, dmd_sm, pio_encode_pull(false, false));
+  pio_sm_exec(frame_pio, frame_sm, pio_encode_pull(false, false));
 
   // Calculate display parameters
   source_pixelsperbyte = 8 / source_bitsperpixel;
@@ -1436,6 +1474,7 @@ bool dmdreader_init(bool return_on_no_detection) {
 #endif
   // Finally start DMD reader PIO program and DMA
   dmd_set_and_enable_new_dma_target();
+  pio_sm_set_enabled(frame_pio, frame_sm, true);
   pio_sm_set_enabled(dmd_pio, dmd_sm, true);
 
   return true;

@@ -8,44 +8,23 @@
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
 .program dmd_framedetect_spike
-    ; Frame detection in Spike:
-    ; Wait for RDATA to go HIGH
-    ; Check if it is still HIGH 150-250ms later - in this case, this is the most significant bit which is the last plane
-    ; Then wait for RDATA to go LOW and HIGH again, this is the beginning of a new frame
-    ; Based on 125MHz clock frequency we have to wait 18750-31250 clock cycles
-    ; We use 24576 here, because it0s 0b11 << 13
-
-    ; initialize isr with 24576
-    set x, 3
-    in x, 2
-    in null, 13
-
 .wrap_target
 
-; synchronize on the least significant plane
+; Stern SPIKE 1 frame start detection
+; ~1.1µs is the longest state in which COLLAT can be high without it being a new frame
+; ~2µs is the usual time of COLLAT for it to be a legitimate frame start. 
+; We go with 1.5µs to be safe and confirm the start of a new frame.
 
-waitrdata:
-    ; wait for RDATA to measure the length of the impulse
-    wait 1 gpio RDATA
+wait_low:
+    wait 1 gpio COLLAT      ; Wait for COLLAT to go high
+    set x, 5                ; Use x as storage for 6 iterations
 
-    mov x, isr
-delayloop:
-    jmp x-- delayloop
+delay_loop:
+    jmp x-- delay_loop [31] ; Decrement x and repeat until zero
 
-    ; check if RDATA is still HIGH
-    jmp pin longrdata  ; jump if rdata is HIGH
+    jmp pin, trigger_irq    ; If pin still high → trigger irq
+    jmp wait_low
 
-    ; RDATA pin was LOW, wait for next
-    jmp waitrdata
-
-longrdata:
-
-    ; skip the next 30 lines
-    set x,30
-lineloop:
-    wait 1 gpio RCLK
-    wait 0 gpio RCLK
-    jmp x-- lineloop
-
+trigger_irq:
     irq FRAME_START_IRQ
 .wrap
