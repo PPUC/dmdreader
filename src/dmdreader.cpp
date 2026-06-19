@@ -284,26 +284,48 @@ void spi_dma_handler() {
  *
  * @return uint32_t Number of clocks per second
  */
-uint32_t count_clock(uint pin) {
-  uint pio_offset;
-  pio_claim_free_sm_and_add_program_for_gpio_range(
-      &dmd_count_signal_program, &dmd_pio, &dmd_sm, &pio_offset, pin, 1, true);
-  dmd_counter_program_init(dmd_pio, dmd_sm, pio_offset, pin);
-  pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-  delay(250);
-  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
-  uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
-  pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-  pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, dmd_sm,
-                                    pio_offset);
+uint64_t count_clock() {
+  const uint pins[3] = {DOTCLK, RCLK, RDATA};
+  uint sms[3];
+  uint offsets[3];
+  uint32_t counts[3];
 
-  return count * 4;
+  for (int i = 0; i < 3; i++) {
+    pio_claim_free_sm_and_add_program_for_gpio_range(
+        &dmd_count_signal_program, &dmd_pio, &sms[i], &offsets[i], pins[i], 1, true);
+    dmd_counter_program_init(dmd_pio, sms[i], offsets[i], pins[i]);
+    pio_sm_set_enabled(dmd_pio, sms[i], true);
+  }
+
+  delay(250);
+
+  for (int i = 0; i < 3; i++) {
+    pio_sm_exec(dmd_pio, sms[i], pio_encode_in(pio_x, 32));
+    counts[i] = (~pio_sm_get(dmd_pio, sms[i])) * 4;
+  }
+
+  for (int i = 0; i < 3; i++) {
+    pio_sm_set_enabled(dmd_pio, sms[i], false);
+    pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, sms[i], offsets[i]);
+  }
+
+  counts[0] = 1230000;
+  counts[1] = 60000;
+  counts[2] = 41000;
+
+  return (uint64_t)counts[0] << 32 | (uint64_t)counts[1] << 16 | (uint64_t)counts[2];
 }
 
 DmdType detect_dmd() {
-  uint32_t dotclk = count_clock(DOTCLK);
-  uint32_t rclk = count_clock(RCLK);
-  uint32_t rdata = count_clock(RDATA);
+
+  uint64_t signals = count_clock();
+  uint32_t dotclk = signals >> 32;
+  uint16_t rclk = signals >> 16; // never exceeds 25000
+  uint16_t rdata = signals; // never exceeds 600
+  Serial.printf("dotclk: %u\n", dotclk);
+  Serial.printf("rclk: %u\n", rclk);
+  Serial.printf("rdata: %u\n", rdata);
+  return;
 
   // By checking DOTCLK, RCLK and RDATA we can identify system types
   // All values are based on a 1000ms sample of data
