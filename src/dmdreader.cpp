@@ -325,7 +325,6 @@ DmdType detect_dmd() {
   Serial.printf("dotclk: %u\n", dotclk);
   Serial.printf("rclk: %u\n", rclk);
   Serial.printf("rdata: %u\n", rdata);
-  return;
 
   // By checking DOTCLK, RCLK and RDATA we can identify system types
   // All values are based on a 1000ms sample of data
