@@ -309,7 +309,7 @@ uint64_t read_clock_count() {
 
   for (int i = 0; i < 3; i++) {
     pio_sm_exec(dmd_pio, *sms[i], pio_encode_in(pio_x, 32));
-    counts[i] = (~pio_sm_get(dmd_pio, *sms[i])) * 4;
+    counts[i] = (~pio_sm_get(dmd_pio, *sms[i])) * COUNT_MULTIPLIER;
     pio_sm_set_enabled(dmd_pio, *sms[i], false);
     pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio,
                                       *sms[i], *offsets[i]);
@@ -950,7 +950,7 @@ bool dmdreader_init(bool return_on_no_detection) {
       locked_in = true;
       count_clock();
       if (return_on_no_detection) return false;
-      delay(250);
+      delay(COUNT_CLOCK_DELAY);
     }
 
     dmd_type = detect_dmd();
@@ -961,9 +961,11 @@ bool dmdreader_init(bool return_on_no_detection) {
       if (return_on_no_detection) {
         return false;
       } else {
-        delay(750);
+        delay(RETRIGGER_DELAY / 2);
       }
     }
+
+    delay(RETRIGGER_DELAY / 2);
 
   } while (dmd_type == DMD_UNKNOWN);
 
