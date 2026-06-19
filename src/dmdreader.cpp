@@ -130,6 +130,7 @@ bool loopback = false;
 // SPI PIO
 PIO spi_pio;
 uint spi_sm;
+uint spi_offset;
 
 // DMD reader PIO
 PIO dmd_pio;
@@ -286,30 +287,35 @@ void spi_dma_handler() {
  */
 uint64_t count_clock() {
   const uint pins[3] = {DOTCLK, RCLK, RDATA};
-  uint sms[3];
-  uint offsets[3];
-  uint32_t counts[3];
+  // why not make use of the already existing sms/offsets
+  uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
+  uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
 
   for (int i = 0; i < 3; i++) {
     pio_claim_free_sm_and_add_program_for_gpio_range(
-        &dmd_count_signal_program, &dmd_pio, &sms[i], &offsets[i], pins[i], 1, true);
-    dmd_counter_program_init(dmd_pio, sms[i], offsets[i], pins[i]);
-    pio_sm_set_enabled(dmd_pio, sms[i], true);
+        &dmd_count_signal_program, &dmd_pio, sms[i], offsets[i], pins[i], 1,
+        true);
+    dmd_counter_program_init(dmd_pio, *sms[i], *offsets[i], pins[i]);
+    pio_sm_set_enabled(dmd_pio, *sms[i], true);
   }
-
+//}
   delay(250);
+//uint64_t read_clock_count() {
+  uint32_t counts[3];
+  // why not make use of the already existing sms/offsets
+  //uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
+  //uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
 
   for (int i = 0; i < 3; i++) {
-    pio_sm_exec(dmd_pio, sms[i], pio_encode_in(pio_x, 32));
-    counts[i] = (~pio_sm_get(dmd_pio, sms[i])) * 4;
+    pio_sm_exec(dmd_pio, *sms[i], pio_encode_in(pio_x, 32));
+    counts[i] = (~pio_sm_get(dmd_pio, *sms[i])) * 4;
+    pio_sm_set_enabled(dmd_pio, *sms[i], false);
+    pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio,
+                                      *sms[i], *offsets[i]);
   }
 
-  for (int i = 0; i < 3; i++) {
-    pio_sm_set_enabled(dmd_pio, sms[i], false);
-    pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, sms[i], offsets[i]);
-  }
-
-  return (uint64_t)counts[0] << 32 | (uint64_t)counts[1] << 16 | (uint64_t)counts[2];
+  return (uint64_t)counts[0] << 32 | (uint64_t)counts[1] << 16 |
+         (uint64_t)counts[2];
 }
 
 DmdType detect_dmd() {
@@ -941,6 +947,7 @@ bool dmdreader_init(bool return_on_no_detection) {
   // Loop until the DMD is detected as it might need some time to be available
   // on power-on
   do {
+    //uint64_t signals = count_clock();
     dmd_type = detect_dmd();
     if (dmd_type == DMD_UNKNOWN && return_on_no_detection) {
       return false;
@@ -1503,11 +1510,10 @@ void dmdreader_spi_init() {
   digitalWrite(SPI0_CS, LOW);
 
   // initialize SPI slave PIO
-  uint pio_offset;
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      &clocked_output_program, &spi_pio, &spi_sm, &pio_offset, SPI_BASE, 4,
+      &clocked_output_program, &spi_pio, &spi_sm, &spi_offset, SPI_BASE, 4,
       true));
-  clocked_output_program_init(spi_pio, spi_sm, pio_offset, SPI_BASE);
+  clocked_output_program_init(spi_pio, spi_sm, spi_offset, SPI_BASE);
 
   // DMA for SPI
   spi_dma_channel = dma_claim_unused_channel(true);
