@@ -285,9 +285,10 @@ void spi_dma_handler() {
  *
  * @return uint32_t Number of clocks per second
  */
-uint64_t count_clock() {
+
+void count_clock() {
   const uint pins[3] = {DOTCLK, RCLK, RDATA};
-  // why not make use of the already existing sms/offsets
+  // just make use of the already defined sms/offsets
   uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
   uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
 
@@ -298,13 +299,13 @@ uint64_t count_clock() {
     dmd_counter_program_init(dmd_pio, *sms[i], *offsets[i], pins[i]);
     pio_sm_set_enabled(dmd_pio, *sms[i], true);
   }
-//}
-  delay(250);
-//uint64_t read_clock_count() {
+}
+
+uint64_t read_clock_count() {
   uint32_t counts[3];
-  // why not make use of the already existing sms/offsets
-  //uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
-  //uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
+  // just make use of the already defined sms/offsets
+  uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
+  uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
 
   for (int i = 0; i < 3; i++) {
     pio_sm_exec(dmd_pio, *sms[i], pio_encode_in(pio_x, 32));
@@ -320,13 +321,10 @@ uint64_t count_clock() {
 
 DmdType detect_dmd() {
 
-  uint64_t signals = count_clock();
+  uint64_t signals = read_clock_count();
   uint32_t dotclk = signals >> 32;
   uint16_t rclk = signals >> 16; // never exceeds 25000
   uint16_t rdata = signals; // never exceeds 600
-  //Serial.printf("dotclk: %u\n", dotclk);
-  //Serial.printf("rclk: %u\n", rclk);
-  //Serial.printf("rdata: %u\n", rdata);
 
   // By checking DOTCLK, RCLK and RDATA we can identify system types
   // All values are based on a 1000ms sample of data
@@ -945,17 +943,28 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
 bool dmdreader_init(bool return_on_no_detection) {
   dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
-  // on power-on
+  // on power-on - non blocking if return_on_no_detection is true
   do {
-    //uint64_t signals = count_clock();
-    dmd_type = detect_dmd();
-    if (dmd_type == DMD_UNKNOWN && return_on_no_detection) {
-      return false;
+    if (!locked_in) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      locked_in = true;
+      count_clock();
+      if (return_on_no_detection) return true;
+      delay(250);
     }
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(300);
+
+    dmd_type = detect_dmd();
     digitalWrite(LED_BUILTIN, LOW);
-    delay(200);
+    locked_in = false;
+    
+    if (dmd_type == DMD_UNKNOWN) {
+      if (return_on_no_detection) {
+        return false;
+      } else {
+        delay(750);
+      }
+    }
+
   } while (dmd_type == DMD_UNKNOWN);
 
   // Delay is still needed when blink gets removed above.
