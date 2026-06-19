@@ -28,7 +28,6 @@ void setup() {
 void loop() {
   // Everything is triggered by interrupts, so nothing to do here
   delay(5000);
-  detect_dmd();
   // digitalWrite(LED_BUILTIN, HIGH);
   delay(500);
   // digitalWrite(LED_BUILTIN, LOW);

@@ -309,10 +309,6 @@ uint64_t count_clock() {
     pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, sms[i], offsets[i]);
   }
 
-  counts[0] = 1230000;
-  counts[1] = 60000;
-  counts[2] = 41000;
-
   return (uint64_t)counts[0] << 32 | (uint64_t)counts[1] << 16 | (uint64_t)counts[2];
 }
 
@@ -322,9 +318,9 @@ DmdType detect_dmd() {
   uint32_t dotclk = signals >> 32;
   uint16_t rclk = signals >> 16; // never exceeds 25000
   uint16_t rdata = signals; // never exceeds 600
-  Serial.printf("dotclk: %u\n", dotclk);
-  Serial.printf("rclk: %u\n", rclk);
-  Serial.printf("rdata: %u\n", rdata);
+  //Serial.printf("dotclk: %u\n", dotclk);
+  //Serial.printf("rclk: %u\n", rclk);
+  //Serial.printf("rdata: %u\n", rdata);
 
   // By checking DOTCLK, RCLK and RDATA we can identify system types
   // All values are based on a 1000ms sample of data
