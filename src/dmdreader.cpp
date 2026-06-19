@@ -949,14 +949,14 @@ bool dmdreader_init(bool return_on_no_detection) {
       digitalWrite(LED_BUILTIN, HIGH);
       locked_in = true;
       count_clock();
-      if (return_on_no_detection) return true;
+      if (return_on_no_detection) return false;
       delay(250);
     }
 
     dmd_type = detect_dmd();
     digitalWrite(LED_BUILTIN, LOW);
     locked_in = false;
-    
+
     if (dmd_type == DMD_UNKNOWN) {
       if (return_on_no_detection) {
         return false;
