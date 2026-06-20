@@ -130,6 +130,7 @@ bool loopback = false;
 // SPI PIO
 PIO spi_pio;
 uint spi_sm;
+uint spi_offset;
 
 // DMD reader PIO
 PIO dmd_pio;
@@ -284,26 +285,46 @@ void spi_dma_handler() {
  *
  * @return uint32_t Number of clocks per second
  */
-uint32_t count_clock(uint pin) {
-  uint pio_offset;
-  pio_claim_free_sm_and_add_program_for_gpio_range(
-      &dmd_count_signal_program, &dmd_pio, &dmd_sm, &pio_offset, pin, 1, true);
-  dmd_counter_program_init(dmd_pio, dmd_sm, pio_offset, pin);
-  pio_sm_set_enabled(dmd_pio, dmd_sm, true);
-  delay(250);
-  pio_sm_exec(dmd_pio, dmd_sm, pio_encode_in(pio_x, 32));
-  uint32_t count = ~pio_sm_get(dmd_pio, dmd_sm);
-  pio_sm_set_enabled(dmd_pio, dmd_sm, false);
-  pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio, dmd_sm,
-                                    pio_offset);
 
-  return count * 4;
+void count_clock() {
+  const uint pins[3] = {DOTCLK, RCLK, RDATA};
+  // just make use of the already defined sms/offsets
+  uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
+  uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
+
+  for (int i = 0; i < 3; i++) {
+    pio_claim_free_sm_and_add_program_for_gpio_range(
+        &dmd_count_signal_program, &dmd_pio, sms[i], offsets[i], pins[i], 1,
+        true);
+    dmd_counter_program_init(dmd_pio, *sms[i], *offsets[i], pins[i]);
+    pio_sm_set_enabled(dmd_pio, *sms[i], true);
+  }
+}
+
+uint64_t read_clock_count() {
+  uint32_t counts[3];
+  // just make use of the already defined sms/offsets
+  uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
+  uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
+
+  for (int i = 0; i < 3; i++) {
+    pio_sm_exec(dmd_pio, *sms[i], pio_encode_in(pio_x, 32));
+    counts[i] = (~pio_sm_get(dmd_pio, *sms[i])) * COUNT_MULTIPLIER;
+    pio_sm_set_enabled(dmd_pio, *sms[i], false);
+    pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio,
+                                      *sms[i], *offsets[i]);
+  }
+
+  return (uint64_t)counts[0] << 32 | (uint64_t)counts[1] << 16 |
+         (uint64_t)counts[2];
 }
 
 DmdType detect_dmd() {
-  uint32_t dotclk = count_clock(DOTCLK);
-  uint32_t rclk = count_clock(RCLK);
-  uint32_t rdata = count_clock(RDATA);
+
+  uint64_t signals = read_clock_count();
+  uint32_t dotclk = signals >> 32;
+  uint16_t rclk = signals >> 16; // never exceeds 25000
+  uint16_t rdata = signals; // never exceeds 600
 
   // By checking DOTCLK, RCLK and RDATA we can identify system types
   // All values are based on a 1000ms sample of data
@@ -922,16 +943,30 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
 bool dmdreader_init(bool return_on_no_detection) {
   dmd_type = DMD_UNKNOWN;
   // Loop until the DMD is detected as it might need some time to be available
-  // on power-on
+  // on power-on - non blocking if return_on_no_detection is true
   do {
-    dmd_type = detect_dmd();
-    if (dmd_type == DMD_UNKNOWN && return_on_no_detection) {
-      return false;
+    if (!locked_in) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      locked_in = true;
+      count_clock();
+      if (return_on_no_detection) return false;
+      delay(COUNT_CLOCK_DELAY);
     }
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(300);
+
+    dmd_type = detect_dmd();
     digitalWrite(LED_BUILTIN, LOW);
-    delay(200);
+    locked_in = false;
+
+    if (dmd_type == DMD_UNKNOWN) {
+      if (return_on_no_detection) {
+        return false;
+      } else {
+        delay(RETRIGGER_DELAY / 2);
+      }
+    }
+
+    delay(RETRIGGER_DELAY / 2);
+
   } while (dmd_type == DMD_UNKNOWN);
 
   // Delay is still needed when blink gets removed above.
@@ -1486,11 +1521,10 @@ void dmdreader_spi_init() {
   digitalWrite(SPI0_CS, LOW);
 
   // initialize SPI slave PIO
-  uint pio_offset;
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      &clocked_output_program, &spi_pio, &spi_sm, &pio_offset, SPI_BASE, 4,
+      &clocked_output_program, &spi_pio, &spi_sm, &spi_offset, SPI_BASE, 4,
       true));
-  clocked_output_program_init(spi_pio, spi_sm, pio_offset, SPI_BASE);
+  clocked_output_program_init(spi_pio, spi_sm, spi_offset, SPI_BASE);
 
   // DMA for SPI
   spi_dma_channel = dma_claim_unused_channel(true);

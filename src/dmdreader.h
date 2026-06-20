@@ -4,6 +4,10 @@
 
 #include <Arduino.h>
 
+#define COUNT_CLOCK_DELAY 250
+#define RETRIGGER_DELAY 750
+#define COUNT_MULTIPLIER 1000 / COUNT_CLOCK_DELAY
+
 enum class Color : uint8_t {
   DMD_ORANGE,
   DMD_RED,
