@@ -961,11 +961,9 @@ bool dmdreader_init(bool return_on_no_detection) {
       if (return_on_no_detection) {
         return false;
       } else {
-        delay(RETRIGGER_DELAY / 2);
+        delay(RETRIGGER_DELAY);
       }
     }
-
-    delay(RETRIGGER_DELAY / 2);
 
   } while (dmd_type == DMD_UNKNOWN);
 
