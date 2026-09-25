@@ -35,6 +35,9 @@ typedef struct __attribute__((__packed__)) block_pix_header_t {
   uint16_t padding;       // padding bits
 } block_pix_header_t __attribute__((aligned(4)));
 
+block_header_t h = {};
+block_pix_header_t ph = {};
+
 DmdType dmd_type;
 
 // Line oversampling
@@ -257,15 +260,6 @@ void spi_clean_exit() {
  * @param pixbuf a frame to send
  */
 bool spi_send_pix(uint8_t *pixbuf, bool skip_when_busy) {
-  block_header_t h = {.block_type = SPI_BLOCK_PIX};
-  block_pix_header_t ph = {};
-
-  // round length to 4-byte blocks
-  h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
-  ph.columns = source_width;
-  ph.rows = source_height;
-  ph.bitsperpixel = target_bitsperpixel;
-
   if (skip_when_busy) {
     if (spi_busy()) return false;
   }
@@ -1563,6 +1557,13 @@ void dmdreader_spi_init() {
   // this is used to notify the Pi that data is available
   pinMode(SPI0_CS, OUTPUT);
   digitalWrite(SPI0_CS, LOW);
+
+  // Set up SPI header
+  h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
+  h.block_type = SPI_BLOCK_PIX;
+  ph.columns = source_width;
+  ph.rows = source_height;
+  ph.bitsperpixel = target_bitsperpixel;
 
   // initialize SPI slave PIO
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
