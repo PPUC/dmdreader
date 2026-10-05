@@ -28,7 +28,7 @@
 
 // SPI Defines
 #ifndef DMDREADER_SPI_BASE
-#define DMDREADER_SPI_BASE 16  // 16 is the default for backwards compatibility
+#define DMDREADER_SPI_BASE 12  // 16 is the default for backwards compatibility
 #endif
 #define DMDREADER_SPI_MISO SPI_BASE
 #define DMDREADER_SPI_CS 17  // Is locked to 17 for all PPUC/DMD revisions
