@@ -222,20 +222,20 @@ void spi_abort() {
 }
 
 /**
- * @brief Notify on pin SPI0_CS that data are ready on SPI
+ * @brief Notify on pin SPI_CS that data is ready
  *
  * The SPI master (the Pico is slave) should start a data transfer when this
- * signal is received It toggles pin SPI0_CS to H
+ * signal is received It toggles pin SPI_CS to H
  *
  */
-void start_spi() { digitalWrite(SPI0_CS, HIGH); }
+void start_spi() { digitalWrite(DMDREADER_SPI_CS, HIGH); }
 
 /**
- * @brief Set pin SPI0_CS to L to signal that there is no active SPI data
+ * @brief Set pin _CS to L to signal that there is no active SPI data
  * transfer
  *
  */
-void finish_spi() { digitalWrite(SPI0_CS, LOW); }
+void finish_spi() { digitalWrite(DMDREADER_SPI_CS, LOW); }
 
 /**
  * @brief Cleanly exit SPI by stopping the DMD pio and sending a blank dummy
@@ -1555,8 +1555,8 @@ bool dmdreader_init(bool return_on_no_detection) {
 
 void dmdreader_spi_init() {
   // this is used to notify the Pi that data is available
-  pinMode(SPI0_CS, OUTPUT);
-  digitalWrite(SPI0_CS, LOW);
+  pinMode(DMDREADER_SPI_CS, OUTPUT);
+  digitalWrite(DMDREADER_SPI_CS, LOW);
 
   // Set up SPI header
   h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
@@ -1567,9 +1567,9 @@ void dmdreader_spi_init() {
 
   // initialize SPI slave PIO
   dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      &clocked_output_program, &spi_pio, &spi_sm, &spi_offset, SPI_BASE, 4,
-      true));
-  clocked_output_program_init(spi_pio, spi_sm, spi_offset, SPI_BASE);
+      &clocked_output_program, &spi_pio, &spi_sm, &spi_offset,
+      DMDREADER_SPI_BASE, 4, true));
+  clocked_output_program_init(spi_pio, spi_sm, spi_offset, DMDREADER_SPI_BASE);
 
   // DMA for SPI
   spi_dma_channel = dma_claim_unused_channel(true);

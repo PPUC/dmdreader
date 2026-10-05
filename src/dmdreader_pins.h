@@ -27,11 +27,12 @@
 #endif
 
 // SPI Defines
-#define SPI0 spi0
-#define SPI_BASE 16
-#define SPI0_MISO SPI_BASE        // 16
-#define SPI0_CS (SPI_BASE + 1)    // 17
-#define SPI0_SCK (SPI_BASE + 2)   // 18
-#define SPI0_MOSI (SPI_BASE + 3)  // 19
+#ifndef DMDREADER_SPI_BASE
+#define DMDREADER_SPI_BASE 16  // 16 is the default for backwards compatibility
+#endif
+#define DMDREADER_SPI_MISO SPI_BASE
+#define DMDREADER_SPI_CS 17  // Is locked to 17 for all PPUC/DMD revisions
+#define DMDREADER_SPI_SCK (DMDREADER_SPI_BASE + 2)
+#define DMDREADER_SPI_MOSI (DMDREADER_SPI_BASE + 3)
 
 #endif  // DMD_READER_PINS_H
