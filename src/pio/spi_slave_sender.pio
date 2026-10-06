@@ -1,16 +1,12 @@
 .program clocked_output
 
 ; Send using an external clock on the SPI interface
-; - OUT pin 0 is the data pin
-; - IN pin 0 is the CLK pin
-; - Autopush is enabled, threshold 32
-;
-;    wait 0 pin 1
+; Pico is a slave and constantly keeps track of incoming SCK
 
 .wrap_target
-    out pins 1
-    wait 1 pin 0
-    wait 0 pin 0
+    wait 1 pin 0         ; rising edge: Pi is sampling the current bit
+    out pins, 1          ; put the NEXT bit on MISO
+    wait 0 pin 0         ; falling edge: prepare for the next rising edge
 .wrap
 
 
@@ -46,6 +42,10 @@ static inline void clocked_output_program_init(PIO pio, uint sm, uint offset, ui
 
     // Load our configuration, and start the program from the beginning
     pio_sm_init(pio, sm, offset, &c);
+
+    // SPI mode 0 needs to have the first bit preloaded, will break otherwise
+    pio_sm_exec(pio, sm, pio_encode_out(pio_pins, 1));
+
     pio_sm_set_enabled(pio, sm, true);
 }
 %}
