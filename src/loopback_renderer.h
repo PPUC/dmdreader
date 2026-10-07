@@ -545,7 +545,8 @@ constexpr Resolution get_resolution_from_dimensions(uint16_t width,
 using ConvertFunction = void (*)(const uint32_t*, uint8_t*);
 
 constexpr bool is_capcom_type(DmdType dmd_type) {
-  return dmd_type == DMD_CAPCOM || dmd_type == DMD_CAPCOM_HD;
+  return dmd_type == DMD_CAPCOM || dmd_type == DMD_CAPCOM_HD ||
+         dmd_type == DMD_ROMSTAR;
 }
 
 inline ConvertFunction select_converter(ConvertFunction normal,
