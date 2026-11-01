@@ -27,6 +27,13 @@ void dmd_reader_program_init(float dmd_clkdiv, PIO pio, uint sm, uint offset, pi
     sm_config_set_clkdiv(&c, dmd_clkdiv);
   }
 
+  if (dmd_type == DMD_SLEIC_V1) {
+    // set DE as the jmp pin for Sleic V1, used to detect MSB or LSB dot.
+    sm_config_set_jmp_pin(&c, DE);
+    pio_gpio_init(pio, DE);
+    pio_sm_set_consecutive_pindirs(pio, sm, DE, 1, false);
+  }
+
   if (in_base_pin == SDATA_X16) {
     pio_gpio_init(pio, SDATA_X16);          // Extra data line for Data East X16
     pio_gpio_init(pio, SDATA_X16_PADDING);  // used as a padding 0 bit

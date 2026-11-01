@@ -7,8 +7,11 @@
 .define FRAME_START_IRQ 5
 
 ; Frame detection program runs in parallel to the reader program and signals the start of a new frame using an IRQ.
-.program dmd_framedetect_sleic
+
+.program dmd_framedetect_sleic_v2
 .wrap_target
+
+; This program is in use by Sleic Io Moon
 
 wait_low:
     mov x, osr          ; set x to 6144

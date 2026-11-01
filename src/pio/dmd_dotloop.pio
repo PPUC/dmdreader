@@ -182,3 +182,47 @@ legit_dot:
     in pins 1           ; read pin data
     jmp x-- dotloop
 .wrap
+
+; // ------------------- //
+; // dmd_reader_sleic_v1 //
+; // ------------------- //
+
+.program dmd_reader_sleic_v1
+.wrap_target
+    set y, 31          ; number of rows
+    mov isr, null      ; clear ISR and reset shift counter
+
+    irq clear START_READING_IRQ
+    wait irq START_READING_IRQ
+
+row_loop:
+    set x, 5               ; load number of dots to skip (6)
+dot_skip_loop:
+    wait 0 gpio DOTCLK     ; no DOTCLK period or faling edge of the previous
+    wait 1 gpio DOTCLK
+    jmp x-- dot_skip_loop  ; skip 6 dots
+
+    mov x, osr             ; load number of pixels to read (128)
+
+check_row:
+    jmp pin msb_row    ; Is DE high?
+    jmp lsb_row        ; DE is low -> LSB
+
+msb_row:
+    wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
+    wait 1 gpio DOTCLK ; rising edge
+    in pins 1          ; read 1 bit pin data
+    in null 1          ; padding 0 to the output as Sleic is 2bit/px
+    jmp x-- msb_row
+    jmp end
+
+lsb_row:
+    wait 0 gpio DOTCLK ; no DOTCLK period or faling edge of the previous
+    wait 1 gpio DOTCLK ; raising edge
+    in null 1          ; padding 0 to the output as Sleic is 2bit/px
+    in pins 1          ; read 1 bit pin data
+    jmp x-- lsb_row
+
+end:
+    jmp y-- row_loop
+.wrap

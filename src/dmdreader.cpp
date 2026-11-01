@@ -408,10 +408,15 @@ DmdType detect_dmd() {
              (rclk < 4400) && (rdata > 125) && (rdata < 140)) {
     return DMD_SPINBALL;
 
-    // Sleic -> DOTCLK: 599000 | RCLK: 4700 | RDATA: 145
+    // Sleic V1 -> DOTCLK: 352000 | RCLK: 2625 | RDATA: 80
+  } else if ((dotclk > 330000) && (dotclk < 375000) && (rclk > 2550) &&
+             (rclk < 2700) && (rdata > 75) && (rdata < 85)) {
+    return DMD_SLEIC_V1;
+
+    // Sleic V2 -> DOTCLK: 599000 | RCLK: 4700 | RDATA: 145
   } else if ((dotclk > 570000) && (dotclk < 630000) && (rclk > 4550) &&
              (rclk < 4850) && (rdata > 135) && (rdata < 155)) {
-    return DMD_SLEIC;
+    return DMD_SLEIC_V2;
 
     // ROMSTAR -> DOTCLK: 4000000 | RCLK: 15625 | RDATA: 245
   } else if ((dotclk > 3900000) && (dotclk < 4100000) && (rclk > 15300) &&
@@ -695,7 +700,7 @@ void dmd_dma_handler() {
       if (source_shiftplanesatmerge) {
         if (dmd_type == DMD_SPIKE1) {
           v <<= plane;
-        } else if (dmd_type == DMD_SLEIC) {
+        } else if (dmd_type == DMD_SLEIC_V2) {
           v <<= (source_planesperframe - 1) - plane;
         }
       }
@@ -1346,13 +1351,36 @@ bool dmdreader_init(bool return_on_no_detection) {
       break;
     }
 
-    case DMD_SLEIC: {
+    case DMD_SLEIC_V1: {
+      uint input_pins[] = {RDATA};
+      dmdreader_programs_init(
+          &dmd_reader_sleic_v1_program,
+          dmd_reader_sleic_v1_program_get_default_config,
+          &dmd_framedetect_generic_program,
+          dmd_framedetect_generic_program_get_default_config, input_pins, 1,
+          0, SDATA);
+
+      // load 127 directly to TX fifo
+      pio_sm_put(dmd_pio, dmd_sm, 127);
+
+      source_width = 128;
+      source_height = 32;
+      source_bitsperpixel = 2;
+      target_bitsperpixel = 2;
+      source_planesperframe = 2;
+      source_planehistoryperframe = 1;
+      source_lineoversampling = LINEOVERSAMPLING_NONE;
+      source_mergeplanes = MERGEPLANES_ADD;
+      break;
+    }    
+
+    case DMD_SLEIC_V2: {
       uint input_pins[] = {DE, RDATA};
       dmdreader_programs_init(
           &dmd_reader_2bpp_program,
           dmd_reader_2bpp_program_get_default_config,
-          &dmd_framedetect_sleic_program,
-          dmd_framedetect_sleic_program_get_default_config, input_pins, 2,
+          &dmd_framedetect_sleic_v2_program,
+          dmd_framedetect_sleic_v2_program_get_default_config, input_pins, 2,
           DE, SDATA);
 
       // load 8192 - 1 pixels directly to TX fifo
