@@ -939,6 +939,44 @@ void dmdreader_error_blink(bool no_error) {
 
 using DmdConfigGetter = pio_sm_config (*)(uint);
 
+/**
+ * @brief Claims a state machine for the reader and one for the frame detection
+ * on the same PIO and loads both programs there. The frame detection starts
+ * the reader through a PIO IRQ, and PIO IRQs only reach state machines of the
+ * same PIO.
+ *
+ * @return false if no PIO has two free state machines and room for both
+ */
+bool claim_reader_programs(const pio_program_t *reader_program,
+                           const pio_program_t *framedetect_program) {
+  // Like pio_claim_free_sm_and_add_program_for_gpio_range(), start at the
+  // last PIO.
+  for (int i = NUM_PIOS - 1; i >= 0; i--) {
+    PIO pio = pio_get_instance(i);
+    // The DMD pins are GPIO 0 - 15.
+    if (pio_get_gpio_base(pio) != 0) continue;
+
+    int reader_sm = pio_claim_unused_sm(pio, false);
+    if (reader_sm < 0) continue;
+    int framedetect_sm = pio_claim_unused_sm(pio, false);
+    if (framedetect_sm >= 0 && pio_can_add_program(pio, reader_program)) {
+      uint reader_offset = pio_add_program(pio, reader_program);
+      if (pio_can_add_program(pio, framedetect_program)) {
+        dmd_pio = frame_pio = pio;
+        dmd_sm = reader_sm;
+        dmd_offset = reader_offset;
+        frame_sm = framedetect_sm;
+        frame_offset = pio_add_program(pio, framedetect_program);
+        return true;
+      }
+      pio_remove_program(pio, reader_program, reader_offset);
+    }
+    if (framedetect_sm >= 0) pio_sm_unclaim(pio, framedetect_sm);
+    pio_sm_unclaim(pio, reader_sm);
+  }
+  return false;
+}
+
 void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
                              DmdConfigGetter reader_get_default_config,
                              const pio_program_t *dmd_framedetect_program,
@@ -949,18 +987,14 @@ void dmdreader_programs_init(const pio_program_t *dmd_reader_program,
   float target_hz = 125000000.0f;           // PIO code designed for 125 MHz
   float dmd_clkdiv = (float)sys_hz / target_hz;  // scales automatically
 
-  dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      dmd_reader_program, &dmd_pio, &dmd_sm, &dmd_offset,
-      (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
+  dmdreader_error_blink(
+      claim_reader_programs(dmd_reader_program, dmd_framedetect_program));
   pio_sm_config dmd_config = reader_get_default_config(dmd_offset);
   dmd_reader_program_init(dmd_clkdiv, dmd_pio, dmd_sm, dmd_offset, dmd_config,
                           dmd_type, in_base_pin);
 
   // The framedetect program just runs and detects the beginning of a new
   // frame
-  dmdreader_error_blink(pio_claim_free_sm_and_add_program_for_gpio_range(
-      dmd_framedetect_program, &frame_pio, &frame_sm, &frame_offset,
-      (DE < SDATA_X16) ? DE : SDATA_X16, 8, true));
   pio_sm_config frame_config = framedetect_get_default_config(frame_offset);
   dmd_framedetect_program_init(dmd_clkdiv, frame_pio, frame_sm, frame_offset,
                                frame_config, input_pins, num_input_pins,
