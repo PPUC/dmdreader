@@ -292,30 +292,34 @@ void spi_dma_handler() {
 
 void count_clock() {
   const uint pins[3] = {DOTCLK, RCLK, RDATA};
-  // just make use of the already defined sms/offsets
+  // just make use of the already defined pios/sms/offsets
+  // Each counter keeps its own PIO: when another user already holds state
+  // machines, the three claims do not all land on the same PIO.
+  PIO *pios[3] = {&spi_pio, &dmd_pio, &frame_pio};
   uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
   uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
 
   for (int i = 0; i < 3; i++) {
     pio_claim_free_sm_and_add_program_for_gpio_range(
-        &dmd_count_signal_program, &dmd_pio, sms[i], offsets[i], pins[i], 1,
+        &dmd_count_signal_program, pios[i], sms[i], offsets[i], pins[i], 1,
         true);
-    dmd_counter_program_init(dmd_pio, *sms[i], *offsets[i], pins[i]);
-    pio_sm_set_enabled(dmd_pio, *sms[i], true);
+    dmd_counter_program_init(*pios[i], *sms[i], *offsets[i], pins[i]);
+    pio_sm_set_enabled(*pios[i], *sms[i], true);
   }
 }
 
 uint64_t read_clock_count() {
   uint32_t counts[3];
-  // just make use of the already defined sms/offsets
+  // just make use of the already defined pios/sms/offsets
+  PIO *pios[3] = {&spi_pio, &dmd_pio, &frame_pio};
   uint *sms[3] = {&spi_sm, &dmd_sm, &frame_sm};
   uint *offsets[3] = {&spi_offset, &dmd_offset, &frame_offset};
 
   for (int i = 0; i < 3; i++) {
-    pio_sm_exec(dmd_pio, *sms[i], pio_encode_in(pio_x, 32));
-    counts[i] = (~pio_sm_get(dmd_pio, *sms[i])) * COUNT_MULTIPLIER;
-    pio_sm_set_enabled(dmd_pio, *sms[i], false);
-    pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, dmd_pio,
+    pio_sm_exec(*pios[i], *sms[i], pio_encode_in(pio_x, 32));
+    counts[i] = (~pio_sm_get(*pios[i], *sms[i])) * COUNT_MULTIPLIER;
+    pio_sm_set_enabled(*pios[i], *sms[i], false);
+    pio_remove_program_and_unclaim_sm(&dmd_count_signal_program, *pios[i],
                                       *sms[i], *offsets[i]);
   }
 
