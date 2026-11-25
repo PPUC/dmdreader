@@ -12,6 +12,7 @@
 #include "hardware/pio.h"
 #include "loopback_renderer.h"
 #include "pio/spi_slave_sender.pio.h"
+#include "pico/unique_id.h"
 typedef struct buf32_t {
   uint8_t byte0;
   uint8_t byte1;
@@ -22,6 +23,12 @@ typedef struct buf32_t {
 // SPI data types and header blocks
 // header block length should always be a multiple of 32bit
 #define SPI_BLOCK_PIX 0xcc33      // DMD frame
+// DMD frame with 4 more bytes between its header and its pixels. Receivers
+// that know nothing of them skip them. They carry half of the RP2350's chip
+// ID, the half named in the pixel header's padding (SPI_CHIP_ID_TAG | half),
+// so that a receiver has the whole ID after two frames.
+#define SPI_BLOCK_PIX_ID 0x44ee
+#define SPI_CHIP_ID_TAG 0xc100
 
 typedef struct __attribute__((__packed__)) block_header_t {
   uint16_t block_type;  // block type
@@ -37,6 +44,10 @@ typedef struct __attribute__((__packed__)) block_pix_header_t {
 
 block_header_t h = {};
 block_pix_header_t ph = {};
+// The chip ID's bytes 0..3 and 4..7, each sent as one word, most significant
+// byte first, so that they arrive in the ID's order.
+uint32_t chip_id_halves[2] = {};
+uint8_t chip_id_half = 0;
 
 DmdType dmd_type;
 
@@ -264,8 +275,11 @@ bool spi_send_pix(uint8_t *pixbuf, bool skip_when_busy) {
     if (spi_busy()) return false;
   }
 
+  ph.padding = SPI_CHIP_ID_TAG | chip_id_half;
   spi_send_blocking((uint32_t *)&h, sizeof(h));
   spi_send_blocking((uint32_t *)&ph, sizeof(ph));
+  spi_send_blocking(&chip_id_halves[chip_id_half], sizeof(uint32_t));
+  chip_id_half ^= 1;
   spi_send_dma((uint32_t *)pixbuf, target_bytes);
   start_spi();
 
@@ -1587,8 +1601,16 @@ void dmdreader_spi_init() {
   digitalWrite(DMDREADER_SPI_CS, LOW);
 
   // Set up SPI header
-  h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph);
-  h.block_type = SPI_BLOCK_PIX;
+  h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph) +
+          sizeof(uint32_t);
+  h.block_type = SPI_BLOCK_PIX_ID;
+  pico_unique_board_id_t id;
+  pico_get_unique_board_id(&id);
+  for (int half = 0; half < 2; half++) {
+    const uint8_t *b = id.id + 4 * half;
+    chip_id_halves[half] = (uint32_t(b[0]) << 24) | (uint32_t(b[1]) << 16) |
+                           (uint32_t(b[2]) << 8) | b[3];
+  }
   ph.columns = source_width;
   ph.rows = source_height;
   ph.bitsperpixel = target_bitsperpixel;
