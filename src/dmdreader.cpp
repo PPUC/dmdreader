@@ -24,8 +24,7 @@ typedef struct buf32_t {
 // header block length should always be a multiple of 32bit
 #define SPI_BLOCK_PIX 0xcc33      // DMD frame
 // DMD frame with the RP2350's whole ID, 8 bytes, between its pixel header
-// and its pixels, so that a receiver has the ID with the first frame. It
-// replaces 0x44ee, which carried half of the ID per frame.
+// and its pixels, so that a receiver has the ID with the first frame.
 #define SPI_BLOCK_PIX_ID 0x55aa
 
 typedef struct __attribute__((__packed__)) block_header_t {
