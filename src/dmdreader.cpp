@@ -23,12 +23,10 @@ typedef struct buf32_t {
 // SPI data types and header blocks
 // header block length should always be a multiple of 32bit
 #define SPI_BLOCK_PIX 0xcc33      // DMD frame
-// DMD frame with 4 more bytes between its header and its pixels. Receivers
-// that know nothing of them skip them. They carry half of the RP2350's chip
-// ID, the half named in the pixel header's padding (SPI_CHIP_ID_TAG | half),
-// so that a receiver has the whole ID after two frames.
-#define SPI_BLOCK_PIX_ID 0x44ee
-#define SPI_CHIP_ID_TAG 0xc100
+// DMD frame with the RP2350's whole ID, 8 bytes, between its pixel header
+// and its pixels, so that a receiver has the ID with the first frame. It
+// replaces 0x44ee, which carried half of the ID per frame.
+#define SPI_BLOCK_PIX_ID 0x55aa
 
 typedef struct __attribute__((__packed__)) block_header_t {
   uint16_t block_type;  // block type
@@ -44,10 +42,9 @@ typedef struct __attribute__((__packed__)) block_pix_header_t {
 
 block_header_t h = {};
 block_pix_header_t ph = {};
-// The chip ID's bytes 0..3 and 4..7, each sent as one word, most significant
+// The ID's bytes 0..3 and 4..7, each sent as one word, most significant
 // byte first, so that they arrive in the ID's order.
-uint32_t chip_id_halves[2] = {};
-uint8_t chip_id_half = 0;
+uint32_t id_words[2] = {};
 
 DmdType dmd_type;
 
@@ -275,11 +272,11 @@ bool spi_send_pix(uint8_t *pixbuf, bool skip_when_busy) {
     if (spi_busy()) return false;
   }
 
-  ph.padding = SPI_CHIP_ID_TAG | chip_id_half;
+  // Five words before the pixels: the joined TX FIFO holds eight, so this
+  // does not block before start_spi() lets the receiver clock them out.
   spi_send_blocking((uint32_t *)&h, sizeof(h));
   spi_send_blocking((uint32_t *)&ph, sizeof(ph));
-  spi_send_blocking(&chip_id_halves[chip_id_half], sizeof(uint32_t));
-  chip_id_half ^= 1;
+  spi_send_blocking(id_words, sizeof(id_words));
   spi_send_dma((uint32_t *)pixbuf, target_bytes);
   start_spi();
 
@@ -1602,14 +1599,14 @@ void dmdreader_spi_init() {
 
   // Set up SPI header
   h.len = (((target_bytes + 3) / 4) * 4) + sizeof(h) + sizeof(ph) +
-          sizeof(uint32_t);
+          sizeof(id_words);
   h.block_type = SPI_BLOCK_PIX_ID;
   pico_unique_board_id_t id;
   pico_get_unique_board_id(&id);
-  for (int half = 0; half < 2; half++) {
-    const uint8_t *b = id.id + 4 * half;
-    chip_id_halves[half] = (uint32_t(b[0]) << 24) | (uint32_t(b[1]) << 16) |
-                           (uint32_t(b[2]) << 8) | b[3];
+  for (int word = 0; word < 2; word++) {
+    const uint8_t *b = id.id + 4 * word;
+    id_words[word] = (uint32_t(b[0]) << 24) | (uint32_t(b[1]) << 16) |
+                     (uint32_t(b[2]) << 8) | b[3];
   }
   ph.columns = source_width;
   ph.rows = source_height;
